@@ -1,9 +1,11 @@
-
 name: Build DUO APK
 
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
 
@@ -26,12 +28,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Analyze Dart code
+        run: flutter analyze
+
       - name: Build APK
-        run: flutter build apk --release -v
+        run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: DUO-Android
           path: build/app/outputs/flutter-apk/app-release.apk
-          
