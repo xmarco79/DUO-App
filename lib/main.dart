@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // ==================== COLORS ====================
 
@@ -712,6 +714,7 @@ class _ChatPageState extends State<ChatPage> {
   bool loading = true;
   bool sending = false;
   bool uploadingImage = false;
+  bool uploadingFile = false;
   final ImagePicker imagePicker = ImagePicker();
   final Map<String, Future<String>> signedImageUrls = {};
 
@@ -859,6 +862,44 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  Future<void> sendFile() async {
+    if (uploadingFile || uploadingImage || sending) return;
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'txt', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty || !mounted) return;
+      final file = result.files.single;
+      final bytes = file.bytes;
+      if (bytes == null || bytes.isEmpty) { showMessage('تعذر قراءة الملف المحدد'); return; }
+      if (bytes.length > 20 * 1024 * 1024) { showMessage('حجم الملف يتجاوز الحد المسموح (20 ميجابايت)'); return; }
+      setState(() => uploadingFile = true);
+      final extension = (file.extension ?? '').toLowerCase();
+      final safeName = file.name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_').replaceAll('..', '_');
+      final storagePath = '${widget.spaceId}/$currentUserId/${DateTime.now().microsecondsSinceEpoch}_$safeName';
+      await db.storage.from('duo-private').uploadBinary(storagePath, bytes, fileOptions: FileOptions(contentType: _fileMimeType(extension), cacheControl: '3600', upsert: false));
+      try {
+        await db.from('duo_messages').insert({'space_id': widget.spaceId, 'sender_id': currentUserId, 'body': storagePath, 'message_type': 'file'});
+      } catch (_) { await db.storage.from('duo-private').remove([storagePath]); rethrow; }
+      if (mounted) showMessage('تم إرسال الملف');
+    } catch (e) { if (mounted) showMessage('تعذر إرسال الملف: $e'); }
+    finally { if (mounted) setState(() => uploadingFile = false); }
+  }
+
+  String _fileMimeType(String extension) {
+    const types = {'pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
+    return types[extension] ?? 'application/octet-stream';
+  }
+
+  Future<void> openSharedFile(String path) async {
+    try {
+      final url = await db.storage.from('duo-private').createSignedUrl(path, 900);
+      final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      if (!opened && mounted) showMessage('تعذر فتح الملف');
+    } catch (e) { if (mounted) showMessage('تعذر فتح الملف: $e'); }
+  }
   Future<String> signedImageUrl(String path) {
     return signedImageUrls.putIfAbsent(
       path,
@@ -1001,7 +1042,21 @@ class _ChatPageState extends State<ChatPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (item['message_type'] == 'image')
+                                  if (item['message_type'] == 'file')
+                                    InkWell(
+                                      onTap: () => openSharedFile(item['body']?.toString() ?? ''),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                        const Icon(Icons.insert_drive_file_outlined, color: gold, size: 30),
+                                        const SizedBox(width: 10),
+                                        Flexible(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                          Text((item['body']?.toString() ?? '').split('/').last.replaceFirst(RegExp(r'^\d+_'), ''), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                          const SizedBox(height: 3),
+                                          const Text('اضغط لفتح الملف', style: TextStyle(color: lavender, fontSize: 11)),
+                                        ])),
+                                      ]),
+                                    )
+                                  else if (item['message_type'] == 'image')
                                     FutureBuilder<String>(
                                       future: signedImageUrl(
                                         item['body']?.toString() ?? '',
@@ -1084,8 +1139,13 @@ class _ChatPageState extends State<ChatPage> {
             child: Row(
               children: [
                 IconButton(
+                  tooltip: 'إرسال ملف',
+                  onPressed: uploadingFile || uploadingImage || sending ? null : sendFile,
+                  icon: uploadingFile ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: gold, strokeWidth: 2)) : const Icon(Icons.attach_file, color: gold),
+                ),
+                IconButton(
                   tooltip: 'إرسال صورة',
-                  onPressed: uploadingImage || sending ? null : sendImage,
+                  onPressed: uploadingImage || uploadingFile || sending ? null : sendImage,
                   icon: uploadingImage
                       ? const SizedBox(
                           width: 20,
