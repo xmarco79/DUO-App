@@ -41,6 +41,8 @@ class OursApp extends StatelessWidget {
   }
 }
 
+// LOGIN AND REGISTER
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -297,6 +299,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+// HOME PAGE
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -307,6 +311,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool loading = false;
   String? inviteCode;
+  String? spaceId;
 
   final codeController = TextEditingController();
 
@@ -316,12 +321,15 @@ class _HomePageState extends State<HomePage> {
     setState(() => loading = true);
 
     try {
-      await db.rpc('create_duo_space');
+      final createdSpace = await db.rpc('create_duo_space');
       final code = await db.rpc('create_duo_invite');
 
-      if (mounted) {
-        setState(() => inviteCode = code.toString());
-      }
+      if (!mounted) return;
+
+      setState(() {
+        spaceId = createdSpace.toString();
+        inviteCode = code.toString();
+      });
     } catch (e) {
       message('تعذر إنشاء المساحة: $e');
     } finally {
@@ -340,17 +348,36 @@ class _HomePageState extends State<HomePage> {
     setState(() => loading = true);
 
     try {
-      await db.rpc(
+      final joinedSpace = await db.rpc(
         'redeem_duo_invite',
         params: {'p_code': code},
       );
 
+      if (!mounted) return;
+
+      setState(() {
+        spaceId = joinedSpace.toString();
+        inviteCode = null;
+      });
+
+      codeController.clear();
       message('تم الانضمام إلى المساحة بنجاح');
     } catch (e) {
       message('تعذر الانضمام: $e');
     } finally {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  void openChat() {
+    if (spaceId == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatPage(spaceId: spaceId!),
+      ),
+    );
   }
 
   void message(String value) {
@@ -381,6 +408,7 @@ class _HomePageState extends State<HomePage> {
             onPressed: () async {
               await db.auth.signOut();
               if (!mounted) return;
+
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -418,7 +446,7 @@ class _HomePageState extends State<HomePage> {
                   icon: Icons.vpn_key_outlined,
                   title: 'الانضمام إلى مساحة',
                   subtitle: 'أدخل رمز الدعوة الذي وصلك',
-                  onTap: () => showJoinDialog(),
+                  onTap: loading ? null : showJoinDialog,
                 ),
                 if (loading) ...[
                   const SizedBox(height: 20),
@@ -441,6 +469,21 @@ class _HomePageState extends State<HomePage> {
                   const Text(
                     'شاركه مع الشخص الذي تريد دعوته',
                     style: TextStyle(color: lavender),
+                  ),
+                ],
+                if (spaceId != null) ...[
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: FilledButton.icon(
+                      onPressed: openChat,
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      label: const Text(
+                        'فتح المحادثة',
+                        style: TextStyle(fontSize: 17),
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -479,7 +522,7 @@ class _HomePageState extends State<HomePage> {
   void showJoinDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: purple,
         title: const Text('الانضمام إلى مساحة'),
         content: TextField(
@@ -492,14 +535,14 @@ class _HomePageState extends State<HomePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('إلغاء'),
           ),
           FilledButton(
             onPressed: loading
                 ? null
                 : () {
-                    Navigator.pop(context);
+                    Navigator.pop(dialogContext);
                     joinSpace();
                   },
             child: const Text('انضمام'),
@@ -509,6 +552,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
+// CHAT PAGE
 
 class ChatPage extends StatefulWidget {
   final String spaceId;
@@ -526,8 +571,7 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController messageController =
       TextEditingController();
 
-  final ScrollController scrollController =
-      ScrollController();
+  final ScrollController scrollController = ScrollController();
 
   SupabaseClient get db => Supabase.instance.client;
 
@@ -675,9 +719,7 @@ class _ChatPageState extends State<ChatPage> {
           Expanded(
             child: loading
                 ? const Center(
-                    child: CircularProgressIndicator(
-                      color: gold,
-                    ),
+                    child: CircularProgressIndicator(color: gold),
                   )
                 : messages.isEmpty
                     ? const Center(
@@ -691,104 +733,4 @@ class _ChatPageState extends State<ChatPage> {
                       )
                     : ListView.builder(
                         controller: scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: messages.length,
-                        itemBuilder: (context, index) {
-                          final item = messages[index];
-                          final isMine =
-                              item['sender_id'] == currentUserId;
-
-                          return Align(
-                            alignment: isMine
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              constraints: BoxConstraints(
-                                maxWidth:
-                                    MediaQuery.of(context).size.width *
-                                        0.78,
-                              ),
-                              margin: const EdgeInsets.symmetric(
-                                vertical: 6,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isMine ? purple : const Color(0xFF211D30),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: isMine
-                                      ? gold.withValues(alpha: 0.35)
-                                      : lavender.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: Text(
-                                item['body']?.toString() ?? '',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-          ),
-          SafeArea(
-            top: false,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-              color: purple,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: messageController,
-                      minLines: 1,
-                      maxLines: 5,
-                      textInputAction: TextInputAction.newline,
-                      decoration: InputDecoration(
-                        hintText: 'اكتب رسالتك...',
-                        filled: true,
-                        fillColor: navy,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: sending ? null : sendMessage,
-                    style: IconButton.styleFrom(
-                      backgroundColor: gold,
-                      foregroundColor: navy,
-                    ),
-                    icon: sending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: navy,
-                            ),
-                          )
-                        : const Icon(Icons.send),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+          
