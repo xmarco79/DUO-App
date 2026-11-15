@@ -28,7 +28,7 @@ jobs:
       - name: Apply OURS Android branding
         shell: bash
         run: |
-          sed -i 's/android:label="duo"/android:label="OURS"/; s#android:icon="@mipmap/ic_launcher"#android:icon="@drawable/ours_icon"#' android/app/src/main/AndroidManifest.xml
+          sed -i 's/android:label="[^"]*"/android:label="OURS"/; s#android:icon="@mipmap/ic_launcher"#android:icon="@drawable/ours_icon"#' android/app/src/main/AndroidManifest.xml
           mkdir -p android/app/src/main/res/drawable
           cat > android/app/src/main/res/drawable/ours_icon.xml <<'EOF'
           <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
