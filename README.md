@@ -7,8 +7,8 @@ OURS is a private two-person space built with Flutter and Supabase.
 - Username-based registration and sign-in through Supabase Edge Functions.
 - Create a private space and invite one other member with an 8-character code.
 - Join an existing space with an invitation code.
-- Realtime text messaging for members of the same space.
-- Private Supabase Storage bucket reserved for future media sharing.
+- Realtime text and image messaging for members of the same space.
+- Images are stored in the private `duo-private` bucket and shown through short-lived signed URLs.
 
 ## Requirements
 
