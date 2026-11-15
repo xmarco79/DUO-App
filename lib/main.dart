@@ -2,21 +2,27 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// ==================== COLORS ====================
+
 const navy = Color(0xFF10101C);
 const purple = Color(0xFF29213D);
 const lavender = Color(0xFFB9A2D5);
 const gold = Color(0xFFD9BC86);
+
+// ==================== MAIN ====================
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
     url: 'https://sthlcrgwpzqhxtpevqwg.supabase.co',
-    anonKey: 'sb_publishable_xUgF7Wh8fE4wMpuZSrROwA_DNdPJKGM',
+    publishableKey: 'sb_publishable_xUgF7Wh8fE4wMpuZSrROwA_DNdPJKGM',
   );
 
   runApp(const OursApp());
 }
+
+// ==================== APP ====================
 
 class OursApp extends StatelessWidget {
   const OursApp({super.key});
@@ -41,7 +47,7 @@ class OursApp extends StatelessWidget {
   }
 }
 
-// LOGIN AND REGISTER
+// ==================== LOGIN PAGE ====================
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -60,49 +66,66 @@ class _LoginPageState extends State<LoginPage> {
 
   SupabaseClient get db => Supabase.instance.client;
 
+  void showMessage(String value) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(value)),
+    );
+  }
+
   Future<void> login() async {
+    final user = username.text.trim().toLowerCase();
+
+    if (user.isEmpty || password.text.isEmpty) {
+      showMessage('أدخل اسم المستخدم وكلمة المرور');
+      return;
+    }
+
     setState(() => loading = true);
 
     try {
-      await performLogin();
+      final response = await db.functions.invoke(
+        'duo-username-login',
+        body: {
+          'username': user,
+          'password': password.text,
+        },
+      );
+
+      final data = response.data is Map
+          ? Map<String, dynamic>.from(response.data)
+          : <String, dynamic>{};
+
+      if (response.status != 200) {
+        throw Exception(data['error'] ?? 'تعذر تسجيل الدخول');
+      }
+
+      final refreshToken = data['refresh_token'];
+
+      if (refreshToken == null) {
+        throw Exception('لم يتم استلام بيانات الجلسة');
+      }
+
+      await db.auth.setSession(refreshToken);
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const HomePage(),
+        ),
+      );
     } catch (e) {
-      showMessage(e.toString().replaceFirst('Exception: ', ''));
+      showMessage(
+        e.toString().replaceFirst('Exception: ', ''),
+      );
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
-  }
-
-  Future<void> performLogin() async {
-    final response = await db.functions.invoke(
-      'duo-username-login',
-      body: {
-        'username': username.text.trim().toLowerCase(),
-        'password': password.text,
-      },
-    );
-
-    final data = response.data is Map
-        ? Map<String, dynamic>.from(response.data)
-        : <String, dynamic>{};
-
-    if (response.status != 200) {
-      throw Exception(data['error'] ?? 'تعذر تسجيل الدخول');
-    }
-
-    final refreshToken = data['refresh_token'];
-
-    if (refreshToken == null) {
-      throw Exception('لم يتم استلام بيانات الجلسة');
-    }
-
-    await db.auth.setSession(refreshToken);
-
-    if (!mounted) return;
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const HomePage()),
-    );
   }
 
   Future<void> register() async {
@@ -147,18 +170,49 @@ class _LoginPageState extends State<LoginPage> {
         throw Exception(data['error'] ?? 'تعذر إنشاء الحساب');
       }
 
-      await performLogin();
-    } catch (e) {
-      showMessage(e.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
+      final loginResponse = await db.functions.invoke(
+        'duo-username-login',
+        body: {
+          'username': user,
+          'password': pass,
+        },
+      );
 
-  void showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+      final loginData = loginResponse.data is Map
+          ? Map<String, dynamic>.from(loginResponse.data)
+          : <String, dynamic>{};
+
+      if (loginResponse.status != 200) {
+        throw Exception(
+          loginData['error'] ?? 'تم إنشاء الحساب، تعذر تسجيل الدخول',
+        );
+      }
+
+      final refreshToken = loginData['refresh_token'];
+
+      if (refreshToken == null) {
+        throw Exception('لم يتم استلام بيانات الجلسة');
+      }
+
+      await db.auth.setSession(refreshToken);
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const HomePage(),
+        ),
+      );
+    } catch (e) {
+      showMessage(
+        e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => loading = false);
+      }
+    }
   }
 
   @override
@@ -178,7 +232,11 @@ class _LoginPageState extends State<LoginPage> {
             padding: const EdgeInsets.all(26),
             child: Column(
               children: [
-                const Icon(Icons.all_inclusive, size: 76, color: gold),
+                const Icon(
+                  Icons.all_inclusive,
+                  size: 76,
+                  color: gold,
+                ),
                 const SizedBox(height: 18),
                 const Text(
                   'OURS',
@@ -237,11 +295,17 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 10),
                   const Text(
                     'اسم المستخدم: أحرف إنجليزية وأرقام و _ فقط',
-                    style: TextStyle(color: lavender, fontSize: 12),
+                    style: TextStyle(
+                      color: lavender,
+                      fontSize: 12,
+                    ),
                   ),
                   const Text(
                     'كلمة المرور: 8 أحرف على الأقل',
-                    style: TextStyle(color: lavender, fontSize: 12),
+                    style: TextStyle(
+                      color: lavender,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 25),
@@ -255,7 +319,9 @@ class _LoginPageState extends State<LoginPage> {
                             ? register
                             : login,
                     child: loading
-                        ? const CircularProgressIndicator(color: navy)
+                        ? const CircularProgressIndicator(
+                            color: navy,
+                          )
                         : Text(
                             creatingAccount
                                 ? 'إنشاء الحساب'
@@ -299,7 +365,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// HOME PAGE
+// ==================== HOME PAGE ====================
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -317,6 +383,14 @@ class _HomePageState extends State<HomePage> {
 
   SupabaseClient get db => Supabase.instance.client;
 
+  void message(String value) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(value)),
+    );
+  }
+
   Future<void> createSpace() async {
     setState(() => loading = true);
 
@@ -333,7 +407,9 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       message('تعذر إنشاء المساحة: $e');
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
   }
 
@@ -365,7 +441,9 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       message('تعذر الانضمام: $e');
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
   }
 
@@ -380,9 +458,68 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void message(String value) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(value)),
+  void showJoinDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: purple,
+        title: const Text('الانضمام إلى مساحة'),
+        content: TextField(
+          controller: codeController,
+          maxLength: 8,
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(
+            hintText: 'رمز الدعوة',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: loading
+                ? null
+                : () {
+                    Navigator.pop(dialogContext);
+                    joinSpace();
+                  },
+            child: const Text('انضمام'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget actionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback? onTap,
+  }) {
+    return Card(
+      color: purple,
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(18),
+        leading: Icon(
+          icon,
+          color: gold,
+          size: 32,
+        ),
+        title: Text(title),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            subtitle,
+            style: const TextStyle(color: lavender),
+          ),
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          color: gold,
+        ),
+        onTap: onTap,
+      ),
     );
   }
 
@@ -398,7 +535,10 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text(
           'OURS',
-          style: TextStyle(color: gold, letterSpacing: 5),
+          style: TextStyle(
+            color: gold,
+            letterSpacing: 5,
+          ),
         ),
         centerTitle: true,
         backgroundColor: navy,
@@ -406,13 +546,20 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await db.auth.signOut();
-              if (!mounted) return;
+              try {
+                await db.auth.signOut();
 
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-              );
+                if (!mounted) return;
+
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LoginPage(),
+                  ),
+                );
+              } catch (e) {
+                message('تعذر تسجيل الخروج: $e');
+              }
             },
           ),
         ],
@@ -423,7 +570,11 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                const Icon(Icons.nights_stay, color: gold, size: 65),
+                const Icon(
+                  Icons.nights_stay,
+                  color: gold,
+                  size: 65,
+                ),
                 const SizedBox(height: 20),
                 const Text(
                   'عالمك الخاص يبدأ هنا',
@@ -493,67 +644,9 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  Widget actionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback? onTap,
-  }) {
-    return Card(
-      color: purple,
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(18),
-        leading: Icon(icon, color: gold, size: 32),
-        title: Text(title),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Text(
-            subtitle,
-            style: const TextStyle(color: lavender),
-          ),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios, color: gold),
-        onTap: onTap,
-      ),
-    );
-  }
-
-  void showJoinDialog() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: purple,
-        title: const Text('الانضمام إلى مساحة'),
-        content: TextField(
-          controller: codeController,
-          maxLength: 8,
-          textCapitalization: TextCapitalization.characters,
-          decoration: const InputDecoration(
-            hintText: 'رمز الدعوة',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            onPressed: loading
-                ? null
-                : () {
-                    Navigator.pop(dialogContext);
-                    joinSpace();
-                  },
-            child: const Text('انضمام'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// CHAT PAGE
+// ==================== CHAT PAGE ====================
 
 class ChatPage extends StatefulWidget {
   final String spaceId;
@@ -576,8 +669,10 @@ class _ChatPageState extends State<ChatPage> {
   SupabaseClient get db => Supabase.instance.client;
 
   List<Map<String, dynamic>> messages = [];
+
   bool loading = true;
   bool sending = false;
+
   RealtimeChannel? channel;
 
   String get currentUserId => db.auth.currentUser!.id;
@@ -607,6 +702,7 @@ class _ChatPageState extends State<ChatPage> {
       scrollToBottom();
     } catch (e) {
       if (!mounted) return;
+
       setState(() => loading = false);
       showMessage('تعذر تحميل الرسائل: $e');
     }
@@ -638,6 +734,7 @@ class _ChatPageState extends State<ChatPage> {
               setState(() {
                 messages.add(newMessage);
               });
+
               scrollToBottom();
             }
           },
@@ -659,6 +756,8 @@ class _ChatPageState extends State<ChatPage> {
         'body': text,
         'message_type': 'text',
       });
+
+      if (!mounted) return;
 
       messageController.clear();
     } catch (e) {
@@ -683,6 +782,8 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void showMessage(String value) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(value)),
     );
@@ -733,4 +834,103 @@ class _ChatPageState extends State<ChatPage> {
                       )
                     : ListView.builder(
                         controller: scrollController,
-          
+                        padding: const EdgeInsets.all(16),
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final item = messages[index];
+                          final isMe =
+                              item['sender_id'] == currentUserId;
+
+                          return Align(
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                maxWidth: 280,
+                              ),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isMe
+                                    ? purple
+                                    : const Color(0xFF211D30),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: gold.withOpacity(0.25),
+                                ),
+                              ),
+                              child: Text(
+                                item['body']?.toString() ?? '',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
+            decoration: BoxDecoration(
+              color: purple,
+              border: Border(
+                top: BorderSide(
+                  color: gold.withOpacity(0.2),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: messageController,
+                    minLines: 1,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => sendMessage(),
+                    decoration: InputDecoration(
+                      hintText: 'اكتب رسالتك...',
+                      filled: true,
+                      fillColor: navy,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton(
+                  onPressed: sending ? null : sendMessage,
+                  icon: sending
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: gold,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.send_rounded,
+                          color: gold,
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
