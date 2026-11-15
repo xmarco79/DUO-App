@@ -72,6 +72,28 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Set Android plugin compile SDKs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path.home() / ".pub-cache/hosted/pub.dev"
+          changed = []
+          for gradle_file in root.glob("*/android/build.gradle*"):
+              content = gradle_file.read_text()
+              updated, count = re.subn(
+                  r"(compileSdk(?:Version)?\\s*(?:=\\s*)?)(?:flutter\\.compileSdkVersion|[0-9]+)",
+                  r"\\g<1>36",
+                  content,
+              )
+              if count:
+                  gradle_file.write_text(updated)
+                  changed.append(str(gradle_file))
+          print("Updated Android plugin compile SDK in:", changed)
+          PY
+
       - name: Analyze Dart code
         run: flutter analyze --no-fatal-infos lib
 
