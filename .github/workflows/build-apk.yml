@@ -41,6 +41,34 @@ jobs:
           </vector>
           EOF
 
+      - name: Set Android compile SDK
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          candidates = [
+              Path("android/app/build.gradle.kts"),
+              Path("android/app/build.gradle"),
+          ]
+          gradle_file = next((p for p in candidates if p.exists()), None)
+          if gradle_file is None:
+              raise SystemExit("Android app Gradle file was not generated")
+
+          content = gradle_file.read_text()
+          updated, count = re.subn(
+              r"compileSdk(?:Version)?\s*(?:=\s*)?flutter\.compileSdkVersion",
+              "compileSdk = 36" if gradle_file.suffix == ".kts" else "compileSdkVersion 36",
+              content,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("Could not locate Flutter compileSdk setting")
+          gradle_file.write_text(updated)
+          print(f"Set compile SDK to 36 in {gradle_file}")
+          PY
+
       - name: Install dependencies
         run: flutter pub get
 
