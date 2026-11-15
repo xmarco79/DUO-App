@@ -574,25 +574,12 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'OURS',
-              style: TextStyle(
-                color: gold,
-                letterSpacing: 5,
-              ),
-            ),
-            Text(
-              partnerName,
-              style: const TextStyle(
-                color: lavender,
-                fontSize: 11,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
+        title: const Text(
+          'OURS',
+          style: TextStyle(
+            color: gold,
+            letterSpacing: 5,
+          ),
         ),
         centerTitle: true,
         backgroundColor: navy,
@@ -1083,12 +1070,25 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'OURS',
-          style: TextStyle(
-            color: gold,
-            letterSpacing: 5,
-          ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'OURS',
+              style: TextStyle(
+                color: gold,
+                letterSpacing: 5,
+              ),
+            ),
+            Text(
+              partnerName,
+              style: const TextStyle(
+                color: lavender,
+                fontSize: 11,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
         ),
         centerTitle: true,
         backgroundColor: navy,
