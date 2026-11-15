@@ -5,9 +5,11 @@ OURS is a private two-person space built with Flutter and Supabase.
 ## Current features
 
 - Username-based registration and sign-in through Supabase Edge Functions.
+- Editable display name and an account/settings screen.
 - Create a private space and invite one other member with an 8-character code.
 - Join an existing space with an invitation code.
 - Realtime text, image, and document sharing between members of the same space.
+- Account profile details, privacy information, and sign-out controls.
 - Images and files are stored in the private `duo-private` bucket and opened through short-lived signed URLs.
 - Supported shared files: PDF, TXT, CSV, Word, Excel, PowerPoint, and ZIP (up to 20 MB).
 
