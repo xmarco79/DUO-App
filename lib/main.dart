@@ -788,9 +788,9 @@ class _ChatPageState extends State<ChatPage> {
         participantNames
           ..clear()
           ..addAll(names);
-        final otherId = ids.where((id) => id != currentUserId).firstOrNull;
-        if (otherId != null) {
-          partnerName = names[otherId] ?? 'الشريك';
+        final otherIds = ids.where((id) => id != currentUserId).toList();
+        if (otherIds.isNotEmpty) {
+          partnerName = names[otherIds.first] ?? 'الشريك';
         }
       });
     } catch (e) {
