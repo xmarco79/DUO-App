@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 
 // ==================== COLORS ====================
 
@@ -710,6 +711,9 @@ class _ChatPageState extends State<ChatPage> {
 
   bool loading = true;
   bool sending = false;
+  bool uploadingImage = false;
+  final ImagePicker imagePicker = ImagePicker();
+  final Map<String, Future<String>> signedImageUrls = {};
 
   RealtimeChannel? channel;
 
@@ -778,6 +782,85 @@ class _ChatPageState extends State<ChatPage> {
           },
         )
         .subscribe();
+  }
+
+
+  Future<void> sendImage() async {
+    if (uploadingImage || sending) return;
+
+    try {
+      final picked = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 82,
+        maxWidth: 1920,
+      );
+      if (picked == null || !mounted) return;
+
+      final bytes = await picked.readAsBytes();
+      if (bytes.isEmpty) {
+        showMessage('الصورة المحددة فارغة');
+        return;
+      }
+      if (bytes.length > 15 * 1024 * 1024) {
+        showMessage('حجم الصورة كبير. اختر صورة أقل من 15 ميجابايت');
+        return;
+      }
+
+      setState(() => uploadingImage = true);
+
+      final originalName = picked.name;
+      final extension = originalName.contains('.')
+          ? originalName.split('.').last.toLowerCase()
+          : 'jpg';
+      const allowedExtensions = {'jpg', 'jpeg', 'png', 'webp', 'gif'};
+      final safeExtension =
+          allowedExtensions.contains(extension) ? extension : 'jpg';
+      final contentType = switch (safeExtension) {
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif',
+        _ => 'image/jpeg',
+      };
+
+      final storagePath =
+          '${widget.spaceId}/$currentUserId/'
+          '${DateTime.now().microsecondsSinceEpoch}.$safeExtension';
+
+      await db.storage.from('duo-private').uploadBinary(
+        storagePath,
+        bytes,
+        fileOptions: FileOptions(
+          contentType: contentType,
+          cacheControl: '3600',
+          upsert: false,
+        ),
+      );
+
+      try {
+        await db.from('duo_messages').insert({
+          'space_id': widget.spaceId,
+          'sender_id': currentUserId,
+          'body': storagePath,
+          'message_type': 'image',
+        });
+      } catch (_) {
+        await db.storage.from('duo-private').remove([storagePath]);
+        rethrow;
+      }
+
+      if (mounted) showMessage('تم إرسال الصورة');
+    } catch (e) {
+      if (mounted) showMessage('تعذر إرسال الصورة: $e');
+    } finally {
+      if (mounted) setState(() => uploadingImage = false);
+    }
+  }
+
+  Future<String> signedImageUrl(String path) {
+    return signedImageUrls.putIfAbsent(
+      path,
+      () => db.storage.from('duo-private').createSignedUrl(path, 900),
+    );
   }
 
   Future<void> sendMessage() async {
@@ -915,13 +998,58 @@ class _ChatPageState extends State<ChatPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    item['body']?.toString() ?? '',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 15,
+                                  if (item['message_type'] == 'image')
+                                    FutureBuilder<String>(
+                                      future: signedImageUrl(
+                                        item['body']?.toString() ?? '',
+                                      ),
+                                      builder: (context, snapshot) {
+                                        if (snapshot.hasError) {
+                                          return const Text(
+                                            'تعذر تحميل الصورة',
+                                            style: TextStyle(color: lavender),
+                                          );
+                                        }
+                                        if (!snapshot.hasData) {
+                                          return const SizedBox(
+                                            width: 190,
+                                            height: 150,
+                                            child: Center(
+                                              child: CircularProgressIndicator(
+                                                color: gold,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        return ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.network(
+                                            snapshot.data!,
+                                            width: 220,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                const SizedBox(
+                                              width: 190,
+                                              height: 100,
+                                              child: Center(
+                                                child: Text(
+                                                  'تعذر عرض الصورة',
+                                                  style: TextStyle(color: lavender),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    )
+                                  else
+                                    Text(
+                                      item['body']?.toString() ?? '',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                      ),
                                     ),
-                                  ),
                                   const SizedBox(height: 6),
                                   Align(
                                     alignment: Alignment.centerRight,
@@ -952,6 +1080,20 @@ class _ChatPageState extends State<ChatPage> {
             ),
             child: Row(
               children: [
+                IconButton(
+                  tooltip: 'إرسال صورة',
+                  onPressed: uploadingImage || sending ? null : sendImage,
+                  icon: uploadingImage
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: gold,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.image_outlined, color: gold),
+                ),
                 Expanded(
                   child: TextField(
                     controller: messageController,
