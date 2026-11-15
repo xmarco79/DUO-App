@@ -574,12 +574,25 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'OURS',
-          style: TextStyle(
-            color: gold,
-            letterSpacing: 5,
-          ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'OURS',
+              style: TextStyle(
+                color: gold,
+                letterSpacing: 5,
+              ),
+            ),
+            Text(
+              partnerName,
+              style: const TextStyle(
+                color: lavender,
+                fontSize: 11,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
         ),
         centerTitle: true,
         backgroundColor: navy,
@@ -729,6 +742,8 @@ class _ChatPageState extends State<ChatPage> {
   bool uploadingFile = false;
   final ImagePicker imagePicker = ImagePicker();
   final Map<String, Future<String>> signedImageUrls = {};
+  final Map<String, String> participantNames = {};
+  String partnerName = 'مساحتكما الخاصة';
 
   RealtimeChannel? channel;
 
@@ -738,7 +753,83 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     loadMessages();
+    loadParticipantNames();
     listenToMessages();
+  }
+
+  Future<void> loadParticipantNames() async {
+    try {
+      final members = await db
+          .from('duo_members')
+          .select('user_id')
+          .eq('space_id', widget.spaceId);
+
+      final ids = members
+          .map((row) => row['user_id'].toString())
+          .toList();
+
+      if (ids.isEmpty) return;
+
+      final profiles = await db
+          .from('duo_profiles')
+          .select('user_id, username, display_name')
+          .inFilter('user_id', ids);
+
+      final names = <String, String>{};
+      for (final profile in profiles) {
+        final id = profile['user_id'].toString();
+        final displayName = profile['display_name']?.toString().trim() ?? '';
+        final username = profile['username']?.toString() ?? '';
+        names[id] = displayName.isNotEmpty ? displayName : username;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        participantNames
+          ..clear()
+          ..addAll(names);
+        final otherId = ids.where((id) => id != currentUserId).firstOrNull;
+        if (otherId != null) {
+          partnerName = names[otherId] ?? 'الشريك';
+        }
+      });
+    } catch (e) {
+      debugPrint('Could not load chat participant names: $e');
+    }
+  }
+
+  void showImagePreview(String imageUrl) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: navy,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 4,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('تعذر تحميل الصورة'),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: IconButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                icon: const Icon(Icons.close, color: gold),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> loadMessages() async {
@@ -1054,6 +1145,18 @@ class _ChatPageState extends State<ChatPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  if (!isMe)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 6),
+                                      child: Text(
+                                        participantNames[item['sender_id']?.toString()] ?? 'الشريك',
+                                        style: const TextStyle(
+                                          color: gold,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
                                   if (item['message_type'] == 'file')
                                     InkWell(
                                       onTap: () => openSharedFile(item['body']?.toString() ?? ''),
@@ -1091,12 +1194,14 @@ class _ChatPageState extends State<ChatPage> {
                                             ),
                                           );
                                         }
-                                        return ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Image.network(
-                                            snapshot.data!,
-                                            width: 220,
-                                            fit: BoxFit.cover,
+                                        return GestureDetector(
+                                          onTap: () => showImagePreview(snapshot.data!),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Image.network(
+                                              snapshot.data!,
+                                              width: 220,
+                                              fit: BoxFit.cover,
                                             errorBuilder: (_, __, ___) =>
                                                 const SizedBox(
                                               width: 190,
@@ -1107,6 +1212,7 @@ class _ChatPageState extends State<ChatPage> {
                                                   style: TextStyle(color: lavender),
                                                 ),
                                               ),
+                                            ),
                                             ),
                                           ),
                                         );
