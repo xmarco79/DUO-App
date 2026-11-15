@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 
 // ==================== COLORS ====================
 
@@ -806,6 +807,16 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  String _formatMessageTime(dynamic value) {
+    if (value == null) return '';
+    try {
+      final date = DateTime.parse(value.toString()).toLocal();
+      return DateFormat('h:mm a').format(date);
+    } catch (_) {
+      return '';
+    }
+  }
+
   void scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !scrollController.hasClients) return;
@@ -900,12 +911,29 @@ class _ChatPageState extends State<ChatPage> {
                                   color: gold.withOpacity(0.25),
                                 ),
                               ),
-                              child: Text(
-                                item['body']?.toString() ?? '',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    item['body']?.toString() ?? '',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      _formatMessageTime(item['created_at']),
+                                      style: const TextStyle(
+                                        color: lavender,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           );
