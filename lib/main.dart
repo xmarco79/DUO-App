@@ -612,7 +612,7 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               children: [
                 const Icon(
-                  Icons.nights_stay,
+                  Icons.all_inclusive_rounded,
                   color: gold,
                   size: 65,
                 ),
