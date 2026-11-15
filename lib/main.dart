@@ -509,3 +509,286 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
+class ChatPage extends StatefulWidget {
+  final String spaceId;
+
+  const ChatPage({
+    super.key,
+    required this.spaceId,
+  });
+
+  @override
+  State<ChatPage> createState() => _ChatPageState();
+}
+
+class _ChatPageState extends State<ChatPage> {
+  final TextEditingController messageController =
+      TextEditingController();
+
+  final ScrollController scrollController =
+      ScrollController();
+
+  SupabaseClient get db => Supabase.instance.client;
+
+  List<Map<String, dynamic>> messages = [];
+  bool loading = true;
+  bool sending = false;
+  RealtimeChannel? channel;
+
+  String get currentUserId => db.auth.currentUser!.id;
+
+  @override
+  void initState() {
+    super.initState();
+    loadMessages();
+    listenToMessages();
+  }
+
+  Future<void> loadMessages() async {
+    try {
+      final result = await db
+          .from('duo_messages')
+          .select()
+          .eq('space_id', widget.spaceId)
+          .order('created_at', ascending: true);
+
+      if (!mounted) return;
+
+      setState(() {
+        messages = List<Map<String, dynamic>>.from(result);
+        loading = false;
+      });
+
+      scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => loading = false);
+      showMessage('تعذر تحميل الرسائل: $e');
+    }
+  }
+
+  void listenToMessages() {
+    channel = db
+        .channel('ours-chat-${widget.spaceId}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'duo_messages',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'space_id',
+            value: widget.spaceId,
+          ),
+          callback: (payload) {
+            final newMessage =
+                Map<String, dynamic>.from(payload.newRecord);
+
+            if (!mounted) return;
+
+            final alreadyExists = messages.any(
+              (item) => item['id'] == newMessage['id'],
+            );
+
+            if (!alreadyExists) {
+              setState(() {
+                messages.add(newMessage);
+              });
+              scrollToBottom();
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  Future<void> sendMessage() async {
+    final text = messageController.text.trim();
+
+    if (text.isEmpty || sending) return;
+
+    setState(() => sending = true);
+
+    try {
+      await db.from('duo_messages').insert({
+        'space_id': widget.spaceId,
+        'sender_id': currentUserId,
+        'body': text,
+        'message_type': 'text',
+      });
+
+      messageController.clear();
+    } catch (e) {
+      showMessage('تعذر إرسال الرسالة: $e');
+    } finally {
+      if (mounted) {
+        setState(() => sending = false);
+      }
+    }
+  }
+
+  void scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !scrollController.hasClients) return;
+
+      scrollController.animateTo(
+        scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void showMessage(String value) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(value)),
+    );
+  }
+
+  @override
+  void dispose() {
+    messageController.dispose();
+    scrollController.dispose();
+
+    if (channel != null) {
+      db.removeChannel(channel!);
+    }
+
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'OURS',
+          style: TextStyle(
+            color: gold,
+            letterSpacing: 5,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: navy,
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: loading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: gold,
+                    ),
+                  )
+                : messages.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'بداية عالمكما الخاص',
+                          style: TextStyle(
+                            color: lavender,
+                            fontSize: 18,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final item = messages[index];
+                          final isMine =
+                              item['sender_id'] == currentUserId;
+
+                          return Align(
+                            alignment: isMine
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              constraints: BoxConstraints(
+                                maxWidth:
+                                    MediaQuery.of(context).size.width *
+                                        0.78,
+                              ),
+                              margin: const EdgeInsets.symmetric(
+                                vertical: 6,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isMine ? purple : const Color(0xFF211D30),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: isMine
+                                      ? gold.withValues(alpha: 0.35)
+                                      : lavender.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Text(
+                                item['body']?.toString() ?? '',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+          SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              color: purple,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: messageController,
+                      minLines: 1,
+                      maxLines: 5,
+                      textInputAction: TextInputAction.newline,
+                      decoration: InputDecoration(
+                        hintText: 'اكتب رسالتك...',
+                        filled: true,
+                        fillColor: navy,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding:
+                            const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    onPressed: sending ? null : sendMessage,
+                    style: IconButton.styleFrom(
+                      backgroundColor: gold,
+                      foregroundColor: navy,
+                    ),
+                    icon: sending
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: navy,
+                            ),
+                          )
+                        : const Icon(Icons.send),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
