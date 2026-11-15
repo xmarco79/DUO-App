@@ -42,7 +42,9 @@ class OursApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const LoginPage(),
+      home: Supabase.instance.client.auth.currentSession == null
+          ? const LoginPage()
+          : const HomePage(),
     );
   }
 }
@@ -166,7 +168,7 @@ class _LoginPageState extends State<LoginPage> {
           ? Map<String, dynamic>.from(response.data)
           : <String, dynamic>{};
 
-      if (response.status != 200) {
+      if (response.status < 200 || response.status >= 300) {
         throw Exception(data['error'] ?? 'تعذر إنشاء الحساب');
       }
 
@@ -375,13 +377,45 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  bool loading = false;
+  bool loading = true;
   String? inviteCode;
   String? spaceId;
 
   final codeController = TextEditingController();
 
   SupabaseClient get db => Supabase.instance.client;
+
+  @override
+  void initState() {
+    super.initState();
+    loadExistingSpace();
+  }
+
+  Future<void> loadExistingSpace() async {
+    try {
+      final userId = db.auth.currentUser?.id;
+      if (userId == null) {
+        if (mounted) setState(() => loading = false);
+        return;
+      }
+
+      final membership = await db
+          .from('duo_members')
+          .select('space_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (!mounted) return;
+      setState(() {
+        spaceId = membership?['space_id']?.toString();
+        loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => loading = false);
+      message('تعذر استرجاع مساحتك: $e');
+    }
+  }
 
   void message(String value) {
     if (!mounted) return;
@@ -396,6 +430,9 @@ class _HomePageState extends State<HomePage> {
 
     try {
       final createdSpace = await db.rpc('create_duo_space');
+      if (!mounted) return;
+      setState(() => spaceId = createdSpace.toString());
+
       final code = await db.rpc('create_duo_invite');
 
       if (!mounted) return;
