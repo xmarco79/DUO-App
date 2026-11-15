@@ -813,8 +813,11 @@ class _ChatPageState extends State<ChatPage> {
           ? originalName.split('.').last.toLowerCase()
           : 'jpg';
       const allowedExtensions = {'jpg', 'jpeg', 'png', 'webp', 'gif'};
-      final safeExtension =
-          allowedExtensions.contains(extension) ? extension : 'jpg';
+      if (!allowedExtensions.contains(extension)) {
+        showMessage('صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP أو GIF');
+        return;
+      }
+      final safeExtension = extension;
       final contentType = switch (safeExtension) {
         'png' => 'image/png',
         'webp' => 'image/webp',
