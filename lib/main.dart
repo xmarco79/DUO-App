@@ -585,6 +585,18 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: navy,
         actions: [
           IconButton(
+            tooltip: 'الملف الشخصي والإعدادات',
+            icon: const Icon(Icons.person_outline),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ProfileSettingsPage(),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               try {
@@ -1201,6 +1213,249 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+
+// ==================== PROFILE & SETTINGS ====================
+
+class ProfileSettingsPage extends StatefulWidget {
+  const ProfileSettingsPage({super.key});
+
+  @override
+  State<ProfileSettingsPage> createState() => _ProfileSettingsPageState();
+}
+
+class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
+  final displayNameController = TextEditingController();
+  SupabaseClient get db => Supabase.instance.client;
+
+  String username = '';
+  String email = '';
+  bool loading = true;
+  bool saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadProfile();
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final user = db.auth.currentUser;
+      if (user == null) throw Exception('انتهت جلسة تسجيل الدخول');
+
+      email = user.email ?? '';
+      final profile = await db
+          .from('duo_profiles')
+          .select('username, display_name')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (!mounted) return;
+      username = profile?['username']?.toString() ?? '';
+      displayNameController.text =
+          profile?['display_name']?.toString() ?? '';
+      setState(() => loading = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => loading = false);
+      showMessage('تعذر تحميل الملف الشخصي: $e');
+    }
+  }
+
+  void showMessage(String value) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(value)),
+    );
+  }
+
+  Future<void> saveProfile() async {
+    final value = displayNameController.text.trim();
+    if (value.length > 30) {
+      showMessage('الاسم الظاهر يجب ألا يتجاوز 30 حرفًا');
+      return;
+    }
+
+    final userId = db.auth.currentUser?.id;
+    if (userId == null) {
+      showMessage('انتهت جلسة تسجيل الدخول');
+      return;
+    }
+
+    setState(() => saving = true);
+    try {
+      await db
+          .from('duo_profiles')
+          .update({'display_name': value.isEmpty ? null : value})
+          .eq('user_id', userId);
+
+      if (!mounted) return;
+      showMessage('تم حفظ الاسم الظاهر');
+    } catch (e) {
+      showMessage('تعذر حفظ التغييرات: $e');
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  Future<void> signOut() async {
+    try {
+      await db.auth.signOut();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+    } catch (e) {
+      showMessage('تعذر تسجيل الخروج: $e');
+    }
+  }
+
+  Widget settingsTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Card(
+      color: purple,
+      child: ListTile(
+        leading: Icon(icon, color: gold),
+        title: Text(title),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(color: lavender),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    displayNameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'الملف الشخصي والإعدادات',
+          style: TextStyle(color: gold, fontSize: 18),
+        ),
+        backgroundColor: navy,
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator(color: gold))
+          : ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                const SizedBox(height: 12),
+                const CircleAvatar(
+                  radius: 42,
+                  backgroundColor: purple,
+                  child: Icon(Icons.person_rounded, color: gold, size: 42),
+                ),
+                const SizedBox(height: 14),
+                Center(
+                  child: Text(
+                    username.isEmpty ? 'حساب OURS' : '@$username',
+                    style: const TextStyle(
+                      color: lavender,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                const Text(
+                  'معلومات الحساب',
+                  style: TextStyle(color: gold, fontSize: 18),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: displayNameController,
+                  maxLength: 30,
+                  decoration: const InputDecoration(
+                    labelText: 'الاسم الظاهر',
+                    hintText: 'كيف تريد أن يظهر اسمك؟',
+                    prefixIcon: Icon(Icons.badge_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'اسم المستخدم',
+                    prefixIcon: Icon(Icons.alternate_email),
+                    border: OutlineInputBorder(),
+                  ),
+                  child: Text(username.isEmpty ? '—' : username),
+                ),
+                const SizedBox(height: 14),
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'البريد المرتبط بالحساب',
+                    prefixIcon: Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  child: Text(email.isEmpty ? 'غير متاح' : email),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  height: 52,
+                  child: FilledButton.icon(
+                    onPressed: saving ? null : saveProfile,
+                    icon: saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: navy,
+                            ),
+                          )
+                        : const Icon(Icons.save_outlined),
+                    label: const Text('حفظ التغييرات'),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                const Text(
+                  'الإعدادات والخصوصية',
+                  style: TextStyle(color: gold, fontSize: 18),
+                ),
+                const SizedBox(height: 10),
+                settingsTile(
+                  icon: Icons.lock_outline,
+                  title: 'مساحتك الخاصة',
+                  subtitle: 'المحادثة والملفات مخصصة لأعضاء مساحتك فقط',
+                ),
+                settingsTile(
+                  icon: Icons.people_outline,
+                  title: 'عدد الأعضاء',
+                  subtitle: 'كل مساحة في OURS مخصصة لشخصين فقط',
+                ),
+                settingsTile(
+                  icon: Icons.info_outline,
+                  title: 'حول OURS',
+                  subtitle: 'YOUR PRIVATE UNIVERSE · الإصدار 1.0.0',
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: signOut,
+                  icon: const Icon(Icons.logout),
+                  label: const Text('تسجيل الخروج'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: gold,
+                    side: const BorderSide(color: gold),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
