@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -51,36 +50,102 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final username = TextEditingController();
   final password = TextEditingController();
+  final confirmPassword = TextEditingController();
+
   bool loading = false;
+  bool creatingAccount = false;
+
+  SupabaseClient get db => Supabase.instance.client;
 
   Future<void> login() async {
     setState(() => loading = true);
 
     try {
-      final response = await Supabase.instance.client.functions.invoke(
-        'duo-username-login',
+      await performLogin();
+    } catch (e) {
+      showMessage(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> performLogin() async {
+    final response = await db.functions.invoke(
+      'duo-username-login',
+      body: {
+        'username': username.text.trim().toLowerCase(),
+        'password': password.text,
+      },
+    );
+
+    final data = response.data is Map
+        ? Map<String, dynamic>.from(response.data)
+        : <String, dynamic>{};
+
+    if (response.status != 200) {
+      throw Exception(data['error'] ?? 'تعذر تسجيل الدخول');
+    }
+
+    final refreshToken = data['refresh_token'];
+
+    if (refreshToken == null) {
+      throw Exception('لم يتم استلام بيانات الجلسة');
+    }
+
+    await db.auth.setSession(refreshToken);
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const HomePage()),
+    );
+  }
+
+  Future<void> register() async {
+    final user = username.text.trim().toLowerCase();
+    final pass = password.text;
+    final confirm = confirmPassword.text;
+
+    if (!RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(user)) {
+      showMessage(
+        'اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا، '
+        'ويحتوي على أحرف إنجليزية أو أرقام أو _ فقط',
+      );
+      return;
+    }
+
+    if (pass.length < 8) {
+      showMessage('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+      return;
+    }
+
+    if (pass != confirm) {
+      showMessage('كلمتا المرور غير متطابقتين');
+      return;
+    }
+
+    setState(() => loading = true);
+
+    try {
+      final response = await db.functions.invoke(
+        'duo-username-register',
         body: {
-          'username': username.text.trim(),
-          'password': password.text,
+          'username': user,
+          'password': pass,
         },
       );
 
-      final data = Map<String, dynamic>.from(response.data);
+      final data = response.data is Map
+          ? Map<String, dynamic>.from(response.data)
+          : <String, dynamic>{};
 
       if (response.status != 200) {
-        throw Exception(data['error'] ?? 'تعذر تسجيل الدخول');
+        throw Exception(data['error'] ?? 'تعذر إنشاء الحساب');
       }
 
-      await Supabase.instance.client.auth.setSession(
-        data['refresh_token'],
-      );
-
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
+      // تسجيل الدخول تلقائيًا بعد إنشاء الحساب.
+      await performLogin();
     } catch (e) {
       showMessage(e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -98,6 +163,7 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     username.dispose();
     password.dispose();
+    confirmPassword.dispose();
     super.dispose();
   }
 
@@ -129,16 +195,18 @@ class _LoginPageState extends State<LoginPage> {
                     fontSize: 11,
                   ),
                 ),
-                const SizedBox(height: 55),
-                const Text(
-                  'مرحبًا بعودتك',
-                  style: TextStyle(fontSize: 24),
+                const SizedBox(height: 50),
+                Text(
+                  creatingAccount ? 'أنشئ حسابك' : 'مرحبًا بعودتك',
+                  style: const TextStyle(fontSize: 24),
                 ),
                 const SizedBox(height: 25),
                 TextField(
                   controller: username,
+                  autocorrect: false,
                   decoration: const InputDecoration(
                     labelText: 'اسم المستخدم',
+                    hintText: 'مثال: ours_user',
                     prefixIcon: Icon(Icons.person_outline),
                     border: OutlineInputBorder(),
                   ),
@@ -153,15 +221,62 @@ class _LoginPageState extends State<LoginPage> {
                     border: OutlineInputBorder(),
                   ),
                 ),
+                if (creatingAccount) ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: confirmPassword,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'تأكيد كلمة المرور',
+                      prefixIcon: Icon(Icons.lock_reset),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'اسم المستخدم: أحرف إنجليزية وأرقام و _ فقط',
+                    style: TextStyle(color: lavender, fontSize: 12),
+                  ),
+                  const Text(
+                    'كلمة المرور: 8 أحرف على الأقل',
+                    style: TextStyle(color: lavender, fontSize: 12),
+                  ),
+                ],
                 const SizedBox(height: 25),
                 SizedBox(
                   width: double.infinity,
                   height: 54,
                   child: FilledButton(
-                    onPressed: loading ? null : login,
+                    onPressed: loading
+                        ? null
+                        : creatingAccount
+                            ? register
+                            : login,
                     child: loading
-                        ? const CircularProgressIndicator()
-                        : const Text('تسجيل الدخول'),
+                        ? const CircularProgressIndicator(color: navy)
+                        : Text(
+                            creatingAccount
+                                ? 'إنشاء الحساب'
+                                : 'تسجيل الدخول',
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                TextButton(
+                  onPressed: loading
+                      ? null
+                      : () {
+                          setState(() {
+                            creatingAccount = !creatingAccount;
+                            password.clear();
+                            confirmPassword.clear();
+                          });
+                        },
+                  child: Text(
+                    creatingAccount
+                        ? 'لديك حساب بالفعل؟ تسجيل الدخول'
+                        : 'ليس لديك حساب؟ إنشاء حساب جديد',
+                    style: const TextStyle(color: lavender),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -204,7 +319,9 @@ class _HomePageState extends State<HomePage> {
       await db.rpc('create_duo_space');
       final code = await db.rpc('create_duo_invite');
 
-      setState(() => inviteCode = code.toString());
+      if (mounted) {
+        setState(() => inviteCode = code.toString());
+      }
     } catch (e) {
       message('تعذر إنشاء المساحة: $e');
     } finally {
