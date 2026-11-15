@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -144,7 +145,6 @@ class _LoginPageState extends State<LoginPage> {
         throw Exception(data['error'] ?? 'تعذر إنشاء الحساب');
       }
 
-      // تسجيل الدخول تلقائيًا بعد إنشاء الحساب.
       await performLogin();
     } catch (e) {
       showMessage(e.toString().replaceFirst('Exception: ', ''));
