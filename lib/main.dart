@@ -741,6 +741,7 @@ class _ChatPageState extends State<ChatPage> {
   Map<String, dynamic>? replyingTo;
   String partnerName = 'مساحتكما الخاصة';
   int unreadIncomingCount = 0;
+  String searchQuery = '';
 
   RealtimeChannel? channel;
 
@@ -1264,6 +1265,42 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  Future<void> showMessageSearch() async {
+    final controller = TextEditingController(text: searchQuery);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: purple,
+        title: const Text('البحث في المحادثة'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'اكتب كلمة أو جزءًا من رسالة',
+            prefixIcon: Icon(Icons.search),
+          ),
+          onChanged: (value) {
+            if (mounted) setState(() => searchQuery = value.trim());
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              if (mounted) setState(() => searchQuery = '');
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('مسح البحث'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('تم'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+  }
+
   void openMediaGallery() {
     Navigator.push(
       context,
@@ -1289,6 +1326,15 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final query = searchQuery.toLowerCase();
+    final displayedMessages = query.isEmpty
+        ? messages
+        : messages.where((item) {
+            final body = item['body']?.toString().toLowerCase() ?? '';
+            final preview = _messagePreview(item).toLowerCase();
+            return body.contains(query) || preview.contains(query);
+          }).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -1314,6 +1360,14 @@ class _ChatPageState extends State<ChatPage> {
         centerTitle: true,
         backgroundColor: navy,
         actions: [
+          IconButton(
+            tooltip: 'البحث في المحادثة',
+            onPressed: showMessageSearch,
+            icon: Icon(
+              Icons.search,
+              color: searchQuery.isEmpty ? gold : Colors.lightGreenAccent,
+            ),
+          ),
           IconButton(
             tooltip: 'الوسائط والملفات المشتركة',
             onPressed: openMediaGallery,
@@ -1353,12 +1407,19 @@ class _ChatPageState extends State<ChatPage> {
                           ),
                         ),
                       )
-                    : ListView.builder(
+                    : displayedMessages.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'لا توجد رسائل تطابق البحث',
+                              style: TextStyle(color: lavender),
+                            ),
+                          )
+                        : ListView.builder(
                         controller: scrollController,
                         padding: const EdgeInsets.all(16),
-                        itemCount: messages.length,
+                        itemCount: displayedMessages.length,
                         itemBuilder: (context, index) {
-                          final item = messages[index];
+                          final item = displayedMessages[index];
                           final isMe =
                               item['sender_id'] == currentUserId;
 
@@ -1505,13 +1566,14 @@ class _ChatPageState extends State<ChatPage> {
                                         style: const TextStyle(color: lavender, fontSize: 10),
                                       ),
                                       const SizedBox(width: 8),
-                                      InkWell(
-                                        onTap: () => _replyToMessage(item),
-                                        child: const Padding(
-                                          padding: EdgeInsets.all(4),
-                                          child: Icon(Icons.reply_rounded, color: lavender, size: 17),
+                                      if (item['deleted_at'] == null)
+                                        InkWell(
+                                          onTap: () => _replyToMessage(item),
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(4),
+                                            child: Icon(Icons.reply_rounded, color: lavender, size: 17),
+                                          ),
                                         ),
-                                      ),
                                       if (isMe && item['deleted_at'] == null)
                                         InkWell(
                                           onTap: () => _deleteMessage(item),
