@@ -825,10 +825,16 @@ class _ChatPageState extends State<ChatPage> {
     listenToPresence();
   }
 
-  void listenToPresence() {
-    presenceChannel = db.channel('ours-presence-${widget.spaceId}', opts: const RealtimeChannelConfig(
-      key: 'ours-presence',
-    ));
+  Future<void> listenToPresence() async {
+    // Respect the local visibility preference and use a unique key per user.
+    final prefs = await SharedPreferences.getInstance();
+    final showOnline = prefs.getBool('ours_show_online') ?? true;
+    if (!mounted || !showOnline) return;
+
+    presenceChannel = db.channel(
+      'ours-presence-${widget.spaceId}',
+      opts: RealtimeChannelConfig(key: currentUserId),
+    );
     presenceChannel!
       .onPresenceSync((payload) {
         final states = presenceChannel!.presenceState();
@@ -839,7 +845,9 @@ class _ChatPageState extends State<ChatPage> {
             if (id != null) onlineIds.add(id);
           }
         }
-        if (mounted) setState(() => partnerOnline = onlineIds.any((id) => id != currentUserId));
+        if (mounted) {
+          setState(() => partnerOnline = onlineIds.any((id) => id != currentUserId));
+        }
       })
       .subscribe((status, error) async {
         if (status == RealtimeSubscribeStatus.subscribed) {
