@@ -1,6 +1,9 @@
 name: Build OURS APK
 
 on:
+  push:
+    branches:
+      - feature/full-ours-worlds
   workflow_dispatch:
 
 jobs:
@@ -114,10 +117,10 @@ jobs:
         run: flutter analyze --no-fatal-infos lib
 
       - name: Build APK
-        run: flutter build apk --release --dart-define=OURS_PREVIEW_MODE=true
+        run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: OURS-Preview-Android
+          name: OURS-Android
           path: build/app/outputs/flutter-apk/app-release.apk
