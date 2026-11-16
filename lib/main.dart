@@ -2074,14 +2074,32 @@ class AudioMessageBubble extends StatefulWidget {
 
 class _AudioMessageBubbleState extends State<AudioMessageBubble> {
   final AudioPlayer player = AudioPlayer();
-  late Future<String> audioUrl;
+  bool loadingUrl = false;
 
-  @override
-  void initState() {
-    super.initState();
-    audioUrl = Supabase.instance.client.storage
-        .from('duo-private')
-        .createSignedUrl(widget.audioPath, 900);
+  Future<void> togglePlayback() async {
+    if (player.state == PlayerState.playing) {
+      await player.pause();
+      return;
+    }
+
+    setState(() => loadingUrl = true);
+    try {
+      // Generate a fresh signed URL each time so long-open chats do not
+      // attempt playback with an expired 15-minute URL.
+      final url = await Supabase.instance.client.storage
+          .from('duo-private')
+          .createSignedUrl(widget.audioPath, 900);
+      await player.play(UrlSource(url));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر تشغيل الرسالة الصوتية')),
+        );
+      }
+      debugPrint('Audio playback failed: $e');
+    } finally {
+      if (mounted) setState(() => loadingUrl = false);
+    }
   }
 
   @override
@@ -2092,60 +2110,46 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String>(
-      future: audioUrl,
+    return StreamBuilder<PlayerState>(
+      stream: player.onPlayerStateChanged,
+      initialData: player.state,
       builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Text('تعذر تحميل الرسالة الصوتية', style: TextStyle(color: lavender));
-        }
-        if (!snapshot.hasData) {
-          return const SizedBox(
-            width: 190,
-            height: 42,
-            child: Center(child: CircularProgressIndicator(color: gold, strokeWidth: 2)),
-          );
-        }
-        return StreamBuilder<PlayerState>(
-          stream: player.onPlayerStateChanged,
-          initialData: player.state,
-          builder: (context, stateSnapshot) {
-            final playing = stateSnapshot.data == PlayerState.playing;
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () async {
-                    try {
-                      if (playing) {
-                        await player.pause();
-                      } else {
-                        if (player.state == PlayerState.completed) {
-                          await player.seek(Duration.zero);
-                        }
-                        await player.play(UrlSource(snapshot.data!));
-                      }
-                    } catch (e) {
-                      debugPrint('Audio playback failed: $e');
-                    }
-                  },
-                  icon: Icon(
-                    playing ? Icons.pause_circle_filled : Icons.play_circle_fill,
-                    color: gold,
-                    size: 34,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  playing ? 'تشغيل الرسالة...' : 'رسالة صوتية',
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                ),
-              ],
-            );
-          },
+        final playing = snapshot.data == PlayerState.playing;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              onPressed: loadingUrl ? null : togglePlayback,
+              icon: loadingUrl
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: gold,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Icon(
+                      playing
+                          ? Icons.pause_circle_filled
+                          : Icons.play_circle_fill,
+                      color: gold,
+                      size: 34,
+                    ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              loadingUrl
+                  ? 'جارٍ التحميل...'
+                  : playing
+                      ? 'تشغيل الرسالة...'
+                      : 'رسالة صوتية',
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+          ],
         );
       },
     );
   }
 }
-
