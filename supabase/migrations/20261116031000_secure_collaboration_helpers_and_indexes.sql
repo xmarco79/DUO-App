@@ -1,0 +1,12 @@
+revoke all on function public.ours_notify_partner() from public, anon, authenticated;
+create index if not exists duo_notifications_actor_idx on public.duo_notifications(actor_id);
+create index if not exists duo_message_reactions_space_idx on public.duo_message_reactions(space_id);
+create index if not exists duo_message_reactions_user_idx on public.duo_message_reactions(user_id);
+create index if not exists duo_albums_created_by_idx on public.duo_albums(created_by);
+create index if not exists duo_album_media_space_idx on public.duo_album_media(space_id);
+create index if not exists duo_album_media_uploaded_by_idx on public.duo_album_media(uploaded_by);
+create index if not exists duo_game_sessions_created_by_idx on public.duo_game_sessions(created_by);
+create index if not exists duo_game_sessions_current_turn_idx on public.duo_game_sessions(current_turn_user_id);
+create index if not exists duo_game_sessions_winner_idx on public.duo_game_sessions(winner_user_id);
+create index if not exists duo_game_moves_space_idx on public.duo_game_moves(space_id);
+create index if not exists duo_game_moves_player_idx on public.duo_game_moves(player_id);
