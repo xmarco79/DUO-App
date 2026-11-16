@@ -1,5 +1,10 @@
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
@@ -727,6 +732,9 @@ class _ChatPageState extends State<ChatPage> {
   bool sending = false;
   bool uploadingImage = false;
   bool uploadingFile = false;
+  bool recordingAudio = false;
+  AudioRecorder? audioRecorder;
+  String? activeRecordingPath;
   final ImagePicker imagePicker = ImagePicker();
   final Map<String, Future<String>> signedImageUrls = {};
   final Map<String, String> participantNames = {};
@@ -997,6 +1005,125 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+
+  Future<void> startAudioRecording() async {
+    if (recordingAudio || sending || uploadingImage || uploadingFile) return;
+    final recorder = audioRecorder ??= AudioRecorder();
+    try {
+      final permitted = await recorder.hasPermission();
+      if (!permitted) {
+        showMessage('يلزم السماح باستخدام الميكروفون لتسجيل رسالة صوتية');
+        return;
+      }
+      final directory = await getTemporaryDirectory();
+      final path = '${directory.path}/ours_${DateTime.now().microsecondsSinceEpoch}.m4a';
+      await recorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 96000,
+          sampleRate: 44100,
+          numChannels: 1,
+          echoCancel: true,
+          noiseSuppress: true,
+        ),
+        path: path,
+      );
+      if (!mounted) {
+        await recorder.cancel();
+        return;
+      }
+      setState(() {
+        activeRecordingPath = path;
+        recordingAudio = true;
+      });
+    } catch (e) {
+      showMessage('تعذر بدء التسجيل: $e');
+    }
+  }
+
+  Future<void> cancelAudioRecording() async {
+    final recorder = audioRecorder;
+    if (recorder == null || !recordingAudio) return;
+    try {
+      await recorder.cancel();
+      final path = activeRecordingPath;
+      if (path != null) {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      }
+    } catch (e) {
+      debugPrint('Audio recording cancel failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          recordingAudio = false;
+          activeRecordingPath = null;
+        });
+      }
+    }
+  }
+
+  Future<void> stopAndSendAudio() async {
+    final recorder = audioRecorder;
+    if (recorder == null || !recordingAudio) return;
+    setState(() => sending = true);
+    String? path;
+    try {
+      path = await recorder.stop();
+      if (path == null || path.isEmpty) {
+        throw Exception('لم يتم حفظ التسجيل');
+      }
+      final audioFile = File(path);
+      if (!await audioFile.exists()) {
+        throw Exception('تعذر العثور على التسجيل');
+      }
+      final bytes = await audioFile.readAsBytes();
+      if (bytes.isEmpty) throw Exception('التسجيل فارغ');
+      if (bytes.length > 15 * 1024 * 1024) {
+        throw Exception('حجم التسجيل يتجاوز 15 ميجابايت');
+      }
+
+      final storagePath =
+          '${widget.spaceId}/$currentUserId/'
+          '${DateTime.now().microsecondsSinceEpoch}.m4a';
+      await db.storage.from('duo-private').uploadBinary(
+        storagePath,
+        bytes,
+        fileOptions: const FileOptions(
+          contentType: 'audio/mp4',
+          cacheControl: '3600',
+          upsert: false,
+        ),
+      );
+      try {
+        await db.from('duo_messages').insert({
+          'space_id': widget.spaceId,
+          'sender_id': currentUserId,
+          'body': storagePath,
+          'message_type': 'audio',
+        });
+      } catch (_) {
+        await db.storage.from('duo-private').remove([storagePath]);
+        rethrow;
+      }
+      if (mounted) showMessage('تم إرسال الرسالة الصوتية');
+    } catch (e) {
+      if (mounted) showMessage('تعذر إرسال التسجيل: $e');
+    } finally {
+      if (path != null) {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      }
+      if (mounted) {
+        setState(() {
+          recordingAudio = false;
+          activeRecordingPath = null;
+          sending = false;
+        });
+      }
+    }
+  }
+
   Future<void> sendMessage() async {
     final text = messageController.text.trim();
 
@@ -1058,6 +1185,7 @@ class _ChatPageState extends State<ChatPage> {
   void dispose() {
     messageController.dispose();
     scrollController.dispose();
+    audioRecorder?.dispose();
 
     if (channel != null) {
       db.removeChannel(channel!);
@@ -1171,6 +1299,11 @@ class _ChatPageState extends State<ChatPage> {
                                         ])),
                                       ]),
                                     )
+                                  else if (item['message_type'] == 'audio')
+                                    AudioMessageBubble(
+                                      audioPath: item['body']?.toString() ?? '',
+                                      isMine: isMe,
+                                    )
                                   else if (item['message_type'] == 'image')
                                     FutureBuilder<String>(
                                       future: signedImageUrl(
@@ -1256,6 +1389,27 @@ class _ChatPageState extends State<ChatPage> {
             ),
             child: Row(
               children: [
+                if (recordingAudio) ...[
+                  IconButton(
+                    tooltip: 'إلغاء التسجيل',
+                    onPressed: sending ? null : cancelAudioRecording,
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'جارٍ تسجيل الرسالة الصوتية...',
+                      style: const TextStyle(color: gold, fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'إيقاف وإرسال التسجيل',
+                    onPressed: sending ? null : stopAndSendAudio,
+                    icon: sending
+                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: gold, strokeWidth: 2))
+                        : const Icon(Icons.send_rounded, color: gold),
+                  ),
+                ] else ...[
                 IconButton(
                   tooltip: 'إرسال ملف',
                   onPressed: uploadingFile || uploadingImage || sending ? null : sendFile,
@@ -1314,6 +1468,12 @@ class _ChatPageState extends State<ChatPage> {
                           color: gold,
                         ),
                 ),
+                IconButton(
+                  tooltip: 'تسجيل رسالة صوتية',
+                  onPressed: sending || uploadingFile || uploadingImage ? null : startAudioRecording,
+                  icon: const Icon(Icons.mic_none_rounded, color: gold),
+                ),
+                ],
               ],
             ),
           ),
@@ -1565,3 +1725,95 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     );
   }
 }
+
+class AudioMessageBubble extends StatefulWidget {
+  final String audioPath;
+  final bool isMine;
+
+  const AudioMessageBubble({
+    super.key,
+    required this.audioPath,
+    required this.isMine,
+  });
+
+  @override
+  State<AudioMessageBubble> createState() => _AudioMessageBubbleState();
+}
+
+class _AudioMessageBubbleState extends State<AudioMessageBubble> {
+  final AudioPlayer player = AudioPlayer();
+  late Future<String> audioUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    audioUrl = Supabase.instance.client.storage
+        .from('duo-private')
+        .createSignedUrl(widget.audioPath, 900);
+  }
+
+  @override
+  void dispose() {
+    player.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String>(
+      future: audioUrl,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Text('تعذر تحميل الرسالة الصوتية', style: TextStyle(color: lavender));
+        }
+        if (!snapshot.hasData) {
+          return const SizedBox(
+            width: 190,
+            height: 42,
+            child: Center(child: CircularProgressIndicator(color: gold, strokeWidth: 2)),
+          );
+        }
+        return StreamBuilder<PlayerState>(
+          stream: player.onPlayerStateChanged,
+          initialData: player.state,
+          builder: (context, stateSnapshot) {
+            final playing = stateSnapshot.data == PlayerState.playing;
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () async {
+                    try {
+                      if (playing) {
+                        await player.pause();
+                      } else {
+                        if (player.state == PlayerState.completed) {
+                          await player.seek(Duration.zero);
+                        }
+                        await player.play(UrlSource(snapshot.data!));
+                      }
+                    } catch (e) {
+                      debugPrint('Audio playback failed: $e');
+                    }
+                  },
+                  icon: Icon(
+                    playing ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                    color: gold,
+                    size: 34,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  playing ? 'تشغيل الرسالة...' : 'رسالة صوتية',
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
