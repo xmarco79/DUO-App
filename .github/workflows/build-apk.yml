@@ -114,10 +114,10 @@ jobs:
         run: flutter analyze --no-fatal-infos lib
 
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define=OURS_PREVIEW_MODE=true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: OURS-Android
+          name: OURS-Preview-Android
           path: build/app/outputs/flutter-apk/app-release.apk
