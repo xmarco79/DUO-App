@@ -424,10 +424,10 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     controller: options,
                     minLines: 2,
                     maxLines: 5,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: (kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List') ? 'المهام (كل مهمة في سطر)' : 'الخيارات (كل خيار في سطر)',
                       hintText: 'الخيار الأول\nالخيار الثاني',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
