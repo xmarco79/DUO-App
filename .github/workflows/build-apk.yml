@@ -98,10 +98,26 @@ jobs:
         shell: bash
         run: |
           sed -i 's/android:label="[^"]*"/android:label="OURS"/; s#android:icon="@mipmap/ic_launcher"#android:icon="@mipmap/ic_launcher"#' android/app/src/main/AndroidManifest.xml
-          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            mkdir -p "android/app/src/main/res/mipmap-${density}"
-            cp assets/ours_icon.png "android/app/src/main/res/mipmap-${density}/ic_launcher.png"
-          done
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          source = Image.open("assets/ours_icon.png").convert("RGBA")
+          sizes = {
+              "mdpi": 48,
+              "hdpi": 72,
+              "xhdpi": 96,
+              "xxhdpi": 144,
+              "xxxhdpi": 192,
+          }
+          for density, size in sizes.items():
+              target = Path(f"android/app/src/main/res/mipmap-{density}/ic_launcher.png")
+              target.parent.mkdir(parents=True, exist_ok=True)
+              icon = source.resize((size, size), Image.Resampling.LANCZOS)
+              icon.save(target, format="PNG", optimize=False)
+              print(f"Generated valid RGBA launcher icon: {target} ({size}px)")
+          PY
           rm -f android/app/src/main/res/drawable/ours_icon.xml
 
       - name: Set Android compile SDK
