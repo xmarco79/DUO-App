@@ -1,4 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -27,6 +31,11 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
   String? error;
   String? selectedKind;
   List<Map<String, dynamic>> items = [];
+  final AudioRecorder voiceRecorder = AudioRecorder();
+  final AudioPlayer voicePlayer = AudioPlayer();
+  bool recordingVoice = false;
+  String? activeVoicePath;
+  String? playingVoicePath;
 
   SupabaseClient get db => Supabase.instance.client;
   bool get canSync => widget.spaceId != null && db.auth.currentUser != null;
@@ -139,6 +148,85 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       return 'ميزة التخزين لم تجهز بعد. حدّث التطبيق أو راجع إعداد قاعدة البيانات.';
     }
     return 'حدث خطأ غير متوقع. حاول مرة أخرى.';
+  }
+
+  Future<void> recordVoiceEntry(String title, String content) async {
+    if (!canSync) {
+      _snack('تسجيل اليوميات الصوتية يتطلب تسجيل الدخول إلى مساحة مشتركة.');
+      return;
+    }
+    try {
+      if (!recordingVoice) {
+        final permitted = await voiceRecorder.hasPermission();
+        if (!permitted) {
+          _snack('اسمح باستخدام الميكروفون لتسجيل اليوميات الصوتية.');
+          return;
+        }
+        final dir = await getTemporaryDirectory();
+        activeVoicePath = '${dir.path}/ours_voice_${DateTime.now().microsecondsSinceEpoch}.m4a';
+        await voiceRecorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.aacLc,
+            bitRate: 96000,
+            sampleRate: 44100,
+            numChannels: 1,
+            echoCancel: true,
+            noiseSuppress: true,
+          ),
+          path: activeVoicePath!,
+        );
+        if (mounted) setState(() => recordingVoice = true);
+        return;
+      }
+      final path = await voiceRecorder.stop();
+      if (mounted) setState(() => recordingVoice = false);
+      if (path == null) return;
+      final file = File(path);
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty || bytes.length > 15 * 1024 * 1024) {
+        _snack('التسجيل فارغ أو يتجاوز الحد المسموح (15 MB).');
+        return;
+      }
+      final userId = db.auth.currentUser!.id;
+      final storagePath = '${widget.spaceId}/$userId/voice_${DateTime.now().microsecondsSinceEpoch}.m4a';
+      await db.storage.from('duo-private').uploadBinary(
+        storagePath,
+        bytes,
+        fileOptions: const FileOptions(
+          contentType: 'audio/mp4',
+          cacheControl: '3600',
+          upsert: false,
+        ),
+      );
+      try {
+        await createItem('Voice Diary', title.trim().isEmpty ? 'يوميات صوتية' : title,
+          content, payload: {'audio_path': storagePath, 'audio_mime': 'audio/mp4'});
+      } catch (_) {
+        await db.storage.from('duo-private').remove([storagePath]);
+        rethrow;
+      }
+      await file.delete();
+      _snack('تم حفظ التسجيل الصوتي في يومياتكما');
+    } catch (e) {
+      if (mounted) {
+        setState(() => recordingVoice = false);
+        _snack(_friendlyError(e));
+      }
+    }
+  }
+
+  Future<void> playVoice(String path) async {
+    try {
+      if (playingVoicePath == path && voicePlayer.state == PlayerState.playing) {
+        await voicePlayer.pause();
+        return;
+      }
+      final url = await db.storage.from('duo-private').createSignedUrl(path, 900);
+      if (mounted) setState(() => playingVoicePath = path);
+      await voicePlayer.play(UrlSource(url));
+    } catch (e) {
+      _snack('تعذر تشغيل التسجيل الصوتي. تحقق من الاتصال والصلاحيات.');
+    }
   }
 
   Future<void> createItem(String kind, String title, String content, {Map<String, dynamic> payload = const {}, DateTime? dueAt}) async {
@@ -283,6 +371,19 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                 maxLength: 10000,
                 decoration: const InputDecoration(
                   labelText: 'اكتب التفاصيل هنا', border: OutlineInputBorder())),
+              if (kind == 'Voice Diary')
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: FilledButton.icon(
+                    onPressed: () => recordVoiceEntry(title.text, body.text),
+                    icon: Icon(recordingVoice ? Icons.stop_circle_outlined : Icons.mic_none_rounded),
+                    label: Text(recordingVoice ? 'إيقاف التسجيل وحفظه' : 'بدء تسجيل صوتي'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: recordingVoice ? Colors.red.shade800 : _gold,
+                      foregroundColor: recordingVoice ? Colors.white : _navy,
+                    ),
+                  ),
+                ),
               if (kind == 'Our Votes' || kind == 'This or That' || kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List')
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
@@ -348,6 +449,16 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     title.dispose();
     body.dispose();
     options.dispose();
+  }
+
+  @override
+  void dispose() {
+    if (recordingVoice) {
+      voiceRecorder.stop();
+    }
+    voiceRecorder.dispose();
+    voicePlayer.dispose();
+    super.dispose();
   }
 
   @override
@@ -480,6 +591,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                               .map((v) => Map<String, dynamic>.from(v as Map)),
                         );
                         final myVote = votes[db.auth.currentUser?.id];
+                        final audioPath = payload['audio_path']?.toString();
                         return Card(
                           color: _purple,
                           margin: const EdgeInsets.only(bottom: 10),
@@ -505,6 +617,18 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                     ],
                                   ),
                                 ]),
+                                if (audioPath != null && audioPath.isNotEmpty)
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: FilledButton.tonalIcon(
+                                      onPressed: () => playVoice(audioPath),
+                                      icon: Icon(
+                                        playingVoicePath == audioPath && voicePlayer.state == PlayerState.playing
+                                            ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                      ),
+                                      label: const Text('تشغيل التسجيل الصوتي'),
+                                    ),
+                                  ),
                                 if (item['due_at'] != null)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 4),
