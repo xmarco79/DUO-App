@@ -621,6 +621,11 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                         );
                         final myVote = votes[db.auth.currentUser?.id];
                         final audioPath = payload['audio_path']?.toString();
+                        final unlockAt = item['due_at'] == null
+                                    ? null : DateTime.tryParse(item['due_at'].toString())?.toLocal();
+                        final isTimeCapsule = item['kind'] == 'Time Capsule';
+                        final isLockedCapsule = isTimeCapsule &&
+                                    unlockAt != null && unlockAt.isAfter(DateTime.now());
                         return Card(
                           color: _purple,
                           margin: const EdgeInsets.only(bottom: 10),
@@ -670,11 +675,6 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                       ),
                                     ]),
                                   ),
-                                final unlockAt = item['due_at'] == null
-                                    ? null : DateTime.tryParse(item['due_at'].toString())?.toLocal();
-                                final isTimeCapsule = item['kind'] == 'Time Capsule';
-                                final isLockedCapsule = isTimeCapsule &&
-                                    unlockAt != null && unlockAt.isAfter(DateTime.now());
                                 if (isLockedCapsule)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 8),
