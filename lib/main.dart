@@ -62,11 +62,33 @@ class OursApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: previewMode
-          ? const HomePage()
-          : Supabase.instance.client.auth.currentSession == null
-              ? const LoginPage()
-              : const HomePage(),
+      home: previewMode ? const HomePage() : const OursAuthGate(),
+    );
+  }
+}
+
+// Keep the root page synchronized with Supabase's persisted session.
+// This avoids relying on one-time startup checks or manual navigation after auth.
+class OursAuthGate extends StatelessWidget {
+  const OursAuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = Supabase.instance.client.auth;
+    return StreamBuilder<AuthState>(
+      stream: auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        final session = snapshot.data?.session ?? auth.currentSession;
+        if (session != null) return const HomePage();
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const Scaffold(
+            backgroundColor: navy,
+            body: Center(child: CircularProgressIndicator(color: gold)),
+          );
+        }
+        return const LoginPage();
+      },
     );
   }
 }
@@ -135,12 +157,7 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const HomePage(),
-        ),
-      );
+      // OursAuthGate observes the authenticated session and opens HomePage.
     } catch (e) {
       showMessage(
         e.toString().replaceFirst('Exception: ', ''),
@@ -222,12 +239,7 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const HomePage(),
-        ),
-      );
+      // OursAuthGate observes the authenticated session and opens HomePage.
     } catch (e) {
       showMessage(
         e.toString().replaceFirst('Exception: ', ''),
