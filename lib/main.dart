@@ -620,6 +620,7 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               try {
+                await OursPushService.unregisterCurrentToken();
                 await db.auth.signOut();
 
                 if (!mounted) return;
@@ -2063,7 +2064,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
   Future<void> signOut() async {
     try {
-      await db.auth.signOut();
+      await OursPushService.unregisterCurrentToken();
+                await db.auth.signOut();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginPage()),
