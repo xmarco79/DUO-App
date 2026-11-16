@@ -218,7 +218,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       await db.storage.from('duo-private').uploadBinary(
         storagePath,
         bytes,
-        fileOptions: const FileOptions(
+        fileOptions: FileOptions(
           contentType: 'audio/mp4',
           cacheControl: '3600',
           upsert: false,
