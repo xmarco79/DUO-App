@@ -825,6 +825,11 @@ class _ChatPageState extends State<ChatPage> {
     listenToPresence();
   }
 
+  Future<void> loadQuietMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) setState(() => quietMode = prefs.getBool('ours_quiet_mode') ?? false);
+  }
+
   Future<void> listenToPresence() async {
     // Respect the local visibility preference and use a unique key per user.
     final prefs = await SharedPreferences.getInstance();
@@ -986,7 +991,7 @@ class _ChatPageState extends State<ChatPage> {
                 if (newMessage['sender_id'] != currentUserId) unreadIncomingCount++;
               });
               if (newMessage['sender_id'] != currentUserId) {
-                showMessage('رسالة جديدة من $partnerName');
+                if (!quietMode) showMessage('رسالة جديدة من $partnerName');
               }
               scrollToBottom();
             }
