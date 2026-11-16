@@ -2,13 +2,6 @@ name: Build OURS APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-      - fix/session-and-space-restore
-  pull_request:
-    branches:
-      - main
 
 jobs:
   build:
