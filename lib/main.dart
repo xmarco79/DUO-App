@@ -830,7 +830,7 @@ class _ChatPageState extends State<ChatPage> {
       key: 'ours-presence',
     ));
     presenceChannel!
-      .onPresenceSync(() {
+      .onPresenceSync((payload) {
         final states = presenceChannel!.presenceState();
         final onlineIds = <String>{};
         for (final state in states) {
