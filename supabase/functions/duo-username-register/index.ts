@@ -59,40 +59,45 @@ Deno.serve(async (req: Request) => {
       email: syntheticEmail,
       password,
       email_confirm: true,
-      user_metadata: { username },
+      user_metadata: { username, display_name: username },
     });
 
     if (createError || !created.user) {
-      console.error("registration: auth user creation failed", createError?.code, createError?.message);
-      if (createError?.code === "email_exists" || createError?.code === "user_already_exists") {
-        return json({ error: "تعذر إنشاء الحساب بهذا الاسم بسبب تعارض في سجل الدخول. تواصل مع الدعم." }, 409);
+      const errorCode = createError?.code ?? "";
+      const errorMessage = createError?.message ?? "";
+      console.error("registration: auth user creation failed", errorCode, errorMessage);
+
+      if (
+        errorCode === "email_exists" ||
+        errorCode === "user_already_exists" ||
+        errorMessage.includes("duo_profiles_username_lower_idx")
+      ) {
+        return json({ error: "اسم المستخدم مستخدم بالفعل" }, 409);
       }
+
+      if (errorMessage.includes("duo_profiles_pkey")) {
+        return json({ error: "تعذر ربط الحساب بملفه الشخصي بسبب تعارض داخلي. حاول مرة أخرى لاحقًا." }, 500);
+      }
+
       return json({ error: "تعذر إنشاء الحساب حاليًا. حاول مرة أخرى." }, 400);
     }
 
-    const { error: profileError } = await admin.from("duo_profiles").insert({
-      user_id: created.user.id,
-      username,
-      display_name: username,
-    });
+    // The on_auth_user_created_duo_profile database trigger creates duo_profiles.
+    // Do not insert a second profile here: that would collide with duo_profiles_pkey.
+    const { data: profile, error: profileLookupError } = await admin
+      .from("duo_profiles")
+      .select("user_id, username")
+      .eq("user_id", created.user.id)
+      .maybeSingle();
 
-    if (profileError) {
+    if (profileLookupError || !profile || profile.username !== username) {
+      console.error(
+        "registration: auth trigger did not create the expected profile",
+        profileLookupError?.code,
+        profileLookupError?.message,
+      );
       await admin.auth.admin.deleteUser(created.user.id);
-      if (profileError.code === "23505") {
-        const { data: conflict, error: conflictLookupError } = await admin
-          .from("duo_profiles")
-          .select("user_id")
-          .eq("username", username)
-          .maybeSingle();
-
-        if (!conflictLookupError && conflict) {
-          return json({ error: "اسم المستخدم مستخدم بالفعل" }, 409);
-        }
-        console.error("registration: unique conflict without matching username row", profileError.code, profileError.message, conflictLookupError?.message);
-        return json({ error: "حدث تعارض في إنشاء الحساب، لكن الاسم لا يظهر كمستخدم. أعد المحاولة أو تواصل مع الدعم." }, 500);
-      }
-      console.error("registration: profile insert failed", profileError.code, profileError.message);
-      return json({ error: "تعذر حفظ بيانات الحساب حاليًا" }, 500);
+      return json({ error: "تعذر إكمال إعداد الملف الشخصي للحساب. حاول مرة أخرى." }, 500);
     }
 
     return json({ success: true, message: "تم إنشاء الحساب. يمكنك تسجيل الدخول الآن." }, 201);
