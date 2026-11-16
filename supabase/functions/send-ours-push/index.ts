@@ -72,6 +72,7 @@ Deno.serve(async (req: Request) => {
     );
     let sent = 0;
     let failed = 0;
+    const staleTokens: string[] = [];
     for (const item of rows) {
       const response = await fetch(
         `https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`,
@@ -97,9 +98,32 @@ Deno.serve(async (req: Request) => {
           }),
         },
       );
-      if (response.ok) sent++; else failed++;
+      if (response.ok) {
+        sent++;
+        continue;
+      }
+
+      failed++;
+      const failure = await response.json().catch(() => ({}));
+      const details = Array.isArray(failure?.error?.details)
+        ? failure.error.details
+        : [];
+      const isUnregistered = details.some(
+        (detail: { errorCode?: string }) =>
+          detail?.errorCode === "UNREGISTERED",
+      );
+      if (isUnregistered) staleTokens.push(item.token);
     }
-    return new Response(JSON.stringify({ sent, failed }), {
+
+    if (staleTokens.length) {
+      await supabase.from("duo_push_tokens").delete().in("token", staleTokens);
+    }
+
+    return new Response(JSON.stringify({
+      sent,
+      failed,
+      removed_stale_tokens: staleTokens.length,
+    }), {
       headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (_error) {
