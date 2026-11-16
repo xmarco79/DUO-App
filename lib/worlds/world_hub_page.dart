@@ -398,7 +398,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     ),
                   ),
                 ),
-              if (worlds[widget.worldIndex].$4 == 'together')
+              if (worlds[widget.worldIndex].$4 == 'together' || worlds[widget.worldIndex].$4 == 'memories')
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: OutlinedButton.icon(
@@ -420,7 +420,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     },
                     icon: const Icon(Icons.calendar_month_outlined),
                     label: Text(dueDate == null
-                        ? 'تحديد تاريخ (اختياري)'
+                        ? (worlds[widget.worldIndex].$4 == 'memories' ? 'تحديد تاريخ فتح الذكرى' : 'تحديد تاريخ (اختياري)')
                         : 'التاريخ: ${dueDate!.day}/${dueDate!.month}/${dueDate!.year}'),
                   ),
                 ),
@@ -636,12 +636,29 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                       const Icon(Icons.event, size: 15, color: _gold),
                                       const SizedBox(width: 5),
                                       Text(
-                                        'الموعد: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(item['due_at'].toString()).toLocal())}',
+                                        '${isTimeCapsule ? 'تُفتح الذكرى' : 'الموعد'}: ${DateFormat('dd/MM/yyyy').format(unlockAt ?? DateTime.parse(item['due_at'].toString()).toLocal())}',
                                         style: const TextStyle(color: _gold, fontSize: 12),
                                       ),
                                     ]),
                                   ),
-                                if ((item['content']?.toString() ?? '').isNotEmpty)
+                                final unlockAt = item['due_at'] == null
+                                    ? null : DateTime.tryParse(item['due_at'].toString())?.toLocal();
+                                final isTimeCapsule = item['kind'] == 'Time Capsule';
+                                final isLockedCapsule = isTimeCapsule &&
+                                    unlockAt != null && unlockAt.isAfter(DateTime.now());
+                                if (isLockedCapsule)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Row(children: [
+                                      const Icon(Icons.lock_clock, color: _gold, size: 18),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: Text(
+                                        'رسالة مغلقة حتى ${DateFormat('dd/MM/yyyy').format(unlockAt)}',
+                                        style: const TextStyle(color: _gold),
+                                      )),
+                                    ]),
+                                  ),
+                                if (!isLockedCapsule && (item['content']?.toString() ?? '').isNotEmpty)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 6, bottom: 8),
                                     child: Text(item['content'].toString(),
