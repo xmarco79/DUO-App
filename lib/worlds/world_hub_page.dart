@@ -268,7 +268,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     maxLines: 5,
                     decoration: const InputDecoration(
                       labelText: 'الخيارات (كل خيار في سطر)',
-                      hintText: 'الخيار الأول\\nالخيار الثاني',
+                      hintText: 'الخيار الأول\nالخيار الثاني',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -286,7 +286,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       ),
     );
     if (result == true && title.text.trim().isNotEmpty) {
-      final choices = options.text.split('\\n').map((v) => v.trim())
+      final choices = options.text.split('\n').map((v) => v.trim())
           .where((v) => v.isNotEmpty).take(6).toList();
       await createItem(kind, title.text, body.text,
           payload: choices.length >= 2 ? {'options': choices, 'votes': <String, dynamic>{}} : {});
