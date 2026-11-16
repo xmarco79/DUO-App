@@ -74,7 +74,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       ('Our Goals', 'أهداف مشتركة', Icons.flag_outlined),
       ('Places to Go', 'أماكن نريد زيارتها', Icons.place_outlined),
       ('Focus Together', 'جلسة تركيز مشتركة', Icons.timer_outlined),
-      ('Future Predictions', 'توقعات نفتحها لاحقًا', Icons.crystal_ball_outlined),
+      ('Future Predictions', 'توقعات نفتحها لاحقًا', Icons.auto_awesome_outlined),
     ],
   ];
 
@@ -224,8 +224,8 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                   labelText: 'اكتب التفاصيل هنا', border: OutlineInputBorder())),
               const SizedBox(height: 16),
               FilledButton(
-                onPressed: title.text.trim().isEmpty ? null : () {
-                  Navigator.pop(context, true);
+                onPressed: () {
+                  if (title.text.trim().isNotEmpty) Navigator.pop(context, true);
                 },
                 child: const Text('حفظ'),
               ),
