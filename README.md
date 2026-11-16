@@ -51,3 +51,25 @@ The Android app is branded as OURS, with a custom navy, gold, and lavender launc
 - Keep Row Level Security enabled on private tables.
 - Invitation codes should be shared only with the intended second member.
 - Before a production release, review Edge Function rate limiting, authentication abuse protection, and storage policies.
+
+
+## Five OURS worlds
+
+- **Connect** — private notes, voice diary concepts, shared lists, and presence ideas.
+- **Universe** — shared planet, garden, constellation, aquarium, and customization concepts.
+- **Play** — daily questions, this-or-that, quizzes, polls, and safe mini missions.
+- **Memories** — timeline entries, time capsules, scrapbook entries, open-when notes, and archive.
+- **Together** — bucket list, calendar entries, shared goals, places, and focus sessions.
+
+The current shared-world implementation stores member-created entries in `duo_world_items`.
+Every row belongs to one `duo_spaces` record and is protected by RLS membership checks.
+The UI supports creating, filtering, pinning, refreshing, and deleting shared entries.
+Some named modules are currently represented by this common entry workflow; specialized
+behaviors (for example audio diary recording, calendar notifications, game scoring,
+shared live presence, and monthly analytics) still require dedicated implementation.
+
+## Development branch
+
+The ongoing full-world work is isolated on `feature/full-ours-worlds`.
+The Android workflow builds a regular release APK on pushes to that branch and uploads
+it as the `OURS-Android` artifact. It does not merge changes into `main`.
