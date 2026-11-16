@@ -738,6 +738,7 @@ class _ChatPageState extends State<ChatPage> {
   final ImagePicker imagePicker = ImagePicker();
   final Map<String, Future<String>> signedImageUrls = {};
   final Map<String, String> participantNames = {};
+  Map<String, dynamic>? replyingTo;
   String partnerName = 'مساحتكما الخاصة';
 
   RealtimeChannel? channel;
@@ -886,6 +887,59 @@ class _ChatPageState extends State<ChatPage> {
   }
 
 
+
+  String _messagePreview(Map<String, dynamic> item) {
+    if (item['deleted_at'] != null) return 'رسالة محذوفة';
+    switch (item['message_type']) {
+      case 'image':
+        return 'صورة';
+      case 'file':
+        return 'ملف';
+      case 'audio':
+        return 'رسالة صوتية';
+      default:
+        final body = item['body']?.toString() ?? '';
+        return body.length > 70 ? '${body.substring(0, 70)}…' : body;
+    }
+  }
+
+  void _replyToMessage(Map<String, dynamic> item) {
+    setState(() => replyingTo = item);
+    showMessage('الرد على: ${_messagePreview(item)}');
+  }
+
+  Future<void> _deleteMessage(Map<String, dynamic> item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: purple,
+        title: const Text('حذف الرسالة؟'),
+        content: const Text('ستظهر الرسالة كمحذوفة داخل المحادثة.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await db.from('duo_messages').update({
+        'deleted_at': DateTime.now().toUtc().toIso8601String(),
+        'body': 'تم حذف الرسالة',
+        'reply_to': null,
+      }).eq('id', item['id']).eq('sender_id', currentUserId);
+      if (mounted) showMessage('تم حذف الرسالة');
+    } catch (e) {
+      if (mounted) showMessage('تعذر حذف الرسالة: $e');
+    }
+  }
+
   Future<void> sendImage() async {
     if (uploadingImage || sending) return;
 
@@ -946,7 +1000,9 @@ class _ChatPageState extends State<ChatPage> {
           'sender_id': currentUserId,
           'body': storagePath,
           'message_type': 'image',
+          if (replyingTo != null) 'reply_to': replyingTo!['id'],
         });
+        if (mounted) setState(() => replyingTo = null);
       } catch (_) {
         await db.storage.from('duo-private').remove([storagePath]);
         rethrow;
@@ -979,7 +1035,8 @@ class _ChatPageState extends State<ChatPage> {
       final storagePath = '${widget.spaceId}/$currentUserId/${DateTime.now().microsecondsSinceEpoch}_$safeName';
       await db.storage.from('duo-private').uploadBinary(storagePath, bytes, fileOptions: FileOptions(contentType: _fileMimeType(extension), cacheControl: '3600', upsert: false));
       try {
-        await db.from('duo_messages').insert({'space_id': widget.spaceId, 'sender_id': currentUserId, 'body': storagePath, 'message_type': 'file'});
+        await db.from('duo_messages').insert({'space_id': widget.spaceId, 'sender_id': currentUserId, 'body': storagePath, 'message_type': 'file', if (replyingTo != null) 'reply_to': replyingTo!['id']});
+        if (mounted) setState(() => replyingTo = null);
       } catch (_) { await db.storage.from('duo-private').remove([storagePath]); rethrow; }
       if (mounted) showMessage('تم إرسال الملف');
     } catch (e) { if (mounted) showMessage('تعذر إرسال الملف: $e'); }
@@ -1101,7 +1158,9 @@ class _ChatPageState extends State<ChatPage> {
           'sender_id': currentUserId,
           'body': storagePath,
           'message_type': 'audio',
+          if (replyingTo != null) 'reply_to': replyingTo!['id'],
         });
+        if (mounted) setState(() => replyingTo = null);
       } catch (_) {
         await db.storage.from('duo-private').remove([storagePath]);
         rethrow;
@@ -1137,11 +1196,13 @@ class _ChatPageState extends State<ChatPage> {
         'sender_id': currentUserId,
         'body': text,
         'message_type': 'text',
+        if (replyingTo != null) 'reply_to': replyingTo!['id'],
       });
 
       if (!mounted) return;
 
       messageController.clear();
+      setState(() => replyingTo = null);
     } catch (e) {
       showMessage('تعذر إرسال الرسالة: $e');
     } finally {
@@ -1285,7 +1346,29 @@ class _ChatPageState extends State<ChatPage> {
                                         ),
                                       ),
                                     ),
-                                  if (item['message_type'] == 'file')
+                                  if (item['reply_to'] != null)
+                                    Container(
+                                      width: double.infinity,
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: navy.withOpacity(0.65),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: const Border(left: BorderSide(color: gold, width: 3)),
+                                      ),
+                                      child: Text(
+                                        'رد على: ${_messagePreview(messages.firstWhere(
+                                          (message) => message['id']?.toString() == item['reply_to']?.toString(),
+                                          orElse: () => <String, dynamic>{'deleted_at': true},
+                                        ))}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(color: lavender, fontSize: 11),
+                                      ),
+                                    ),
+                                  if (item['deleted_at'] != null)
+                                    const Text('تم حذف الرسالة', style: TextStyle(color: lavender, fontStyle: FontStyle.italic))
+                                  else if (item['message_type'] == 'file')
                                     InkWell(
                                       onTap: () => openSharedFile(item['body']?.toString() ?? ''),
                                       borderRadius: BorderRadius.circular(10),
@@ -1360,15 +1443,30 @@ class _ChatPageState extends State<ChatPage> {
                                       ),
                                     ),
                                   const SizedBox(height: 6),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Text(
-                                      _formatMessageTime(item['created_at']),
-                                      style: const TextStyle(
-                                        color: lavender,
-                                        fontSize: 10,
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        _formatMessageTime(item['created_at']),
+                                        style: const TextStyle(color: lavender, fontSize: 10),
                                       ),
-                                    ),
+                                      const SizedBox(width: 8),
+                                      InkWell(
+                                        onTap: () => _replyToMessage(item),
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(4),
+                                          child: Icon(Icons.reply_rounded, color: lavender, size: 17),
+                                        ),
+                                      ),
+                                      if (isMe && item['deleted_at'] == null)
+                                        InkWell(
+                                          onTap: () => _deleteMessage(item),
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(4),
+                                            child: Icon(Icons.delete_outline, color: Colors.redAccent, size: 17),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -1437,7 +1535,9 @@ class _ChatPageState extends State<ChatPage> {
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => sendMessage(),
                     decoration: InputDecoration(
-                      hintText: 'اكتب رسالتك...',
+                      hintText: replyingTo == null
+                          ? 'اكتب رسالتك...'
+                          : 'الرد على: ${_messagePreview(replyingTo!)}',
                       filled: true,
                       fillColor: navy,
                       border: OutlineInputBorder(
@@ -1468,6 +1568,12 @@ class _ChatPageState extends State<ChatPage> {
                           color: gold,
                         ),
                 ),
+                if (replyingTo != null)
+                  IconButton(
+                    tooltip: 'إلغاء الرد',
+                    onPressed: () => setState(() => replyingTo = null),
+                    icon: const Icon(Icons.close, color: lavender),
+                  ),
                 IconButton(
                   tooltip: 'تسجيل رسالة صوتية',
                   onPressed: sending || uploadingFile || uploadingImage ? null : startAudioRecording,
