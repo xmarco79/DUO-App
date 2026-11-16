@@ -2089,6 +2089,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
   String username = '';
   String email = '';
+  String? avatarUrl;
+  bool uploadingAvatar = false;
   bool loading = true;
   bool saving = false;
   bool quietMode = false;
@@ -2125,12 +2127,14 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       email = user.email ?? '';
       final profile = await db
           .from('duo_profiles')
-          .select('username, display_name')
+          .select('username, display_name, avatar_path')
           .eq('user_id', user.id)
           .maybeSingle();
 
       if (!mounted) return;
       username = profile?['username']?.toString() ?? '';
+      final avatarPath = profile?['avatar_path']?.toString();
+      avatarUrl = avatarPath == null ? null : db.storage.from('ours-avatars').getPublicUrl(avatarPath);
       displayNameController.text =
           profile?['display_name']?.toString() ?? '';
       setState(() => loading = false);
@@ -2146,6 +2150,39 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(value)),
     );
+  }
+
+  Future<void> chooseAvatar() async {
+    if (uploadingAvatar) return;
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 86,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
+      if (picked == null) return;
+      final user = db.auth.currentUser;
+      if (user == null) throw Exception('انتهت جلسة تسجيل الدخول');
+      setState(() => uploadingAvatar = true);
+      final extension = picked.name.split('.').last.toLowerCase();
+      final safeExtension = ['jpg', 'jpeg', 'png', 'webp'].contains(extension) ? extension : 'jpg';
+      final path = '${user.id}/avatar.$safeExtension';
+      final bytes = await picked.readAsBytes();
+      await db.storage.from('ours-avatars').uploadBinary(
+        path,
+        bytes,
+        fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+      );
+      await db.from('duo_profiles').update({'avatar_path': path}).eq('user_id', user.id);
+      if (!mounted) return;
+      setState(() => avatarUrl = db.storage.from('ours-avatars').getPublicUrl(path));
+      showMessage('تم تحديث الصورة الشخصية');
+    } catch (e) {
+      showMessage('تعذر تحديث الصورة: $e');
+    } finally {
+      if (mounted) setState(() => uploadingAvatar = false);
+    }
   }
 
   Future<void> saveProfile() async {
@@ -2245,11 +2282,31 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               padding: const EdgeInsets.all(20),
               children: [
                 const SizedBox(height: 12),
-                const CircleAvatar(
-                  radius: 42,
-                  backgroundColor: purple,
-                  child: Icon(Icons.person_rounded, color: gold, size: 42),
+                GestureDetector(
+                  onTap: uploadingAvatar ? null : chooseAvatar,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 48,
+                        backgroundColor: purple,
+                        backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
+                        child: avatarUrl == null ? const Icon(Icons.person_rounded, color: gold, size: 48) : null,
+                      ),
+                      Positioned(
+                        bottom: 0, right: 0,
+                        child: CircleAvatar(
+                          radius: 16, backgroundColor: gold,
+                          child: uploadingAvatar
+                              ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: navy))
+                              : const Icon(Icons.camera_alt_outlined, color: navy, size: 17),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: 6),
+                const Text('اضغط لتغيير الصورة', style: TextStyle(color: lavender, fontSize: 12)),
                 const SizedBox(height: 14),
                 Center(
                   child: Text(
