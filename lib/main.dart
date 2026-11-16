@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'worlds/world_hub_page.dart';
 import 'notifications/ours_notifications.dart';
+import 'memories/ours_albums_page.dart';
+import 'chat/ours_message_reactions.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -809,6 +811,8 @@ class _ChatPageState extends State<ChatPage> {
   String searchQuery = '';
 
   RealtimeChannel? channel;
+  RealtimeChannel? presenceChannel;
+  bool partnerOnline = false;
 
   String get currentUserId => db.auth.currentUser!.id;
 
@@ -818,6 +822,33 @@ class _ChatPageState extends State<ChatPage> {
     loadMessages();
     loadParticipantNames();
     listenToMessages();
+    listenToPresence();
+  }
+
+  void listenToPresence() {
+    presenceChannel = db.channel('ours-presence-${widget.spaceId}', opts: const RealtimeChannelConfig(
+      key: 'ours-presence',
+    ));
+    presenceChannel!
+      .onPresenceSync(() {
+        final states = presenceChannel!.presenceState();
+        final onlineIds = <String>{};
+        for (final state in states) {
+          for (final presence in state.presences) {
+            final id = presence.payload['user_id']?.toString();
+            if (id != null) onlineIds.add(id);
+          }
+        }
+        if (mounted) setState(() => partnerOnline = onlineIds.any((id) => id != currentUserId));
+      })
+      .subscribe((status, error) async {
+        if (status == RealtimeSubscribeStatus.subscribed) {
+          await presenceChannel!.track({
+            'user_id': currentUserId,
+            'online_at': DateTime.now().toUtc().toIso8601String(),
+          });
+        }
+      });
   }
 
   Future<void> loadParticipantNames() async {
@@ -1384,6 +1415,12 @@ class _ChatPageState extends State<ChatPage> {
     controller.dispose();
   }
 
+  void openAlbums() {
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => OursAlbumsPage(spaceId: widget.spaceId),
+    ));
+  }
+
   void openMediaGallery() {
     Navigator.push(
       context,
@@ -1400,8 +1437,10 @@ class _ChatPageState extends State<ChatPage> {
     scrollController.dispose();
     audioRecorder?.dispose();
 
-    if (channel != null) {
-      db.removeChannel(channel!);
+    if (channel != null) db.removeChannel(channel!);
+    if (presenceChannel != null) {
+      presenceChannel!.untrack();
+      db.removeChannel(presenceChannel!);
     }
 
     super.dispose();
@@ -1430,14 +1469,17 @@ class _ChatPageState extends State<ChatPage> {
                 letterSpacing: 5,
               ),
             ),
-            Text(
-              partnerName,
-              style: const TextStyle(
-                color: lavender,
-                fontSize: 11,
-                letterSpacing: 0,
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 7, height: 7, decoration: BoxDecoration(
+                color: partnerOnline ? Colors.lightGreenAccent : Colors.grey,
+                shape: BoxShape.circle,
+              )),
+              const SizedBox(width: 5),
+              Text(
+                partnerOnline ? '$partnerName · متصل الآن' : '$partnerName · غير متصل',
+                style: const TextStyle(color: lavender, fontSize: 11, letterSpacing: 0),
               ),
-            ),
+            ]),
           ],
         ),
         centerTitle: true,
@@ -1450,6 +1492,11 @@ class _ChatPageState extends State<ChatPage> {
               Icons.search,
               color: searchQuery.isEmpty ? gold : Colors.lightGreenAccent,
             ),
+          ),
+          IconButton(
+            tooltip: 'ألبومات الصور المشتركة',
+            onPressed: openAlbums,
+            icon: const Icon(Icons.photo_album_outlined, color: gold),
           ),
           IconButton(
             tooltip: 'الوسائط والملفات المشتركة',
@@ -1638,6 +1685,14 @@ class _ChatPageState extends State<ChatPage> {
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 15,
+                                      ),
+                                    ),
+                                  if (item['deleted_at'] == null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: OursMessageReactions(
+                                        messageId: item['id'].toString(),
+                                        spaceId: widget.spaceId,
                                       ),
                                     ),
                                   const SizedBox(height: 6),
