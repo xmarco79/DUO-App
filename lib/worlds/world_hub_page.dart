@@ -44,7 +44,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       ('Voice Diary', 'يوميات صوتية', Icons.mic_none_rounded),
       ('Our List', 'قائمة مشتركة', Icons.checklist_rounded),
       ('Our Radio', 'رسائل صوتية قصيرة', Icons.radio_rounded),
-      ('I'm Here', 'إشارة لطيفة بأنك موجود', Icons.waving_hand_outlined),
+      ('I’m Here', 'إشارة لطيفة بأنك موجود', Icons.waving_hand_outlined),
     ],
     [
       ('Our Little Planet', 'الكوكب المشترك', Icons.language_rounded),
@@ -140,7 +140,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     return 'حدث خطأ غير متوقع. حاول مرة أخرى.';
   }
 
-  Future<void> createItem(String kind, String title, String content) async {
+  Future<void> createItem(String kind, String title, String content, {Map<String, dynamic> payload = const {}}) async {
     if (!canSync) {
       _snack('هذه معاينة فقط. سجّل الدخول وأنشئ مساحة لحفظ بياناتكما.');
       return;
@@ -153,9 +153,27 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
         'kind': kind,
         'title': title.trim(),
         'content': content.trim(),
+        'payload': payload,
       });
       if (!mounted) return;
       _snack('تم الحفظ في مساحتكما');
+      await loadItems();
+    } catch (e) {
+      _snack(_friendlyError(e));
+    }
+  }
+
+  Future<void> voteOnItem(Map<String, dynamic> item, int optionIndex) async {
+    if (!canSync) return;
+    try {
+      final payload = Map<String, dynamic>.from(item['payload'] is Map ? item['payload'] : {});
+      final votes = Map<String, dynamic>.from(payload['votes'] is Map ? payload['votes'] : {});
+      votes[db.auth.currentUser!.id] = optionIndex;
+      payload['votes'] = votes;
+      await db.from('duo_world_items').update({
+        'payload': payload,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', item['id']).eq('space_id', widget.spaceId!);
       await loadItems();
     } catch (e) {
       _snack(_friendlyError(e));
@@ -209,6 +227,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
   Future<void> _showEditor(String kind) async {
     final title = TextEditingController();
     final body = TextEditingController();
+    final options = TextEditingController();
     final feature = features[widget.worldIndex]
         .firstWhere((entry) => entry.$1 == kind);
     final result = await showModalBottomSheet<bool>(
@@ -240,6 +259,20 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                 maxLength: 10000,
                 decoration: const InputDecoration(
                   labelText: 'اكتب التفاصيل هنا', border: OutlineInputBorder())),
+              if (kind == 'Our Votes' || kind == 'This or That')
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: TextField(
+                    controller: options,
+                    minLines: 2,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'الخيارات (كل خيار في سطر)',
+                      hintText: 'الخيار الأول\\nالخيار الثاني',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {
@@ -253,10 +286,14 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       ),
     );
     if (result == true && title.text.trim().isNotEmpty) {
-      await createItem(kind, title.text, body.text);
+      final choices = options.text.split('\\n').map((v) => v.trim())
+          .where((v) => v.isNotEmpty).take(6).toList();
+      await createItem(kind, title.text, body.text,
+          payload: choices.length >= 2 ? {'options': choices, 'votes': <String, dynamic>{}} : {});
     }
     title.dispose();
     body.dispose();
+    options.dispose();
   }
 
   @override
@@ -377,31 +414,76 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                         ]),
                       )
                     else
-                      ...items.map((item) => Card(
-                        color: _purple,
-                        margin: const EdgeInsets.only(bottom: 10),
-                        child: ListTile(
-                          title: Text(item['title']?.toString() ?? ''),
-                          subtitle: Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(item['content']?.toString() ?? '',
-                              maxLines: 5, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: _lavender, height: 1.4)),
+                      ...items.map((item) {
+                        final payload = Map<String, dynamic>.from(
+                            item['payload'] is Map ? item['payload'] : {});
+                        final choices = List<String>.from(payload['options'] is List
+                            ? payload['options'] : const []);
+                        final votes = Map<String, dynamic>.from(
+                            payload['votes'] is Map ? payload['votes'] : {});
+                        final myVote = votes[db.auth.currentUser?.id];
+                        return Card(
+                          color: _purple,
+                          margin: const EdgeInsets.only(bottom: 10),
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(children: [
+                                  Icon(item['is_pinned'] == true
+                                      ? Icons.push_pin : Icons.notes_rounded, color: _gold),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text(item['title']?.toString() ?? '',
+                                      style: const TextStyle(fontWeight: FontWeight.w600))),
+                                  PopupMenuButton<String>(
+                                    onSelected: (value) {
+                                      if (value == 'pin') togglePin(item);
+                                      if (value == 'delete') deleteItem(item);
+                                    },
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(value: 'pin', child: Text('تثبيت / إلغاء التثبيت')),
+                                      PopupMenuItem(value: 'delete', child: Text('حذف')),
+                                    ],
+                                  ),
+                                ]),
+                                if ((item['content']?.toString() ?? '').isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6, bottom: 8),
+                                    child: Text(item['content'].toString(),
+                                      style: const TextStyle(color: _lavender, height: 1.4)),
+                                  ),
+                                if (choices.isNotEmpty) ...[
+                                  const Divider(color: _lavender),
+                                  ...List.generate(choices.length, (index) {
+                                    final count = votes.values.where((v) => v == index).length;
+                                    final selected = myVote == index;
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 6),
+                                      child: OutlinedButton(
+                                        onPressed: canSync ? () => voteOnItem(item, index) : null,
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: selected ? _gold : Colors.white,
+                                          side: BorderSide(color: selected ? _gold : _lavender.withOpacity(.3)),
+                                        ),
+                                        child: Row(children: [
+                                          Expanded(child: Text(choices[index])),
+                                          Text('$count'),
+                                          if (selected) const Padding(
+                                            padding: EdgeInsets.only(left: 6),
+                                            child: Icon(Icons.check_circle, size: 17, color: _gold)),
+                                        ]),
+                                      ),
+                                    );
+                                  }),
+                                  Text('عدد الأصوات: ${votes.length}',
+                                      style: const TextStyle(color: _lavender, fontSize: 12)),
+                                ],
+                              ],
+                            ),
                           ),
-                          leading: Icon(item['is_pinned'] == true
-                              ? Icons.push_pin : Icons.notes_rounded, color: _gold),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (value) {
-                              if (value == 'pin') togglePin(item);
-                              if (value == 'delete') deleteItem(item);
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(value: 'pin', child: Text('تثبيت / إلغاء التثبيت')),
-                              PopupMenuItem(value: 'delete', child: Text('حذف')),
-                            ],
-                          ),
-                        ),
-                      )),
+                        );
+                      }),
                     const SizedBox(height: 14),
                     ...worldFeatures.map((feature) => OutlinedButton.icon(
                       onPressed: () => _showEditor(feature.$1),
