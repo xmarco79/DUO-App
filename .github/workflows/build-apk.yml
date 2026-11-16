@@ -238,6 +238,44 @@ jobs:
       - name: Analyze Dart code
         run: flutter analyze --no-fatal-infos lib
 
+      - name: Configure installable release signing
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          candidates = [Path("android/app/build.gradle.kts"), Path("android/app/build.gradle")]
+          gradle = next((p for p in candidates if p.exists()), None)
+          if gradle is None:
+              raise SystemExit("Android app Gradle file not found")
+          text = gradle.read_text()
+          kotlin_dsl = gradle.suffix == ".kts"
+          match = re.search(r"buildTypes\\s*\\{", text)
+          if not match:
+              raise SystemExit("Could not locate Android buildTypes block")
+          start = match.end()
+          depth = 1
+          i = start
+          while i < len(text) and depth:
+              if text[i] == "{":
+                  depth += 1
+              elif text[i] == "}":
+                  depth -= 1
+              i += 1
+          block = text[start:i-1]
+          release = re.search(r"release\\s*\\{", block)
+          if not release:
+              raise SystemExit("Could not locate release build type")
+          insert_at = start + release.end()
+          statement = ("\\n            signingConfig = signingConfigs.getByName('debug')"
+                       if kotlin_dsl else "\\n            signingConfig signingConfigs.debug")
+          if "signingConfig" not in block[release.end():]:
+              text = text[:insert_at] + statement + text[insert_at:]
+              gradle.write_text(text)
+          print("Configured release APK signing with the generated debug key for device testing")
+          PY
+
       - name: Build APK
         run: flutter build apk --release
 
