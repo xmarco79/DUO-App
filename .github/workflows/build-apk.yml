@@ -59,7 +59,7 @@ jobs:
               marker = 'plugins {'
               if marker not in content:
                   raise SystemExit('Could not find plugins block in Android settings')
-              content = content.replace(marker, marker + '\\n    ' + plugin, 1)
+              content = content.replace(marker, marker + '\n    ' + plugin, 1)
               settings.write_text(content)
 
           app_candidates = [Path('android/app/build.gradle.kts'), Path('android/app/build.gradle')]
@@ -71,11 +71,11 @@ jobs:
           if app.suffix == '.gradle':
               app_plugin = "id 'com.google.gms.google-services'"
           if 'com.google.gms.google-services' not in app_content:
-              app_content = re.sub(r'(plugins\\s*\\{)', r'\\1\\n    ' + app_plugin, app_content, count=1)
+              app_content = re.sub(r'(plugins\s*\{)', r'\1\n    ' + app_plugin, app_content, count=1)
               app.write_text(app_content)
           manifest = Path('android/app/src/main/AndroidManifest.xml')
           manifest_text = manifest.read_text()
-          permission = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\\n'
+          permission = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n'
           if 'android.permission.POST_NOTIFICATIONS' not in manifest_text:
               manifest_text = manifest_text.replace('    <application', permission + '    <application', 1)
               manifest.write_text(manifest_text)
