@@ -159,7 +159,7 @@ jobs:
           kotlin_dsl = gradle.suffix == ".kts"
           enabled = "isCoreLibraryDesugaringEnabled = true" if kotlin_dsl else "coreLibraryDesugaringEnabled true"
 
-          match = re.search(r"compileOptions\\s*\\{", text)
+          match = re.search(r"compileOptions\s*\{", text)
           if match:
               start = match.end()
               depth = 1
@@ -172,16 +172,16 @@ jobs:
                   i += 1
               block = text[match.start():i]
               if enabled not in block:
-                  text = text[:start] + "\\n        " + enabled + text[start:]
+                  text = text[:start] + "\n        " + enabled + text[start:]
           else:
-              android = re.search(r"android\\s*\\{", text)
+              android = re.search(r"android\s*\{", text)
               if not android:
                   raise SystemExit("Could not locate android block")
-              text = text[:android.end()] + "\\n    compileOptions {\\n        " + enabled + "\\n    }\\n" + text[android.end():]
+              text = text[:android.end()] + "\n    compileOptions {\n        " + enabled + "\n    }\n" + text[android.end():]
 
           dependency = 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' if kotlin_dsl else "coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'"
           if dependency not in text:
-              text += "\\n\\ndependencies {\\n    " + dependency + "\\n}\\n"
+              text += "\n\ndependencies {\n    " + dependency + "\n}\n"
 
           gradle.write_text(text)
           print("Enabled core library desugaring in", gradle)
