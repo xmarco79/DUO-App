@@ -4,6 +4,7 @@ import 'notifications/ours_push_service.dart';
 
 import 'package:flutter/material.dart';
 import 'worlds/world_hub_page.dart';
+import 'social/ours_social_pages.dart';
 import 'notifications/ours_notifications.dart';
 import 'memories/ours_albums_page.dart';
 import 'chat/ours_message_reactions.dart';
@@ -167,7 +168,13 @@ class OursAuthGate extends StatelessWidget {
       stream: auth.onAuthStateChange,
       builder: (context, snapshot) {
         final session = snapshot.data?.session ?? auth.currentSession;
-        if (session != null) return const HomePage();
+        if (session != null) {
+          return OursSocialHomePage(
+            onProfileTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
+            ),
+          );
+        }
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
           return const Scaffold(
