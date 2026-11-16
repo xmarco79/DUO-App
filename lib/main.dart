@@ -2162,8 +2162,27 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   Future<void> chooseAvatar() async {
     if (uploadingAvatar) return;
     try {
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        backgroundColor: purple,
+        builder: (sheetContext) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined, color: gold),
+              title: const Text('اختيار من المعرض'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined, color: gold),
+              title: const Text('التقاط صورة بالكاميرا'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+          ]),
+        ),
+      );
+      if (source == null) return;
       final picked = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 86,
         maxWidth: 1200,
         maxHeight: 1200,
@@ -2179,7 +2198,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       await db.storage.from('ours-avatars').uploadBinary(
         path,
         bytes,
-        fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+        fileOptions: FileOptions(upsert: true, contentType: safeExtension == 'png' ? 'image/png' : safeExtension == 'webp' ? 'image/webp' : 'image/jpeg'),
       );
       await db.from('duo_profiles').update({'avatar_path': path}).eq('user_id', user.id);
       if (!mounted) return;
