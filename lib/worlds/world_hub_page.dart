@@ -490,11 +490,11 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       final quizOptions = lines.take(6).toList();
       final correct = quizOptions.indexWhere((v) =>
           v.toLowerCase() == correctAnswer.text.trim().toLowerCase());
-      final payload = isTaskList
-          ? {'tasks': lines.map((v) => {'title': v, 'done': false}).toList()}
+      final Map<String, dynamic> payload = isTaskList
+          ? <String, dynamic>{'tasks': lines.map((v) => <String, dynamic>{'title': v, 'done': false}).toList()}
           : isQuiz && quizOptions.length >= 2 && correct >= 0
-              ? {'options': quizOptions, 'votes': <String, dynamic>{}, 'correct_index': correct}
-              : lines.length >= 2 ? {'options': quizOptions, 'votes': <String, dynamic>{}} : {};
+              ? <String, dynamic>{'options': quizOptions, 'votes': <String, dynamic>{}, 'correct_index': correct}
+              : lines.length >= 2 ? <String, dynamic>{'options': quizOptions, 'votes': <String, dynamic>{}} : <String, dynamic>{};
       if (isQuiz && (quizOptions.length < 2 || correct < 0)) {
         _snack('أضف خيارين على الأقل وحدد الإجابة الصحيحة من بينها.');
       } else {
