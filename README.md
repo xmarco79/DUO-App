@@ -63,7 +63,7 @@ The Android app is branded as OURS, with a custom navy, gold, and lavender launc
 
 The current shared-world implementation stores member-created entries in `duo_world_items`.
 Every row belongs to one `duo_spaces` record and is protected by RLS membership checks.
-The UI supports creating, filtering, pinning, refreshing, and deleting shared entries.
+The UI supports creating, filtering, pinning, refreshing, and deleting shared entries. Polls and This-or-That entries can include up to six options; each signed-in member can cast or change one vote, and the current vote totals are displayed.
 Some named modules are currently represented by this common entry workflow; specialized
 behaviors (for example audio diary recording, calendar notifications, game scoring,
 shared live presence, and monthly analytics) still require dedicated implementation.
