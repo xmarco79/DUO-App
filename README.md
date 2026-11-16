@@ -71,3 +71,13 @@ Voice Diary entries can record AAC audio, upload it to the private storage bucke
 The ongoing full-world work is isolated on `feature/full-ours-worlds`.
 The Android workflow builds a regular release APK on pushes to that branch and uploads
 it as the `OURS-Android` artifact. It does not merge changes into `main`.
+
+
+## Collaboration features added
+
+- Private notification inbox with unread count and realtime in-app updates. Database triggers create notifications for partner messages and new world entries. Android notifications while the app is closed still require Firebase Cloud Messaging project credentials and device-token registration.
+- Realtime partner presence in the chat header, using Supabase Presence while the chat channel is connected.
+- Shared photo albums: create albums, upload private images to the `duo-private` bucket, and view the gallery with short-lived signed URLs.
+- Message emoji reactions are stored per member and synchronized through Realtime.
+- Tic Tac Toe is available from the Play world. Moves are validated atomically by a database function that checks membership, turn ownership, occupied cells, win conditions, and draw conditions.
+- Other game types can use the shared game-session schema, but do not yet have complete dedicated gameplay screens or scoring flows.
