@@ -6,6 +6,8 @@ import 'package:record/record.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import '../games/ours_tic_tac_toe_page.dart';
+import '../memories/ours_albums_page.dart';
 
 const _navy = Color(0xFF10101C);
 const _purple = Color(0xFF29213D);
@@ -552,6 +554,21 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     ]),
                     const SizedBox(height: 8),
                     Text(world.$2, style: const TextStyle(color: _lavender)),
+                    const SizedBox(height: 16),
+                    if (canSync && widget.worldIndex == 2)
+                      SizedBox(width: double.infinity, child: FilledButton.icon(
+                        onPressed: () => Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => OursTicTacToePage(spaceId: widget.spaceId!))),
+                        icon: const Icon(Icons.grid_3x3_rounded),
+                        label: const Text('العبا XO مباشرة'),
+                      )),
+                    if (canSync && widget.worldIndex == 3)
+                      SizedBox(width: double.infinity, child: OutlinedButton.icon(
+                        onPressed: () => Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => OursAlbumsPage(spaceId: widget.spaceId!))),
+                        icon: const Icon(Icons.photo_album_outlined),
+                        label: const Text('فتح ألبومات الصور'),
+                      )),
                     const SizedBox(height: 20),
                     if (!canSync)
                       Container(
