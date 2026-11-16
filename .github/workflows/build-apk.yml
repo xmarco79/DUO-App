@@ -26,6 +26,19 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android --org com.duoapp --project-name duo .
 
+      - name: Add microphone permission
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          content = manifest.read_text()
+          permission = '    <uses-permission android:name="android.permission.RECORD_AUDIO" />\\n'
+          if 'android.permission.RECORD_AUDIO' not in content:
+              content = content.replace('    <application', permission + '    <application', 1)
+          manifest.write_text(content)
+          PY
+
       - name: Apply OURS Android branding
         shell: bash
         run: |
