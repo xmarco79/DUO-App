@@ -365,6 +365,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     final title = TextEditingController();
     final body = TextEditingController();
     final options = TextEditingController();
+    final correctAnswer = TextEditingController();
     DateTime? dueDate;
     final feature = features[widget.worldIndex]
         .firstWhere((entry) => entry.$1 == kind);
@@ -411,7 +412,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     ),
                   ),
                 ),
-              if (kind == 'Our Votes' || kind == 'This or That' || kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List')
+              if (kind == 'Our Votes' || kind == 'This or That' || kind == 'Who Knows Who?' || kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List')
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: TextField(
@@ -421,6 +422,17 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     decoration: const InputDecoration(
                       labelText: (kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List') ? 'المهام (كل مهمة في سطر)' : 'الخيارات (كل خيار في سطر)',
                       hintText: 'الخيار الأول\nالخيار الثاني',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+              if (kind == 'Who Knows Who?')
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: TextField(
+                    controller: correctAnswer,
+                    decoration: const InputDecoration(
+                      labelText: 'الإجابة الصحيحة (اكتبها كما في الخيارات)',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -469,14 +481,25 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       final lines = options.text.split('\n').map((v) => v.trim())
           .where((v) => v.isNotEmpty).take(30).toList();
       final isTaskList = kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List';
+      final isQuiz = kind == 'Who Knows Who?';
+      final quizOptions = lines.take(6).toList();
+      final correct = quizOptions.indexWhere((v) =>
+          v.toLowerCase() == correctAnswer.text.trim().toLowerCase());
       final payload = isTaskList
           ? {'tasks': lines.map((v) => {'title': v, 'done': false}).toList()}
-          : lines.length >= 2 ? {'options': lines.take(6).toList(), 'votes': <String, dynamic>{}} : {};
-      await createItem(kind, title.text, body.text, payload: payload, dueAt: dueDate);
+          : isQuiz && quizOptions.length >= 2 && correct >= 0
+              ? {'options': quizOptions, 'votes': <String, dynamic>{}, 'correct_index': correct}
+              : lines.length >= 2 ? {'options': quizOptions, 'votes': <String, dynamic>{}} : {};
+      if (isQuiz && (quizOptions.length < 2 || correct < 0)) {
+        _snack('أضف خيارين على الأقل وحدد الإجابة الصحيحة من بينها.');
+      } else {
+        await createItem(kind, title.text, body.text, payload: payload, dueAt: dueDate);
+      }
     }
     title.dispose();
     body.dispose();
     options.dispose();
+    correctAnswer.dispose();
   }
 
   @override
@@ -621,6 +644,9 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                         );
                         final myVote = votes[db.auth.currentUser?.id];
                         final audioPath = payload['audio_path']?.toString();
+                        final isQuiz = item['kind'] == 'Who Knows Who?';
+                        final correctIndex = payload['correct_index'];
+                        final quizFinished = isQuiz && votes.length >= 2 && correctIndex is int;
                         final unlockAt = item['due_at'] == null
                                     ? null : DateTime.tryParse(item['due_at'].toString())?.toLocal();
                         final isTimeCapsule = item['kind'] == 'Time Capsule';
@@ -675,6 +701,12 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                       ),
                                     ]),
                                   ),
+                                if (isQuiz && !quizFinished)
+                                  const Padding(
+                                    padding: EdgeInsets.only(bottom: 8),
+                                    child: Text('تظهر الإجابة الصحيحة بعد مشاركة الطرفين.',
+                                      style: TextStyle(color: _lavender, fontSize: 12)),
+                                  ),
                                 if (isLockedCapsule)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 8),
@@ -711,6 +743,14 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                   Text('${tasks.where((task) => task['done'] == true).length} / ${tasks.length} مكتملة',
                                     style: const TextStyle(color: _lavender, fontSize: 12)),
                                 ],
+                                if (quizFinished)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: Text(
+                                      'الإجابة الصحيحة: ${choices[correctIndex]}',
+                                      style: const TextStyle(color: _gold, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
                                 if (choices.isNotEmpty) ...[
                                   const Divider(color: _lavender),
                                   ...List.generate(choices.length, (index) {
@@ -727,6 +767,8 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                         child: Row(children: [
                                           Expanded(child: Text(choices[index])),
                                           Text('$count'),
+                                          if (quizFinished && index == correctIndex)
+                                            const Icon(Icons.check_circle, color: Colors.greenAccent, size: 18),
                                           if (selected) const Padding(
                                             padding: EdgeInsets.only(left: 6),
                                             child: Icon(Icons.check_circle, size: 17, color: _gold)),
