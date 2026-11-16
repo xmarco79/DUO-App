@@ -18,6 +18,9 @@ const purple = Color(0xFF29213D);
 const lavender = Color(0xFFB9A2D5);
 const gold = Color(0xFFD9BC86);
 
+// Preview builds open the home screen without requiring an account.
+const bool previewMode = bool.fromEnvironment('OURS_PREVIEW_MODE', defaultValue: false);
+
 // ==================== MAIN ====================
 
 Future<void> main() async {
@@ -51,9 +54,11 @@ class OursApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: Supabase.instance.client.auth.currentSession == null
-          ? const LoginPage()
-          : const HomePage(),
+      home: previewMode
+          ? const HomePage()
+          : Supabase.instance.client.auth.currentSession == null
+              ? const LoginPage()
+              : const HomePage(),
     );
   }
 }
@@ -588,7 +593,7 @@ class _HomePageState extends State<HomePage> {
         ),
         centerTitle: true,
         backgroundColor: navy,
-        actions: [
+        actions: previewMode ? const [] : [
           IconButton(
             tooltip: 'الملف الشخصي والإعدادات',
             icon: const Icon(Icons.person_outline),
@@ -644,19 +649,44 @@ class _HomePageState extends State<HomePage> {
                   style: TextStyle(color: lavender),
                 ),
                 const SizedBox(height: 45),
+                if (previewMode) ...[
+                  Card(
+                    color: purple,
+                    child: const Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          Icon(Icons.visibility_outlined, color: gold),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'وضع معاينة — يمكنك استكشاف الواجهة، لكن إنشاء المساحات والمحادثات يتطلب تسجيل الدخول.',
+                              style: TextStyle(color: lavender),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                ],
                 if (spaceId == null) ...[
                   actionCard(
                     icon: Icons.add_circle_outline,
                     title: 'إنشاء مساحة جديدة',
                     subtitle: 'أنشئ عالمك الخاص وأرسل رمز الدعوة',
-                    onTap: loading ? null : createSpace,
+                    onTap: loading ? null : previewMode
+                        ? () => message('هذه نسخة معاينة؛ إنشاء مساحة يتطلب حسابًا.')
+                        : createSpace,
                   ),
                   const SizedBox(height: 18),
                   actionCard(
                     icon: Icons.vpn_key_outlined,
                     title: 'الانضمام إلى مساحة',
                     subtitle: 'أدخل رمز الدعوة الذي وصلك',
-                    onTap: loading ? null : showJoinDialog,
+                    onTap: loading ? null : previewMode
+                        ? () => message('هذه نسخة معاينة؛ الانضمام يتطلب حسابًا.')
+                        : showJoinDialog,
                   ),
                 ] else ...[
                   const Card(
