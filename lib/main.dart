@@ -1,5 +1,6 @@
 
 import 'dart:io';
+import 'notifications/ours_push_service.dart';
 
 import 'package:flutter/material.dart';
 import 'worlds/world_hub_page.dart';
@@ -35,6 +36,8 @@ Future<void> main() async {
     url: 'https://sthlcrgwpzqhxtpevqwg.supabase.co',
     publishableKey: 'sb_publishable_xUgF7Wh8fE4wMpuZSrROwA_DNdPJKGM',
   );
+
+  await OursPushService.initialize();
 
   runApp(const OursApp());
 }
