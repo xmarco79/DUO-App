@@ -63,8 +63,8 @@ The Android app is branded as OURS, with a custom navy, gold, and lavender launc
 
 The current shared-world implementation stores member-created entries in `duo_world_items`.
 Every row belongs to one `duo_spaces` record and is protected by RLS membership checks.
-The UI supports creating, filtering, pinning, refreshing, and deleting shared entries. Polls and This-or-That entries can include up to six options; each signed-in member can cast or change one vote, and the current vote totals are displayed. Our List, Mini Missions, and Bucket List support shared checkable tasks with completion counts.
-Voice Diary entries can record AAC audio, upload it to the private storage bucket, and play it through short-lived signed URLs. Time Capsule entries can be locked until their selected opening date. Together entries can save a shared due date. Local notifications, background reminders, dedicated game scoring/round synchronization, live presence, photo scrapbook uploads, interactive planet/garden scenes, and monthly analytics are not yet implemented.
+The UI supports creating, filtering, pinning, refreshing, and deleting shared entries. World entries synchronize live between the two members through Supabase Realtime. Polls and This-or-That entries can include up to six options; each signed-in member can cast or change one vote, and the current vote totals are displayed. Our List, Mini Missions, and Bucket List support shared checkable tasks with completion counts.
+Voice Diary entries can record AAC audio, upload it to the private storage bucket, and play it through short-lived signed URLs. World item changes are subscribed through the `supabase_realtime` publication and reloaded on each change. Time Capsule entries can be locked until their selected opening date. Together entries can save a shared due date. Local notifications, background reminders, dedicated game scoring/round synchronization, live presence, photo scrapbook uploads, interactive planet/garden scenes, and monthly analytics are not yet implemented.
 
 ## Development branch
 
