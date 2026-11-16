@@ -62,7 +62,95 @@ class OursApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: previewMode ? const HomePage() : const OursAuthGate(),
+      home: previewMode ? const HomePage() : const OursEntryGate(),
+    );
+  }
+}
+
+// First-launch welcome screen. It is shown once before authentication.
+class OursEntryGate extends StatefulWidget {
+  const OursEntryGate({super.key});
+  @override
+  State<OursEntryGate> createState() => _OursEntryGateState();
+}
+
+class _OursEntryGateState extends State<OursEntryGate> {
+  bool? _hasSeenWelcome;
+  @override
+  void initState() { super.initState(); _loadWelcomeState(); }
+
+  Future<void> _loadWelcomeState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) setState(() => _hasSeenWelcome = prefs.getBool('ours_welcome_seen') ?? false);
+  }
+
+  Future<void> _finishWelcome() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('ours_welcome_seen', true);
+    if (mounted) setState(() => _hasSeenWelcome = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasSeenWelcome == null) {
+      return const Scaffold(backgroundColor: navy, body: Center(child: CircularProgressIndicator(color: gold)));
+    }
+    if (_hasSeenWelcome!) return const OursAuthGate();
+    return WelcomePage(onLogin: _finishWelcome, onRegister: _finishWelcome);
+  }
+}
+
+class WelcomePage extends StatelessWidget {
+  final VoidCallback onLogin;
+  final VoidCallback onRegister;
+  const WelcomePage({super.key, required this.onLogin, required this.onRegister});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(28, 36, 28, 28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 184, height: 184,
+                  decoration: BoxDecoration(color: purple.withValues(alpha: .55), shape: BoxShape.circle,
+                    border: Border.all(color: lavender.withValues(alpha: .25))),
+                  child: const Icon(Icons.all_inclusive_rounded, color: gold, size: 112),
+                ),
+                const SizedBox(height: 30),
+                const Text('OURS', style: TextStyle(color: gold, fontSize: 44, letterSpacing: 12, fontWeight: FontWeight.w300)),
+                const SizedBox(height: 8),
+                const Text('YOUR PRIVATE UNIVERSE', style: TextStyle(color: lavender, letterSpacing: 3, fontSize: 11)),
+                const SizedBox(height: 30),
+                const Text('عالمك الخاص، بطريقتك', textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 12),
+                const Text('تواصل مع الأشخاص المهمين لك، وشارك لحظاتك ومحادثاتك في تجربة خاصة تجمعكم.',
+                  textAlign: TextAlign.center, style: TextStyle(color: lavender, height: 1.8, fontSize: 15)),
+                const SizedBox(height: 38),
+                SizedBox(width: double.infinity, height: 54,
+                  child: FilledButton(onPressed: () {
+                    onRegister();
+                    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage(initialCreatingAccount: true)));
+                  }, child: const Text('إنشاء حساب'))),
+                const SizedBox(height: 12),
+                SizedBox(width: double.infinity, height: 54,
+                  child: OutlinedButton(onPressed: () {
+                    onLogin();
+                    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
+                  }, style: OutlinedButton.styleFrom(foregroundColor: lavender, side: const BorderSide(color: lavender)),
+                    child: const Text('تسجيل الدخول'))),
+                const SizedBox(height: 28),
+                const Text('خصوصيتك أولويتنا', style: TextStyle(color: gold, fontSize: 12, letterSpacing: 1.2)),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -96,7 +184,8 @@ class OursAuthGate extends StatelessWidget {
 // ==================== LOGIN PAGE ====================
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final bool initialCreatingAccount;
+  const LoginPage({super.key, this.initialCreatingAccount = false});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -108,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
   final confirmPassword = TextEditingController();
 
   bool loading = false;
-  bool creatingAccount = false;
+  late bool creatingAccount = widget.initialCreatingAccount;
 
   SupabaseClient get db => Supabase.instance.client;
 
@@ -631,6 +720,20 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  backgroundColor: purple,
+                  icon: const Icon(Icons.logout_rounded, color: gold),
+                  title: const Text('تسجيل الخروج'),
+                  content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+                    FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('تسجيل الخروج')),
+                  ],
+                ),
+              );
+              if (confirmed != true) return;
               try {
                 await OursPushService.unregisterCurrentToken();
                 await db.auth.signOut();
@@ -2075,6 +2178,20 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   }
 
   Future<void> signOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: purple,
+        icon: const Icon(Icons.logout_rounded, color: gold),
+        title: const Text('تسجيل الخروج'),
+        content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('تسجيل الخروج')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
       await OursPushService.unregisterCurrentToken();
                 await db.auth.signOut();
