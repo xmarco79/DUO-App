@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'worlds/world_hub_page.dart';
+import 'notifications/ours_notifications.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -597,6 +598,7 @@ class _HomePageState extends State<HomePage> {
         centerTitle: true,
         backgroundColor: navy,
         actions: previewMode ? const [] : [
+          OursNotificationBell(spaceId: spaceId),
           IconButton(
             tooltip: 'الملف الشخصي والإعدادات',
             icon: const Icon(Icons.person_outline),
