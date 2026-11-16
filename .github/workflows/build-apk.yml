@@ -22,6 +22,65 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android --org com.ours --project-name ours .
 
+      - name: Configure Firebase Android app
+        shell: bash
+        run: |
+          mkdir -p android/app
+          cat > android/app/google-services.json <<'EOF'
+          {
+            "project_info": {
+              "project_number": "893369880607",
+              "project_id": "ours-fbec8",
+              "storage_bucket": "ours-fbec8.firebasestorage.app"
+            },
+            "client": [{
+              "client_info": {
+                "mobilesdk_app_id": "1:893369880607:android:240e62b6c7c375fd24c52a",
+                "android_client_info": { "package_name": "com.ours.ours" }
+              },
+              "oauth_client": [],
+              "api_key": [{ "current_key": "AIzaSyAwBjEKWDs8kK4OSf89FK5J7W-ANip2AWg" }],
+              "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+            }],
+            "configuration_version": "1"
+          }
+          EOF
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          settings = Path('android/settings.gradle.kts')
+          if not settings.exists():
+              settings = Path('android/settings.gradle')
+          content = settings.read_text()
+          plugin = 'id("com.google.gms.google-services") version "4.4.2" apply false'
+          if settings.suffix == '.gradle':
+              plugin = "id 'com.google.gms.google-services' version '4.4.2' apply false"
+          if 'com.google.gms.google-services' not in content:
+              marker = 'plugins {'
+              if marker not in content:
+                  raise SystemExit('Could not find plugins block in Android settings')
+              content = content.replace(marker, marker + '\\n    ' + plugin, 1)
+              settings.write_text(content)
+
+          app_candidates = [Path('android/app/build.gradle.kts'), Path('android/app/build.gradle')]
+          app = next((p for p in app_candidates if p.exists()), None)
+          if app is None:
+              raise SystemExit('Android app Gradle file not found')
+          app_content = app.read_text()
+          app_plugin = 'id("com.google.gms.google-services")'
+          if app.suffix == '.gradle':
+              app_plugin = "id 'com.google.gms.google-services'"
+          if 'com.google.gms.google-services' not in app_content:
+              app_content = re.sub(r'(plugins\\s*\\{)', r'\\1\\n    ' + app_plugin, app_content, count=1)
+              app.write_text(app_content)
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          manifest_text = manifest.read_text()
+          permission = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\\n'
+          if 'android.permission.POST_NOTIFICATIONS' not in manifest_text:
+              manifest_text = manifest_text.replace('    <application', permission + '    <application', 1)
+              manifest.write_text(manifest_text)
+          PY
+
       - name: Add microphone permission
         shell: bash
         run: |
