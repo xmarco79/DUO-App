@@ -800,6 +800,7 @@ class _ChatPageState extends State<ChatPage> {
 
   bool loading = true;
   bool sending = false;
+  bool quietMode = false;
   bool uploadingImage = false;
   bool uploadingFile = false;
   bool recordingAudio = false;
@@ -823,6 +824,7 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     loadMessages();
+    loadQuietMode();
     loadParticipantNames();
     listenToMessages();
     listenToPresence();
