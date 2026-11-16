@@ -7,6 +7,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1899,11 +1900,30 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   String email = '';
   bool loading = true;
   bool saving = false;
+  bool quietMode = false;
+  bool showOnlineStatus = true;
+  bool confirmBeforeDelete = true;
 
   @override
   void initState() {
     super.initState();
+    loadPreferences();
     loadProfile();
+  }
+
+  Future<void> loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      quietMode = prefs.getBool('ours_quiet_mode') ?? false;
+      showOnlineStatus = prefs.getBool('ours_show_online') ?? true;
+      confirmBeforeDelete = prefs.getBool('ours_confirm_delete') ?? true;
+    });
+  }
+
+  Future<void> savePreference(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
   }
 
   Future<void> loadProfile() async {
@@ -2092,6 +2112,42 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   style: TextStyle(color: gold, fontSize: 18),
                 ),
                 const SizedBox(height: 10),
+                SwitchListTile(
+                  value: quietMode,
+                  activeColor: gold,
+                  secondary: const Icon(Icons.notifications_off_outlined, color: gold),
+                  title: const Text('الوضع الهادئ'),
+                  subtitle: const Text('إيقاف التنبيهات داخل التطبيق عند تفعيلها مستقبلًا',
+                      style: TextStyle(color: lavender)),
+                  onChanged: (value) {
+                    setState(() => quietMode = value);
+                    savePreference('ours_quiet_mode', value);
+                  },
+                ),
+                SwitchListTile(
+                  value: showOnlineStatus,
+                  activeColor: gold,
+                  secondary: const Icon(Icons.visibility_outlined, color: gold),
+                  title: const Text('إظهار حالة النشاط'),
+                  subtitle: const Text('تفضيل محلي؛ لا يفعّل حالة اتصال عامة حاليًا',
+                      style: TextStyle(color: lavender)),
+                  onChanged: (value) {
+                    setState(() => showOnlineStatus = value);
+                    savePreference('ours_show_online', value);
+                  },
+                ),
+                SwitchListTile(
+                  value: confirmBeforeDelete,
+                  activeColor: gold,
+                  secondary: const Icon(Icons.delete_outline, color: gold),
+                  title: const Text('تأكيد الحذف'),
+                  subtitle: const Text('الاحتفاظ بتأكيد قبل حذف العناصر',
+                      style: TextStyle(color: lavender)),
+                  onChanged: (value) {
+                    setState(() => confirmBeforeDelete = value);
+                    savePreference('ours_confirm_delete', value);
+                  },
+                ),
                 settingsTile(
                   icon: Icons.lock_outline,
                   title: 'مساحتك الخاصة',
