@@ -180,6 +180,26 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     }
   }
 
+  Future<void> toggleTask(Map<String, dynamic> item, int taskIndex, bool done) async {
+    try {
+      final payload = Map<String, dynamic>.from(item['payload'] is Map ? item['payload'] : {});
+      final tasks = List<Map<String, dynamic>>.from(
+        (payload['tasks'] is List ? payload['tasks'] as List : const [])
+            .map((v) => Map<String, dynamic>.from(v as Map)),
+      );
+      if (taskIndex < 0 || taskIndex >= tasks.length) return;
+      tasks[taskIndex]['done'] = done;
+      payload['tasks'] = tasks;
+      await db.from('duo_world_items').update({
+        'payload': payload,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', item['id']).eq('space_id', widget.spaceId!);
+      await loadItems();
+    } catch (e) {
+      _snack(_friendlyError(e));
+    }
+  }
+
   Future<void> togglePin(Map<String, dynamic> item) async {
     try {
       await db.from('duo_world_items').update({
@@ -259,7 +279,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                 maxLength: 10000,
                 decoration: const InputDecoration(
                   labelText: 'اكتب التفاصيل هنا', border: OutlineInputBorder())),
-              if (kind == 'Our Votes' || kind == 'This or That')
+              if (kind == 'Our Votes' || kind == 'This or That' || kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List')
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: TextField(
@@ -267,7 +287,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     minLines: 2,
                     maxLines: 5,
                     decoration: const InputDecoration(
-                      labelText: 'الخيارات (كل خيار في سطر)',
+                      labelText: (kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List') ? 'المهام (كل مهمة في سطر)' : 'الخيارات (كل خيار في سطر)',
                       hintText: 'الخيار الأول\nالخيار الثاني',
                       border: OutlineInputBorder(),
                     ),
@@ -286,10 +306,13 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       ),
     );
     if (result == true && title.text.trim().isNotEmpty) {
-      final choices = options.text.split('\n').map((v) => v.trim())
-          .where((v) => v.isNotEmpty).take(6).toList();
-      await createItem(kind, title.text, body.text,
-          payload: choices.length >= 2 ? {'options': choices, 'votes': <String, dynamic>{}} : {});
+      final lines = options.text.split('\n').map((v) => v.trim())
+          .where((v) => v.isNotEmpty).take(30).toList();
+      final isTaskList = kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List';
+      final payload = isTaskList
+          ? {'tasks': lines.map((v) => {'title': v, 'done': false}).toList()}
+          : lines.length >= 2 ? {'options': lines.take(6).toList(), 'votes': <String, dynamic>{}} : {};
+      await createItem(kind, title.text, body.text, payload: payload);
     }
     title.dispose();
     body.dispose();
@@ -421,6 +444,10 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                             ? payload['options'] : const []);
                         final votes = Map<String, dynamic>.from(
                             payload['votes'] is Map ? payload['votes'] : {});
+                        final tasks = List<Map<String, dynamic>>.from(
+                          (payload['tasks'] is List ? payload['tasks'] as List : const [])
+                              .map((v) => Map<String, dynamic>.from(v as Map)),
+                        );
                         final myVote = votes[db.auth.currentUser?.id];
                         return Card(
                           color: _purple,
@@ -453,6 +480,24 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                     child: Text(item['content'].toString(),
                                       style: const TextStyle(color: _lavender, height: 1.4)),
                                   ),
+                                if (tasks.isNotEmpty) ...[
+                                  const Divider(color: _lavender),
+                                  ...List.generate(tasks.length, (index) => CheckboxListTile(
+                                    value: tasks[index]['done'] == true,
+                                    onChanged: canSync ? (value) => toggleTask(item, index, value == true) : null,
+                                    activeColor: _gold,
+                                    checkColor: _navy,
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(tasks[index]['title']?.toString() ?? '',
+                                      style: TextStyle(
+                                        color: _lavender,
+                                        decoration: tasks[index]['done'] == true
+                                            ? TextDecoration.lineThrough : TextDecoration.none,
+                                      )),
+                                  )),
+                                  Text('${tasks.where((task) => task['done'] == true).length} / ${tasks.length} مكتملة',
+                                    style: const TextStyle(color: _lavender, fontSize: 12)),
+                                ],
                                 if (choices.isNotEmpty) ...[
                                   const Divider(color: _lavender),
                                   ...List.generate(choices.length, (index) {
