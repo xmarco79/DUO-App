@@ -198,6 +198,7 @@ class _LoginPageState extends State<LoginPage> {
           loginData['error'] ?? 'تم إنشاء الحساب، تعذر تسجيل الدخول',
         );
       }
+
       final refreshToken = loginData['refresh_token'];
 
       if (refreshToken == null) {
@@ -396,7 +397,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    loadExistingSpace();  }
+    loadExistingSpace();
+  }
 
   Future<void> loadExistingSpace() async {
     try {
@@ -595,7 +597,8 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => const ProfileSettingsPage(),
-                ),              );
+                ),
+              );
             },
           ),
           IconButton(
@@ -794,7 +797,8 @@ class _ChatPageState extends State<ChatPage> {
 
       if (!mounted) return;
       setState(() {
-        participantNames          ..clear()
+        participantNames
+          ..clear()
           ..addAll(names);
         final otherIds = ids.where((id) => id != currentUserId).toList();
         if (otherIds.isNotEmpty) {
@@ -993,6 +997,7 @@ class _ChatPageState extends State<ChatPage> {
         showMessage('حجم الصورة كبير. اختر صورة أقل من 15 ميجابايت');
         return;
       }
+
       setState(() => uploadingImage = true);
 
       final originalName = picked.name;
@@ -1096,8 +1101,7 @@ class _ChatPageState extends State<ChatPage> {
         .createSignedUrl(path, 900);
     signedImageUrls[path] = future;
 
-    // Refresh before the 15-minute signed URL expires. This matters when
-    // a chat stays open for a long time and old image bubbles are rebuilt.
+    // Refresh before the 15-minute signed URL expires.
     future.then((_) {
       Future<void>.delayed(const Duration(minutes: 10), () {
         if (!identical(signedImageUrls[path], future)) return;
@@ -1211,7 +1215,8 @@ class _ChatPageState extends State<ChatPage> {
           'message_type': 'audio',
           if (replyingTo != null) 'reply_to': replyingTo!['id'],
         });
-        if (mounted) setState(() => replyingTo = null);      } catch (_) {
+        if (mounted) setState(() => replyingTo = null);
+      } catch (_) {
         await db.storage.from('duo-private').remove([storagePath]);
         rethrow;
       }
@@ -1410,7 +1415,8 @@ class _ChatPageState extends State<ChatPage> {
                       padding: const EdgeInsets.all(3),
                       decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
                       child: Text('$unreadIncomingCount', style: const TextStyle(fontSize: 9, color: Colors.white)),
-                    ),                  ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1609,7 +1615,8 @@ class _ChatPageState extends State<ChatPage> {
                                           ),
                                         ),
                                     ],
-                                  ),                                ],
+                                  ),
+                                ],
                               ),
                             ),
                           );
@@ -1808,7 +1815,8 @@ class _MediaList extends StatelessWidget {
           ),
           trailing: const Icon(Icons.open_in_new, color: lavender),
           onTap: () async {
-            try {              final url = await Supabase.instance.client.storage.from('duo-private').createSignedUrl(path, 900);
+            try {
+              final url = await Supabase.instance.client.storage.from('duo-private').createSignedUrl(path, 900);
               final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
               if (!opened && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح العنصر')));
@@ -2007,7 +2015,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 InputDecorator(
                   decoration: const InputDecoration(
                     labelText: 'البريد المرتبط بالحساب',
-                    prefixIcon: Icon(Icons.email_outlined),                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(),
                   ),
                   child: Text(email.isEmpty ? 'غير متاح' : email),
                 ),
