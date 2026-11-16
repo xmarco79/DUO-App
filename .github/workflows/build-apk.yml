@@ -251,7 +251,7 @@ jobs:
               raise SystemExit("Android app Gradle file not found")
           text = gradle.read_text()
           kotlin_dsl = gradle.suffix == ".kts"
-          match = re.search(r"buildTypes\\s*\\{", text)
+          match = re.search(r"buildTypes\s*\{", text)
           if not match:
               raise SystemExit("Could not locate Android buildTypes block")
           start = match.end()
@@ -264,12 +264,12 @@ jobs:
                   depth -= 1
               i += 1
           block = text[start:i-1]
-          release = re.search(r"release\\s*\\{", block)
+          release = re.search(r"release\s*\{", block)
           if not release:
               raise SystemExit("Could not locate release build type")
           insert_at = start + release.end()
-          statement = ("\\n            signingConfig = signingConfigs.getByName('debug')"
-                       if kotlin_dsl else "\\n            signingConfig signingConfigs.debug")
+          statement = ("\n            signingConfig = signingConfigs.getByName('debug')"
+                       if kotlin_dsl else "\n            signingConfig signingConfigs.debug")
           if "signingConfig" not in block[release.end():]:
               text = text[:insert_at] + statement + text[insert_at:]
               gradle.write_text(text)
