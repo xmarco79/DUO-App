@@ -101,9 +101,16 @@ jobs:
           python3 -m pip install --quiet Pillow
           python3 - <<'PY'
           from pathlib import Path
-          from PIL import Image
+          from PIL import Image, ImageFile
 
-          source = Image.open("assets/ours_icon.png").convert("RGBA")
+          # The committed source icon contains a damaged/truncated PNG stream.
+          # Pillow can still recover its decodable pixels for Android mipmaps.
+          ImageFile.LOAD_TRUNCATED_IMAGES = True
+          with Image.open("assets/ours_icon.png") as original:
+              original.load()
+              source = original.convert("RGBA")
+          if source.width == 0 or source.height == 0:
+              raise SystemExit("The OURS source icon has no recoverable image data")
           sizes = {
               "mdpi": 48,
               "hdpi": 72,
