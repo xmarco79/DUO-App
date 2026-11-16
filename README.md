@@ -55,18 +55,16 @@ The Android app is branded as OURS, with a custom navy, gold, and lavender launc
 
 ## Five OURS worlds
 
-- **Connect** — private notes, voice diary concepts, shared lists, and presence ideas.
+- **Connect** — private notes, shared checklists, and private voice diary recording/playback in the duo-private bucket.
 - **Universe** — shared planet, garden, constellation, aquarium, and customization concepts.
 - **Play** — daily questions, this-or-that, quizzes, polls, and safe mini missions.
-- **Memories** — timeline entries, time capsules, scrapbook entries, open-when notes, and archive.
-- **Together** — bucket list, calendar entries, shared goals, places, and focus sessions.
+- **Memories** — timeline entries, future-opening Time Capsules with locked content until the chosen date, scrapbook entries, open-when notes, and archive.
+- **Together** — bucket list, calendar entries with saved dates, shared goals, places, and focus sessions.
 
 The current shared-world implementation stores member-created entries in `duo_world_items`.
 Every row belongs to one `duo_spaces` record and is protected by RLS membership checks.
 The UI supports creating, filtering, pinning, refreshing, and deleting shared entries. Polls and This-or-That entries can include up to six options; each signed-in member can cast or change one vote, and the current vote totals are displayed. Our List, Mini Missions, and Bucket List support shared checkable tasks with completion counts.
-Some named modules are currently represented by this common entry workflow; specialized
-behaviors (for example audio diary recording, calendar notifications, game scoring,
-shared live presence, and monthly analytics) still require dedicated implementation.
+Voice Diary entries can record AAC audio, upload it to the private storage bucket, and play it through short-lived signed URLs. Time Capsule entries can be locked until their selected opening date. Together entries can save a shared due date. Local notifications, background reminders, dedicated game scoring/round synchronization, live presence, photo scrapbook uploads, interactive planet/garden scenes, and monthly analytics are not yet implemented.
 
 ## Development branch
 
