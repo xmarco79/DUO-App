@@ -20,7 +20,7 @@ jobs:
           channel: stable
 
       - name: Generate Android project
-        run: flutter create --platforms=android --org com.duoapp --project-name duo .
+        run: flutter create --platforms=android --org com.ours --project-name ours .
 
       - name: Add microphone permission
         shell: bash
