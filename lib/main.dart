@@ -644,19 +644,33 @@ class _HomePageState extends State<HomePage> {
                   style: TextStyle(color: lavender),
                 ),
                 const SizedBox(height: 45),
-                actionCard(
-                  icon: Icons.add_circle_outline,
-                  title: 'إنشاء مساحة جديدة',
-                  subtitle: 'أنشئ عالمك الخاص وأرسل رمز الدعوة',
-                  onTap: loading ? null : createSpace,
-                ),
-                const SizedBox(height: 18),
-                actionCard(
-                  icon: Icons.vpn_key_outlined,
-                  title: 'الانضمام إلى مساحة',
-                  subtitle: 'أدخل رمز الدعوة الذي وصلك',
-                  onTap: loading ? null : showJoinDialog,
-                ),
+                if (spaceId == null) ...[
+                  actionCard(
+                    icon: Icons.add_circle_outline,
+                    title: 'إنشاء مساحة جديدة',
+                    subtitle: 'أنشئ عالمك الخاص وأرسل رمز الدعوة',
+                    onTap: loading ? null : createSpace,
+                  ),
+                  const SizedBox(height: 18),
+                  actionCard(
+                    icon: Icons.vpn_key_outlined,
+                    title: 'الانضمام إلى مساحة',
+                    subtitle: 'أدخل رمز الدعوة الذي وصلك',
+                    onTap: loading ? null : showJoinDialog,
+                  ),
+                ] else ...[
+                  const Card(
+                    color: purple,
+                    child: ListTile(
+                      leading: Icon(Icons.verified_user_outlined, color: gold, size: 30),
+                      title: Text('مساحتك جاهزة'),
+                      subtitle: Text(
+                        'لديك مساحة خاصة بالفعل. يمكنك فتح محادثتك من الزر أدناه.',
+                        style: TextStyle(color: lavender),
+                      ),
+                    ),
+                  ),
+                ],
                 if (loading) ...[
                   const SizedBox(height: 20),
                   const CircularProgressIndicator(color: gold),
