@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _navy = Color(0xFF10101C);
 const _purple = Color(0xFF29213D);
@@ -174,6 +175,23 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
   }
 
   Future<void> deleteItem(Map<String, dynamic> item) async {
+    final prefs = await SharedPreferences.getInstance();
+    final confirm = prefs.getBool('ours_confirm_delete') ?? true;
+    if (confirm && mounted) {
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: _purple,
+          title: const Text('تأكيد الحذف'),
+          content: const Text('هل تريد حذف هذا العنصر من المساحة المشتركة؟'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+          ],
+        ),
+      );
+      if (accepted != true) return;
+    }
     try {
       await db.from('duo_world_items').delete()
           .eq('id', item['id']).eq('space_id', widget.spaceId!);
@@ -284,7 +302,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                         decoration: BoxDecoration(
                           color: _purple,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: _lavender.withValues(alpha: .2)),
+                          border: Border.all(color: _lavender.withOpacity(.2)),
                         ),
                         child: const Row(children: [
                           Icon(Icons.visibility_outlined, color: _gold),
@@ -391,7 +409,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                       label: Text('إضافة إلى ${feature.$1}'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _lavender,
-                        side: BorderSide(color: _lavender.withValues(alpha: .25)),
+                        side: BorderSide(color: _lavender.withOpacity(.25)),
                         padding: const EdgeInsets.symmetric(vertical: 13),
                       ),
                     )),
