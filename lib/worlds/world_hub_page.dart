@@ -200,7 +200,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       );
       try {
         await createItem('Voice Diary', title.trim().isEmpty ? 'يوميات صوتية' : title,
-          content, payload: {'audio_path': storagePath, 'audio_mime': 'audio/mp4'});
+          content, payload: {'audio_path': storagePath, 'audio_mime': 'audio/mp4'}, rethrowErrors: true);
       } catch (_) {
         await db.storage.from('duo-private').remove([storagePath]);
         rethrow;
@@ -229,7 +229,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     }
   }
 
-  Future<void> createItem(String kind, String title, String content, {Map<String, dynamic> payload = const {}, DateTime? dueAt}) async {
+  Future<void> createItem(String kind, String title, String content, {Map<String, dynamic> payload = const {}, DateTime? dueAt, bool rethrowErrors = false}) async {
     if (!canSync) {
       _snack('هذه معاينة فقط. سجّل الدخول وأنشئ مساحة لحفظ بياناتكما.');
       return;
@@ -250,6 +250,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       await loadItems();
     } catch (e) {
       _snack(_friendlyError(e));
+      if (rethrowErrors) rethrow;
     }
   }
 
@@ -425,12 +426,13 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                   ),
                 ),
               const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () {
-                  if (title.text.trim().isNotEmpty) Navigator.pop(context, true);
-                },
-                child: const Text('حفظ'),
-              ),
+              if (kind != 'Voice Diary')
+                FilledButton(
+                  onPressed: () {
+                    if (title.text.trim().isNotEmpty) Navigator.pop(context, true);
+                  },
+                  child: const Text('حفظ'),
+                ),
             ],
           ),
         ),
