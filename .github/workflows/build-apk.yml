@@ -1,11 +1,7 @@
-
-name: Build DUO APK
+name: Build OURS APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   build:
@@ -23,15 +19,105 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android --org com.duoapp --project-name duo .
 
+      - name: Add microphone permission
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          content = manifest.read_text()
+          permission = '    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n'
+          if 'android.permission.RECORD_AUDIO' not in content:
+              content = content.replace('    <application', permission + '    <application', 1)
+          manifest.write_text(content)
+          PY
+
+      - name: Apply OURS Android branding
+        shell: bash
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="OURS"/; s#android:icon="@mipmap/ic_launcher"#android:icon="@drawable/ours_icon"#' android/app/src/main/AndroidManifest.xml
+          mkdir -p android/app/src/main/res/drawable
+          cat > android/app/src/main/res/drawable/ours_icon.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#10101C" android:pathData="M0,0h108v108h-108z" />
+              <path android:strokeColor="#D9BC86" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="@android:color/transparent" android:pathData="M12,54 C23,30 38,30 54,54 C70,78 85,78 96,54 C85,30 70,30 54,54 C38,78 23,78 12,54" />
+              <path android:strokeColor="#B9A2D5" android:strokeWidth="3" android:strokeLineCap="round" android:fillColor="@android:color/transparent" android:pathData="M14,54 C25,78 39,78 54,54 C69,30 83,30 94,54" />
+              <path android:fillColor="#D9BC86" android:pathData="M54,9 L57,17 L65,20 L57,23 L54,31 L51,23 L43,20 L51,17 Z" />
+              <path android:fillColor="#B9A2D5" android:pathData="M54,77 L56,83 L62,85 L56,87 L54,93 L52,87 L46,85 L52,83 Z" />
+          </vector>
+          EOF
+
+      - name: Set Android compile SDK
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          candidates = [
+              Path("android/app/build.gradle.kts"),
+              Path("android/app/build.gradle"),
+          ]
+          gradle_file = next((p for p in candidates if p.exists()), None)
+          if gradle_file is None:
+              raise SystemExit("Android app Gradle file was not generated")
+
+          content = gradle_file.read_text()
+          updated, count = re.subn(
+              r"compileSdk(?:Version)?\s*(?:=\s*)?flutter\.compileSdkVersion",
+              "compileSdk = 36" if gradle_file.suffix == ".kts" else "compileSdkVersion 36",
+              content,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("Could not locate Flutter compileSdk setting")
+
+          updated, min_count = re.subn(
+              r"minSdk(?:Version)?\s*(?:=\s*)?flutter\.minSdkVersion",
+              "minSdk = 23" if gradle_file.suffix == ".kts" else "minSdkVersion 23",
+              updated,
+              count=1,
+          )
+          if min_count != 1:
+              raise SystemExit("Could not locate Flutter minSdk setting")
+
+          gradle_file.write_text(updated)
+          print(f"Set compile SDK to 36 and min SDK to 23 in {gradle_file}")
+          PY
+
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Set Android plugin compile SDKs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path.home() / ".pub-cache/hosted/pub.dev"
+          changed = []
+          for gradle_file in root.glob("*/android/build.gradle*"):
+              content = gradle_file.read_text()
+              updated, count = re.subn(
+                  r"(compileSdk(?:Version)?\s*(?:=\s*)?)(?:flutter\.compileSdkVersion|[0-9]+)",
+                  r"\g<1>36",
+                  content,
+              )
+              if count:
+                  gradle_file.write_text(updated)
+                  changed.append(str(gradle_file))
+          print("Updated Android plugin compile SDK in:", changed)
+          PY
+
+      - name: Analyze Dart code
+        run: flutter analyze --no-fatal-infos lib
+
       - name: Build APK
-        run: flutter build apk --release -v
+        run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: DUO-Android
+          name: OURS-Android
           path: build/app/outputs/flutter-apk/app-release.apk
-          
