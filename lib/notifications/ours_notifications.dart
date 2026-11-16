@@ -32,6 +32,7 @@ class _OursNotificationBellState extends State<OursNotificationBell> {
       final rows = await db.from('duo_notifications')
           .select('id')
           .eq('user_id', userId)
+          .eq('space_id', widget.spaceId!)
           .isFilter('read_at', null);
       if (mounted) setState(() => unread = rows.length);
     } catch (_) {
