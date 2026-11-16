@@ -740,6 +740,7 @@ class _ChatPageState extends State<ChatPage> {
   final Map<String, String> participantNames = {};
   Map<String, dynamic>? replyingTo;
   String partnerName = 'مساحتكما الخاصة';
+  int unreadIncomingCount = 0;
 
   RealtimeChannel? channel;
 
@@ -877,10 +878,31 @@ class _ChatPageState extends State<ChatPage> {
             if (!alreadyExists) {
               setState(() {
                 messages.add(newMessage);
+                if (newMessage['sender_id'] != currentUserId) unreadIncomingCount++;
               });
-
+              if (newMessage['sender_id'] != currentUserId) {
+                showMessage('رسالة جديدة من $partnerName');
+              }
               scrollToBottom();
             }
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'duo_messages',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'space_id',
+            value: widget.spaceId,
+          ),
+          callback: (payload) {
+            final updated = Map<String, dynamic>.from(payload.newRecord);
+            if (!mounted) return;
+            setState(() {
+              final index = messages.indexWhere((item) => item['id'] == updated['id']);
+              if (index >= 0) messages[index] = updated;
+            });
           },
         )
         .subscribe();
@@ -1242,6 +1264,16 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  void openMediaGallery() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SharedMediaPage(messages: List<Map<String, dynamic>>.from(messages)),
+      ),
+    );
+    if (mounted) setState(() => unreadIncomingCount = 0);
+  }
+
   @override
   void dispose() {
     messageController.dispose();
@@ -1281,6 +1313,28 @@ class _ChatPageState extends State<ChatPage> {
         ),
         centerTitle: true,
         backgroundColor: navy,
+        actions: [
+          IconButton(
+            tooltip: 'الوسائط والملفات المشتركة',
+            onPressed: openMediaGallery,
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.perm_media_outlined, color: gold),
+                if (unreadIncomingCount > 0)
+                  Positioned(
+                    top: -5,
+                    right: -6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                      child: Text('$unreadIncomingCount', style: const TextStyle(fontSize: 9, color: Colors.white)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -1585,6 +1639,102 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+
+// ==================== SHARED MEDIA ====================
+
+class SharedMediaPage extends StatelessWidget {
+  final List<Map<String, dynamic>> messages;
+
+  const SharedMediaPage({super.key, required this.messages});
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = messages
+        .where((item) => item['deleted_at'] == null &&
+            {'image', 'file', 'audio'}.contains(item['message_type']))
+        .toList()
+      ..sort((a, b) => DateTime.parse(b['created_at'].toString())
+          .compareTo(DateTime.parse(a['created_at'].toString())));
+
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('الوسائط والملفات', style: TextStyle(color: gold)),
+          backgroundColor: navy,
+          bottom: const TabBar(
+            labelColor: gold,
+            unselectedLabelColor: lavender,
+            indicatorColor: gold,
+            tabs: [
+              Tab(icon: Icon(Icons.image_outlined), text: 'الصور'),
+              Tab(icon: Icon(Icons.insert_drive_file_outlined), text: 'الملفات'),
+              Tab(icon: Icon(Icons.mic_none), text: 'الصوت'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _MediaList(items: visible.where((m) => m['message_type'] == 'image').toList()),
+            _MediaList(items: visible.where((m) => m['message_type'] == 'file').toList()),
+            _MediaList(items: visible.where((m) => m['message_type'] == 'audio').toList()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MediaList extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+
+  const _MediaList({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const Center(child: Text('لا توجد عناصر مشتركة بعد', style: TextStyle(color: lavender)));
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(14),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const Divider(color: purple),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final type = item['message_type'];
+        final path = item['body']?.toString() ?? '';
+        final created = DateTime.tryParse(item['created_at']?.toString() ?? '');
+        final label = type == 'image' ? 'صورة مشتركة' : type == 'audio' ? 'رسالة صوتية' : path.split('/').last;
+        return ListTile(
+          leading: Icon(
+            type == 'image' ? Icons.image_outlined : type == 'audio' ? Icons.audio_file_outlined : Icons.insert_drive_file_outlined,
+            color: gold,
+          ),
+          title: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text(
+            created == null ? '' : DateFormat('yyyy/MM/dd • HH:mm').format(created.toLocal()),
+            style: const TextStyle(color: lavender, fontSize: 11),
+          ),
+          trailing: const Icon(Icons.open_in_new, color: lavender),
+          onTap: () async {
+            try {
+              final url = await Supabase.instance.client.storage.from('duo-private').createSignedUrl(path, 900);
+              final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+              if (!opened && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح العنصر')));
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر فتح العنصر: $e')));
+              }
+            }
+          },
+        );
+      },
     );
   }
 }
