@@ -84,8 +84,8 @@ jobs:
           for gradle_file in root.glob("*/android/build.gradle*"):
               content = gradle_file.read_text()
               updated, count = re.subn(
-                  r"(compileSdk(?:Version)?\\s*(?:=\\s*)?)(?:flutter\\.compileSdkVersion|[0-9]+)",
-                  r"\\g<1>36",
+                  r"(compileSdk(?:Version)?\s*(?:=\s*)?)(?:flutter\.compileSdkVersion|[0-9]+)",
+                  r"\g<1>36",
                   content,
               )
               if count:
