@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 const _navy = Color(0xFF10101C);
 const _purple = Color(0xFF29213D);
@@ -140,7 +141,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     return 'حدث خطأ غير متوقع. حاول مرة أخرى.';
   }
 
-  Future<void> createItem(String kind, String title, String content, {Map<String, dynamic> payload = const {}}) async {
+  Future<void> createItem(String kind, String title, String content, {Map<String, dynamic> payload = const {}, DateTime? dueAt}) async {
     if (!canSync) {
       _snack('هذه معاينة فقط. سجّل الدخول وأنشئ مساحة لحفظ بياناتكما.');
       return;
@@ -154,6 +155,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
         'title': title.trim(),
         'content': content.trim(),
         'payload': payload,
+        'due_at': dueAt?.toUtc().toIso8601String(),
       });
       if (!mounted) return;
       _snack('تم الحفظ في مساحتكما');
@@ -248,6 +250,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     final title = TextEditingController();
     final body = TextEditingController();
     final options = TextEditingController();
+    DateTime? dueDate;
     final feature = features[widget.worldIndex]
         .firstWhere((entry) => entry.$1 == kind);
     final result = await showModalBottomSheet<bool>(
@@ -258,7 +261,8 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
         padding: EdgeInsets.fromLTRB(22, 22, 22,
             MediaQuery.of(context).viewInsets.bottom + 24),
         child: SingleChildScrollView(
-          child: Column(
+          child: StatefulBuilder(
+          builder: (context, setSheetState) => Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -293,6 +297,32 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     ),
                   ),
                 ),
+              if (worlds[widget.worldIndex].$4 == 'together')
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: dueDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2100),
+                        builder: (context, child) => Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: const ColorScheme.dark(
+                              primary: _gold, surface: _purple, onSurface: Colors.white),
+                          ),
+                          child: child!,
+                        ),
+                      );
+                      if (picked != null) setSheetState(() => dueDate = picked);
+                    },
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: Text(dueDate == null
+                        ? 'تحديد تاريخ (اختياري)'
+                        : 'التاريخ: ${dueDate!.day}/${dueDate!.month}/${dueDate!.year}'),
+                  ),
+                ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {
@@ -303,6 +333,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
             ],
           ),
         ),
+        ),
       ),
     );
     if (result == true && title.text.trim().isNotEmpty) {
@@ -312,7 +343,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       final payload = isTaskList
           ? {'tasks': lines.map((v) => {'title': v, 'done': false}).toList()}
           : lines.length >= 2 ? {'options': lines.take(6).toList(), 'votes': <String, dynamic>{}} : {};
-      await createItem(kind, title.text, body.text, payload: payload);
+      await createItem(kind, title.text, body.text, payload: payload, dueAt: dueDate);
     }
     title.dispose();
     body.dispose();
@@ -474,6 +505,18 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                     ],
                                   ),
                                 ]),
+                                if (item['due_at'] != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Row(children: [
+                                      const Icon(Icons.event, size: 15, color: _gold),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'الموعد: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(item['due_at'].toString()).toLocal())}',
+                                        style: const TextStyle(color: _gold, fontSize: 12),
+                                      ),
+                                    ]),
+                                  ),
                                 if ((item['content']?.toString() ?? '').isNotEmpty)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 6, bottom: 8),
