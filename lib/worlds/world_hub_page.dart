@@ -36,6 +36,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
   bool recordingVoice = false;
   String? activeVoicePath;
   String? playingVoicePath;
+  RealtimeChannel? worldChannel;
 
   SupabaseClient get db => Supabase.instance.client;
   bool get canSync => widget.spaceId != null && db.auth.currentUser != null;
@@ -93,6 +94,27 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
   void initState() {
     super.initState();
     loadItems();
+    _subscribeToWorldItems();
+  }
+
+  void _subscribeToWorldItems() {
+    if (!canSync) return;
+    worldChannel = db
+        .channel('ours-world-${widget.spaceId}-${worlds[widget.worldIndex].$4}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'duo_world_items',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'space_id',
+            value: widget.spaceId,
+          ),
+          callback: (_) {
+            if (mounted) loadItems();
+          },
+        )
+        .subscribe();
   }
 
   @override
@@ -101,7 +123,11 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     if (oldWidget.worldIndex != widget.worldIndex ||
         oldWidget.spaceId != widget.spaceId) {
       selectedKind = null;
+      final oldChannel = worldChannel;
+      worldChannel = null;
+      if (oldChannel != null) db.removeChannel(oldChannel);
       loadItems();
+      _subscribeToWorldItems();
     }
   }
 
@@ -455,6 +481,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
 
   @override
   void dispose() {
+    if (worldChannel != null) db.removeChannel(worldChannel!);
     if (recordingVoice) {
       voiceRecorder.stop();
     }
