@@ -26,47 +26,68 @@ class OursPushService {
   static StreamSubscription<AuthState>? _authSubscription;
   static StreamSubscription<String>? _tokenSubscription;
   static StreamSubscription<RemoteMessage>? _messageSubscription;
+  static StreamSubscription<RemoteMessage>? _openedMessageSubscription;
   static bool _initialized = false;
+  static bool _initializing = false;
 
   static Future<void> initialize() async {
-    if (_initialized) return;
-    _initialized = true;
+    if (_initialized || _initializing) return;
+    _initializing = true;
 
-    await Firebase.initializeApp();
-    FirebaseMessaging.onBackgroundMessage(oursFirebaseBackgroundHandler);
+    try {
+      await Firebase.initializeApp();
+      FirebaseMessaging.onBackgroundMessage(oursFirebaseBackgroundHandler);
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    await _localNotifications.initialize(
-      const InitializationSettings(android: androidSettings),
-      onDidReceiveNotificationResponse: (_) {},
-    );
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_channel);
+      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      await _localNotifications.initialize(
+        const InitializationSettings(android: androidSettings),
+        onDidReceiveNotificationResponse: (_) {},
+      );
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(_channel);
 
-    FirebaseMessaging.onMessage.listen(_showForegroundNotification);
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleOpenedMessage);
+      _messageSubscription =
+          FirebaseMessaging.onMessage.listen(_showForegroundNotification);
+      _openedMessageSubscription =
+          FirebaseMessaging.onMessageOpenedApp.listen(_handleOpenedMessage);
 
-    final initialMessage =
-        await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMessage != null) _handleOpenedMessage(initialMessage);
+      final initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) _handleOpenedMessage(initialMessage);
 
-    _authSubscription =
-        Supabase.instance.client.auth.onAuthStateChange.listen((event) {
-      if (event.session != null) {
-        _registerCurrentToken();
+      _authSubscription =
+          Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+        if (event.session != null) {
+          _registerCurrentToken();
+        }
+      });
+
+      _tokenSubscription =
+          FirebaseMessaging.instance.onTokenRefresh.listen(_saveToken);
+
+      if (Supabase.instance.client.auth.currentSession != null) {
+        await _registerCurrentToken();
       }
-    });
-
-    if (Supabase.instance.client.auth.currentSession != null) {
-      await _registerCurrentToken();
+      _initialized = true;
+    } catch (_) {
+      await _cancelSubscriptions();
+      rethrow;
+    } finally {
+      _initializing = false;
     }
+  }
 
-    _tokenSubscription =
-        FirebaseMessaging.instance.onTokenRefresh.listen((token) {
-      _saveToken(token);
-    });
+  static Future<void> _cancelSubscriptions() async {
+    await _authSubscription?.cancel();
+    await _tokenSubscription?.cancel();
+    await _messageSubscription?.cancel();
+    await _openedMessageSubscription?.cancel();
+    _authSubscription = null;
+    _tokenSubscription = null;
+    _messageSubscription = null;
+    _openedMessageSubscription = null;
   }
 
   static Future<void> _registerCurrentToken() async {
@@ -145,9 +166,7 @@ class OursPushService {
   }
 
   static Future<void> dispose() async {
-    await _authSubscription?.cancel();
-    await _tokenSubscription?.cancel();
-    await _messageSubscription?.cancel();
+    await _cancelSubscriptions();
     _initialized = false;
   }
 }
