@@ -2,6 +2,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'worlds/world_hub_page.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -744,22 +745,10 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-      ) : SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon([Icons.public_rounded, Icons.sports_esports_rounded, Icons.auto_awesome_rounded, Icons.favorite_rounded][selectedWorldIndex - 1], color: gold, size: 58),
-                const SizedBox(height: 18),
-                Text(['', 'Universe', 'Play', 'Memories', 'Together'][selectedWorldIndex], style: const TextStyle(color: gold, fontSize: 28, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 10),
-                const Text('هذا العالم قيد البناء. سنضيف ميزاته بالتدريج.', textAlign: TextAlign.center, style: TextStyle(color: lavender, height: 1.6)),
-              ],
-            ),
-          ),
-        ),
+      ) : OursWorldHubPage(
+        key: ValueKey('ours-world-$selectedWorldIndex'),
+        spaceId: spaceId,
+        worldIndex: selectedWorldIndex,
       ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: purple,
