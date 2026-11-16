@@ -71,8 +71,18 @@ jobs:
           )
           if count != 1:
               raise SystemExit("Could not locate Flutter compileSdk setting")
+
+          updated, min_count = re.subn(
+              r"minSdk(?:Version)?\s*(?:=\s*)?flutter\.minSdkVersion",
+              "minSdk = 23" if gradle_file.suffix == ".kts" else "minSdkVersion 23",
+              updated,
+              count=1,
+          )
+          if min_count != 1:
+              raise SystemExit("Could not locate Flutter minSdk setting")
+
           gradle_file.write_text(updated)
-          print(f"Set compile SDK to 36 in {gradle_file}")
+          print(f"Set compile SDK to 36 and min SDK to 23 in {gradle_file}")
           PY
 
       - name: Install dependencies
