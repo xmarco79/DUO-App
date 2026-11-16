@@ -403,7 +403,10 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: FilledButton.icon(
-                    onPressed: () => recordVoiceEntry(title.text, body.text),
+                    onPressed: () async {
+                      await recordVoiceEntry(title.text, body.text);
+                      setSheetState(() {});
+                    },
                     icon: Icon(recordingVoice ? Icons.stop_circle_outlined : Icons.mic_none_rounded),
                     label: Text(recordingVoice ? 'إيقاف التسجيل وحفظه' : 'بدء تسجيل صوتي'),
                     style: FilledButton.styleFrom(
@@ -459,7 +462,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     },
                     icon: const Icon(Icons.calendar_month_outlined),
                     label: Text(dueDate == null
-                        ? (worlds[widget.worldIndex].$4 == 'memories' ? 'تحديد تاريخ فتح الذكرى' : 'تحديد تاريخ (اختياري)')
+                        ? (kind == 'Time Capsule' ? 'تحديد تاريخ فتح الرسالة' : 'تحديد التاريخ (اختياري)')
                         : 'التاريخ: ${dueDate!.day}/${dueDate!.month}/${dueDate!.year}'),
                   ),
                 ),
