@@ -391,6 +391,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  int selectedWorldIndex = 0;
   bool loading = true;
   String? inviteCode;
   String? spaceId;
@@ -744,11 +745,23 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+      bottomNavigationBar: NavigationBar(
+        backgroundColor: purple,
+        selectedIndex: selectedWorldIndex,
+        onDestinationSelected: (index) => setState(() => selectedWorldIndex = index),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.forum_outlined), label: 'Connect'),
+          NavigationDestination(icon: Icon(Icons.public_outlined), label: 'Universe'),
+          NavigationDestination(icon: Icon(Icons.sports_esports_outlined), label: 'Play'),
+          NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), label: 'Memories'),
+          NavigationDestination(icon: Icon(Icons.favorite_border), label: 'Together'),
+        ],
+      ),
     );
   }
 }
 
-// ==================== CHAT PAGE ====================
+ // ==================== CHAT PAGE ====================
 
 class ChatPage extends StatefulWidget {
   final String spaceId;
