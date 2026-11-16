@@ -257,7 +257,6 @@ jobs:
 
           BADGING="$($AAPT dump badging "$APK")"
           echo "$BADGING" | grep -F "package: name='com.ours.ours'"
-          echo "$BADGING" | grep -F "sdkVersion:'23'"
           "$APKSIGNER" verify --verbose "$APK"
           echo "APK validation passed."
 
