@@ -136,6 +136,7 @@ jobs:
               target = Path(f"android/app/src/main/res/mipmap-{density}/ic_launcher.png")
               target.parent.mkdir(parents=True, exist_ok=True)
               image.resize((pixels, pixels), Image.Resampling.LANCZOS).save(target, format="PNG", optimize=True)
+          Path("build").mkdir(parents=True, exist_ok=True)
           image.save("build/ours_icon_preview.png", format="PNG", optimize=True)
           print("Generated a fresh OURS launcher icon in all Android densities.")
           PY
