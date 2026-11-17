@@ -967,9 +967,6 @@ class _ChatPageState extends State<ChatPage> {
       if (!['image/png', 'image/jpeg', 'image/webp'].contains(mime)) {
         throw Exception('صيغة الصورة غير مدعومة.');
       }
-      if (!['image/png', 'image/jpeg', 'image/webp'].contains(mime)) {
-        throw Exception('صيغة الصورة غير مدعومة.');
-      }
       final result = await _removeBackgroundLocally(image);
       await _saveStickerPng(result);
     } catch (e) {
