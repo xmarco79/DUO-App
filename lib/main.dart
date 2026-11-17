@@ -27,6 +27,9 @@ const purple = Color(0xFF29213D);
 const lavender = Color(0xFFB9A2D5);
 const gold = Color(0xFFD9BC86);
 
+String oursText(BuildContext context, String ar, String en) =>
+    Localizations.localeOf(context).languageCode == 'ar' ? ar : en;
+
 // Preview builds open the home screen without requiring an account.
 const bool previewMode = bool.fromEnvironment('OURS_PREVIEW_MODE', defaultValue: false);
 
@@ -162,26 +165,26 @@ class WelcomePage extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Text('YOUR PRIVATE UNIVERSE', style: TextStyle(color: lavender, letterSpacing: 3, fontSize: 11)),
                 const SizedBox(height: 30),
-                const Text('عالمك الخاص، بطريقتك', textAlign: TextAlign.center,
+                Text(oursText(context, 'عالمك الخاص، بطريقتكما', 'A private universe for two'), textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 12),
-                const Text('تواصل مع الأشخاص المهمين لك، وشارك لحظاتك ومحادثاتك في تجربة خاصة تجمعكم.',
-                  textAlign: TextAlign.center, style: TextStyle(color: lavender, height: 1.8, fontSize: 15)),
+                Text(oursText(context, 'مساحة رقمية خاصة تجمعك أنت وشريكك فقط؛ للمحادثات والذكريات والعوالم التي تصنعانها معًا.', 'A private space for you and your partner to chat, share memories, and build your own worlds together.'),
+                  textAlign: TextAlign.center, style: const TextStyle(color: lavender, height: 1.8, fontSize: 15)),
                 const SizedBox(height: 38),
                 SizedBox(width: double.infinity, height: 54,
                   child: FilledButton(onPressed: () {
                     onRegister();
                     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage(initialCreatingAccount: true)));
-                  }, child: const Text('إنشاء حساب'))),
+                  }, child: Text(oursText(context, 'إنشاء حساب', 'Create account')))),
                 const SizedBox(height: 12),
                 SizedBox(width: double.infinity, height: 54,
                   child: OutlinedButton(onPressed: () {
                     onLogin();
                     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
                   }, style: OutlinedButton.styleFrom(foregroundColor: lavender, side: const BorderSide(color: lavender)),
-                    child: const Text('تسجيل الدخول'))),
+                    child: Text(oursText(context, 'تسجيل الدخول', 'Log in')))),
                 const SizedBox(height: 28),
-                const Text('خصوصيتك أولويتنا', style: TextStyle(color: gold, fontSize: 12, letterSpacing: 1.2)),
+                Text(oursText(context, 'عالم خاص لشخصين فقط', 'A private world for two only'), style: const TextStyle(color: gold, fontSize: 12, letterSpacing: 1.2)),
               ],
             ),
           ),
@@ -424,7 +427,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 50),
                 Text(
-                  creatingAccount ? 'أنشئ حسابك' : 'مرحبًا بعودتك',
+                  creatingAccount ? oursText(context, 'أنشئ حسابك', 'Create your account') : oursText(context, 'مرحبًا بعودتك', 'Welcome back'),
                   style: const TextStyle(fontSize: 24),
                 ),
                 const SizedBox(height: 25),
@@ -432,7 +435,7 @@ class _LoginPageState extends State<LoginPage> {
                   controller: username,
                   autocorrect: false,
                   decoration: const InputDecoration(
-                    labelText: 'اسم المستخدم',
+                    labelText: oursText(context, 'اسم المستخدم', 'Username'),
                     hintText: 'مثال: ours_user',
                     prefixIcon: Icon(Icons.person_outline),
                     border: OutlineInputBorder(),
@@ -443,7 +446,7 @@ class _LoginPageState extends State<LoginPage> {
                   controller: password,
                   obscureText: true,
                   decoration: const InputDecoration(
-                    labelText: 'كلمة المرور',
+                    labelText: oursText(context, 'كلمة المرور', 'Password'),
                     prefixIcon: Icon(Icons.lock_outline),
                     border: OutlineInputBorder(),
                   ),
@@ -454,7 +457,7 @@ class _LoginPageState extends State<LoginPage> {
                     controller: confirmPassword,
                     obscureText: true,
                     decoration: const InputDecoration(
-                      labelText: 'تأكيد كلمة المرور',
+                      labelText: oursText(context, 'تأكيد كلمة المرور', 'Confirm password'),
                       prefixIcon: Icon(Icons.lock_reset),
                       border: OutlineInputBorder(),
                     ),
@@ -491,8 +494,8 @@ class _LoginPageState extends State<LoginPage> {
                           )
                         : Text(
                             creatingAccount
-                                ? 'إنشاء الحساب'
-                                : 'تسجيل الدخول',
+                                ? oursText(context, 'إنشاء الحساب', 'Create account')
+                                : oursText(context, 'تسجيل الدخول', 'Log in'),
                           ),
                   ),
                 ),
@@ -509,8 +512,8 @@ class _LoginPageState extends State<LoginPage> {
                         },
                   child: Text(
                     creatingAccount
-                        ? 'لديك حساب بالفعل؟ تسجيل الدخول'
-                        : 'ليس لديك حساب؟ إنشاء حساب جديد',
+                        ? oursText(context, 'لديك حساب بالفعل؟ تسجيل الدخول', 'Already have an account? Log in')
+                        : oursText(context, 'ليس لديك حساب؟ إنشاء حساب جديد', 'New here? Create an account'),
                     style: const TextStyle(color: lavender),
                   ),
                 ),
@@ -2234,14 +2237,25 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       setState(() => uploadingAvatar = true);
       final extension = picked.name.split('.').last.toLowerCase();
       final safeExtension = ['jpg', 'jpeg', 'png', 'webp'].contains(extension) ? extension : 'jpg';
-      final path = '${user.id}/avatar.$safeExtension';
+      final oldProfile = await db.from('duo_profiles').select('avatar_path').eq('user_id', user.id).maybeSingle();
+      final oldPath = oldProfile?['avatar_path']?.toString();
+      final path = '${user.id}/avatar_${DateTime.now().microsecondsSinceEpoch}.$safeExtension';
       final bytes = await picked.readAsBytes();
+      if (bytes.length > 5 * 1024 * 1024) throw Exception('حجم الصورة يتجاوز 5 ميجابايت');
       await db.storage.from('ours-avatars').uploadBinary(
         path,
         bytes,
-        fileOptions: FileOptions(upsert: true, contentType: safeExtension == 'png' ? 'image/png' : safeExtension == 'webp' ? 'image/webp' : 'image/jpeg'),
+        fileOptions: FileOptions(upsert: false, contentType: safeExtension == 'png' ? 'image/png' : safeExtension == 'webp' ? 'image/webp' : 'image/jpeg'),
       );
-      await db.from('duo_profiles').update({'avatar_path': path}).eq('user_id', user.id);
+      try {
+        await db.from('duo_profiles').update({'avatar_path': path}).eq('user_id', user.id);
+      } catch (_) {
+        await db.storage.from('ours-avatars').remove([path]);
+        rethrow;
+      }
+      if (oldPath != null && oldPath != path) {
+        try { await db.storage.from('ours-avatars').remove([oldPath]); } catch (_) {}
+      }
       if (!mounted) return;
       setState(() => avatarUrl = db.storage.from('ours-avatars').getPublicUrl(path) + '?v=' + DateTime.now().millisecondsSinceEpoch.toString());
       showMessage('تم تحديث الصورة الشخصية');
