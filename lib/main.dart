@@ -1,5 +1,6 @@
 
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'notifications/ours_push_service.dart';
 
 import 'package:flutter/material.dart';
@@ -77,7 +78,7 @@ class OursApp extends StatelessWidget {
         locale: locale,
         supportedLocales: const [Locale('ar'), Locale('en')],
         builder: (context, child) => Directionality(
-          textDirection: locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+          textDirection: locale.languageCode == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
           child: child ?? const SizedBox.shrink(),
         ),
         theme: ThemeData(
@@ -2149,7 +2150,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     if (!mounted) return;
     setState(() {
       quietMode = prefs.getBool('ours_quiet_mode') ?? false;
-      showOnlineStatus = prefs.getBool('ours_show_online') ?? true;
       confirmBeforeDelete = prefs.getBool('ours_confirm_delete') ?? true;
       languageCode = prefs.getString('ours_language') ?? 'ar';
     });
