@@ -2325,10 +2325,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       await OursPushService.unregisterCurrentToken();
                 await db.auth.signOut();
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-        (route) => false,
-      );
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
       showMessage('تعذر تسجيل الخروج: $e');
     }
