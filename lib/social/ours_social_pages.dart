@@ -117,6 +117,7 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
   final db = Supabase.instance.client;
   final inviteController = TextEditingController();
   Map<String, dynamic>? partner;
+  String? partnerUserId;
   bool loadingPartner = false;
   bool busy = false;
   String? inviteCode;
@@ -135,7 +136,7 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.spaceId != widget.spaceId) {
       partner = null;
-      inviteCode = null;
+      partnerUserId = null;
       loadPartner();
     }
   }
@@ -143,7 +144,7 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
   Future<void> loadPartner() async {
     final space = widget.spaceId;
     if (space == null) {
-      if (mounted) setState(() { partner = null; loadingPartner = false; });
+      if (mounted) setState(() { partner = null; partnerUserId = null; loadingPartner = false; });
       return;
     }
     setState(() { loadingPartner = true; loadError = null; });
@@ -156,14 +157,19 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
       }
       final other = members.where((m) => m['user_id'].toString() != uid).toList();
       Map<String, dynamic>? profile;
-      if (other.isNotEmpty) {
+      final otherUserId = other.isEmpty ? null : other.first['user_id'].toString();
+      if (otherUserId != null) {
         profile = await db.from('duo_profiles')
             .select('username, display_name, avatar_path, bio')
-            .eq('user_id', other.first['user_id'])
+            .eq('user_id', otherUserId)
             .maybeSingle();
       }
       if (!mounted) return;
-      setState(() { partner = profile; loadingPartner = false; });
+      setState(() {
+        partner = profile;
+        partnerUserId = otherUserId;
+        loadingPartner = false;
+      });
     } catch (e) {
       if (mounted) setState(() { loadingPartner = false; loadError = e.toString(); });
     }
@@ -294,7 +300,7 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
     final avatarUrl = avatarPath == null ? null : db.storage.from('ours-avatars').getPublicUrl(avatarPath);
     final displayName = partner?['display_name']?.toString().trim() ?? '';
     final username = partner?['username']?.toString() ?? '';
-    final hasPartner = partner != null;
+    final hasPartner = partnerUserId != null;
 
     return RefreshIndicator(
       color: _gold,
@@ -322,7 +328,7 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
                   child: avatarUrl == null ? const Icon(Icons.person_outline, color: _gold, size: 36) : null,
                 ),
                 const SizedBox(height: 12),
-                Text(hasPartner ? (displayName.isEmpty ? '@$username' : displayName) : _oursText(context, 'بانتظار شريكك', 'Waiting for your partner'),
+                Text(hasPartner ? (displayName.isNotEmpty ? displayName : username.isNotEmpty ? '@$username' : _oursText(context, 'شريكك', 'Your partner')) : _oursText(context, 'بانتظار شريكك', 'Waiting for your partner'),
                     style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
                 if (hasPartner && username.isNotEmpty)
                   Text('@$username', style: const TextStyle(color: _lavender)),
