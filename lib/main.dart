@@ -309,10 +309,11 @@ class _LoginPageState extends State<LoginPage> {
     final confirm = confirmPassword.text;
 
     if (!RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(user)) {
-      showMessage(
-        'اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا، '
-        'ويحتوي على أحرف إنجليزية أو أرقام أو _ فقط', 'Username must be 3–20 characters using English letters, numbers, or _ only'),
-      );
+      showMessage(oursText(
+        context,
+        'اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا، ويحتوي على أحرف إنجليزية أو أرقام أو _ فقط',
+        'Username must be 3–20 characters using English letters, numbers, or _ only',
+      ));
       return;
     }
 
