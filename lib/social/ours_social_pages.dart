@@ -136,7 +136,7 @@ class _OursPeopleSearchPageState extends State<OursPeopleSearchPage> {
       if (!mounted) return;
       setState(() => results = List<Map<String, dynamic>>.from(rows));
     } catch (e) {
-      if (mounted) _message('تعذر البحث: $e');
+      if (mounted) _message(_oursText(context, 'تعذر البحث: $e', 'Search failed: $e'));
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -152,9 +152,9 @@ class _OursPeopleSearchPageState extends State<OursPeopleSearchPage> {
       });
       _message(_oursText(context, 'تم إرسال طلب الإضافة', 'Friend request sent'));
     } on PostgrestException catch (e) {
-      _message(e.code == '23505' ? _oursText(context, 'سبق إرسال طلب لهذا المستخدم', 'A request was already sent to this user') : 'تعذر إرسال الطلب: ${e.message}');
+      _message(e.code == '23505' ? _oursText(context, 'سبق إرسال طلب لهذا المستخدم', 'A request was already sent to this user') : _oursText(context, 'تعذر إرسال الطلب: ${e.message}', 'Could not send request: ${e.message}'));
     } catch (e) {
-      _message('تعذر إرسال الطلب: $e');
+      _message(_oursText(context, 'تعذر إرسال الطلب: $e', 'Could not send request: $e'));
     }
   }
 
@@ -171,7 +171,7 @@ class _OursPeopleSearchPageState extends State<OursPeopleSearchPage> {
           textInputAction: TextInputAction.search,
           onSubmitted: (_) => search(),
           decoration: InputDecoration(
-            hintText: _oursText(context, 'ابحث باسم المستخدم', 'Search by username'),
+            hintText: _oursText(context, _oursText(context, 'ابحث باسم المستخدم', 'Search by username'), 'Search by username'),
             prefixIcon: const Icon(Icons.search),
             suffixIcon: IconButton(onPressed: search, icon: const Icon(Icons.arrow_forward)),
             filled: true, fillColor: _purple,
@@ -249,7 +249,7 @@ class _OursFriendRequestsPageState extends State<OursFriendRequestsPage> {
       setState(() { requests = list; loading = false; });
     } catch (e) {
       if (mounted) setState(() => loading = false);
-      if (mounted) _message(_oursText(context, 'تعذر تحميل الطلبات: $e', 'Could not load requests: $e'));
+      if (mounted) _message(_oursText(context, _oursText(context, 'تعذر تحميل الطلبات: $e', 'Could not load requests: $e'), 'Could not load requests: $e'));
     }
   }
 
@@ -261,22 +261,22 @@ class _OursFriendRequestsPageState extends State<OursFriendRequestsPage> {
         'p_request_id': id,
         'p_accept': accept,
       });
-      _message(accept ? _oursText(context, 'تم قبول الطلب وفتح المحادثة', 'Request accepted. Chat is ready') : _oursText(context, 'تم رفض الطلب', 'Request declined'));
+      _message(accept ? _oursText(context, _oursText(context, 'تم قبول الطلب وفتح المحادثة', 'Request accepted. Chat is ready'), 'Request accepted. Chat is ready') : _oursText(context, _oursText(context, 'تم رفض الطلب', 'Request declined'), 'Request declined'));
       await load();
-    } catch (e) { _message('تعذر معالجة الطلب: $e'); }
+    } catch (e) { _message(_oursText(context, 'تعذر معالجة الطلب: $e', 'Could not process request: $e')); }
   }
 
   @override
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator(color: _gold));
-    if (requests.isEmpty) return const Center(child: Text(_oursText(context, 'لا توجد طلبات إضافة حاليًا', 'No pending requests'), style: TextStyle(color: _lavender)));
+    if (requests.isEmpty) return const Center(child: Text(_oursText(context, _oursText(context, 'لا توجد طلبات إضافة حاليًا', 'No pending requests'), 'No pending requests'), style: TextStyle(color: _lavender)));
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: requests.length,
       itemBuilder: (context, i) {
         final row = requests[i];
         final profile = row['profile'] as Map<String, dynamic>?;
-        final username = profile?['username']?.toString() ?? 'مستخدم';
+        final username = profile?['username']?.toString() ?? _oursText(context, 'مستخدم', 'User');
         final display = profile?['display_name']?.toString().trim() ?? '';
         final path = profile?['avatar_path']?.toString();
         final url = path == null ? null : db.storage.from('ours-avatars').getPublicUrl(path);
@@ -335,7 +335,7 @@ class _OursConversationsPageState extends State<OursConversationsPage> {
             .order('created_at', ascending: false).limit(1).maybeSingle();
         rows.add({
           'id': id, 'profile': profile,
-          'preview': last == null ? _oursText(context, 'ابدأ المحادثة الآن', 'Start chatting') : (last['message_type'] == 'text' ? last['body'] : _oursText(context, 'مرفق', 'Attachment')),
+          'preview': last == null ? _oursText(context, _oursText(context, 'ابدأ المحادثة الآن', 'Start chatting'), 'Start chatting') : (last['message_type'] == 'text' ? last['body'] : _oursText(context, _oursText(context, 'مرفق', 'Attachment'), 'Attachment')),
           'last_message_at': last?['created_at'],
         });
       }
@@ -343,7 +343,7 @@ class _OursConversationsPageState extends State<OursConversationsPage> {
       if (mounted) setState(() { conversations = rows; loading = false; });
     } catch (e) {
       if (mounted) setState(() => loading = false);
-      if (mounted) _message('تعذر تحميل المحادثات: $e');
+      if (mounted) _message(_oursText(context, 'تعذر تحميل المحادثات: $e', 'Could not load chats: $e'));
     }
   }
 
@@ -357,7 +357,7 @@ class _OursConversationsPageState extends State<OursConversationsPage> {
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: const [
         Icon(Icons.forum_outlined, color: _gold, size: 58),
         SizedBox(height: 18),
-        Text(_oursText(context, 'لا توجد محادثات بعد', 'No conversations yet'), style: TextStyle(fontSize: 21)),
+        Text(_oursText(context, _oursText(context, 'لا توجد محادثات بعد', 'No conversations yet'), 'No conversations yet'), style: TextStyle(fontSize: 21)),
         SizedBox(height: 8),
         Text(_oursText(context, 'ابحث عن شريكك باسم المستخدم وأرسل طلب إضافة. بعد قبول الطلب ستظهر محادثتكما هنا.', 'Find your partner by username and send a request. Your chat will appear here after they accept.'), textAlign: TextAlign.center, style: TextStyle(color: _lavender, height: 1.6)),
       ]),
@@ -369,7 +369,7 @@ class _OursConversationsPageState extends State<OursConversationsPage> {
         itemBuilder: (context, i) {
           final row = conversations[i];
           final profile = row['profile'] as Map<String, dynamic>?;
-          final username = profile?['username']?.toString() ?? 'مستخدم';
+          final username = profile?['username']?.toString() ?? _oursText(context, 'مستخدم', 'User');
           final display = profile?['display_name']?.toString().trim() ?? '';
           final path = profile?['avatar_path']?.toString();
           final url = path == null ? null : db.storage.from('ours-avatars').getPublicUrl(path);
