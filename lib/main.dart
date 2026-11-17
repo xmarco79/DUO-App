@@ -158,7 +158,6 @@ class _OursEntryGateState extends State<OursEntryGate> {
         if (showLogin) return LoginPage(initialCreatingAccount: creatingAccount);
         return WelcomePage(
           onLogin: () => setState(() { showLogin = true; creatingAccount = false; }),
-          onRegister: () => setState(() { showLogin = true; creatingAccount = true; }),
         );
       },
     );
@@ -167,8 +166,7 @@ class _OursEntryGateState extends State<OursEntryGate> {
 
 class WelcomePage extends StatelessWidget {
   final VoidCallback onLogin;
-  final VoidCallback onRegister;
-  const WelcomePage({super.key, required this.onLogin, required this.onRegister});
+  const WelcomePage({super.key, required this.onLogin});
 
   @override
   Widget build(BuildContext context) {
@@ -198,13 +196,12 @@ class WelcomePage extends StatelessWidget {
                   textAlign: TextAlign.center, style: const TextStyle(color: lavender, height: 1.8, fontSize: 15)),
                 const SizedBox(height: 38),
                 SizedBox(width: double.infinity, height: 54,
-                  child: FilledButton(onPressed: onRegister, child: Text(oursText(context, 'إنشاء حساب', 'Create account')))),
-                const SizedBox(height: 12),
-                SizedBox(width: double.infinity, height: 54,
                   child: OutlinedButton(onPressed: onLogin, style: OutlinedButton.styleFrom(foregroundColor: lavender, side: const BorderSide(color: lavender)),
                     child: Text(oursText(context, 'تسجيل الدخول', 'Log in')))),
-                const SizedBox(height: 28),
-                Text(oursText(context, 'عالم خاص لشخصين فقط', 'A private world for two only'), style: const TextStyle(color: gold, fontSize: 12, letterSpacing: 1.2)),
+                const SizedBox(height: 18),
+                Text(oursText(context, 'الحسابان المعتمدان: naif و zoi فقط', 'The only accounts: naif and zoi'), textAlign: TextAlign.center, style: const TextStyle(color: gold, fontSize: 12, letterSpacing: 0.5)),
+                const SizedBox(height: 10),
+                Text(oursText(context, 'عالم خاص لشخصين فقط', 'A private world for two only'), style: const TextStyle(color: lavender, fontSize: 11, letterSpacing: 1.2)),
               ],
             ),
           ),
@@ -524,23 +521,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                TextButton(
-                  onPressed: loading
-                      ? null
-                      : () {
-                          setState(() {
-                            creatingAccount = !creatingAccount;
-                            password.clear();
-                            confirmPassword.clear();
-                          });
-                        },
-                  child: Text(
-                    creatingAccount
-                        ? oursText(context, 'لديك حساب بالفعل؟ تسجيل الدخول', 'Already have an account? Log in')
-                        : oursText(context, 'ليس لديك حساب؟ إنشاء حساب جديد', 'New here? Create an account'),
-                    style: const TextStyle(color: lavender),
-                  ),
-                ),
                 const SizedBox(height: 20),
                 const Text(
                   'A WORLD OF TWO',
