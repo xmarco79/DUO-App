@@ -164,41 +164,11 @@ class WelcomePage extends StatelessWidget {
 
 // Keep the root page synchronized with Supabase's persisted session.
 // This avoids relying on one-time startup checks or manual navigation after auth.
-class OursAuthGate extends StatelessWidget {
-  const OursAuthGate({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final auth = Supabase.instance.client.auth;
-    return StreamBuilder<AuthState>(
-      stream: auth.onAuthStateChange,
-      builder: (context, snapshot) {
-        final session = snapshot.data?.session ?? auth.currentSession;
-        if (session != null) {
-          return const HomePage();
-        /* return OursSocialHomePage(
-            onProfileTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
-            ),
-          ); */
-        }
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !snapshot.hasData) {
-          return const Scaffold(
-            backgroundColor: navy,
-            body: Center(child: CircularProgressIndicator(color: gold)),
-          );
-        }
-        return Supabase.instance.client.auth.currentSession != null ? const HomePage() : const LoginPage();
-      },
-    );
-  }
-}
-
 // ==================== LOGIN PAGE ====================
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final bool initialCreatingAccount;
+  const LoginPage({super.key, this.initialCreatingAccount = false});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -911,6 +881,16 @@ class _HomePageState extends State<HomePage> {
                         'فتح المحادثة',
                         style: TextStyle(fontSize: 17),
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  actionCard(
+                    icon: Icons.auto_awesome,
+                    title: 'OURS AI',
+                    subtitle: 'محادثة ذكية وأفكار وملخصات لعالمكما',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => OursAiPage(spaceId: spaceId!)),
                     ),
                   ),
                 ],
