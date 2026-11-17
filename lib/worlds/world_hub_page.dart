@@ -655,6 +655,12 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     const SizedBox(height: 8),
                     Text(worldDescription, style: const TextStyle(color: _lavender)),
                     const SizedBox(height: 16),
+                    if (canSync && widget.worldIndex == 1)
+                      SizedBox(width: double.infinity, child: OutlinedButton.icon(
+                        onPressed: _invitePartnerToWorld,
+                        icon: const Icon(Icons.person_add_alt_1),
+                        label: Text(_worldText(context, 'دعوة شريكك إلى العالم', 'Invite your partner to this world')),
+                      )),
                     if (canSync && widget.worldIndex == 2)
                       SizedBox(width: double.infinity, child: FilledButton.icon(
                         onPressed: () => Navigator.push(context, MaterialPageRoute(
@@ -670,13 +676,30 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                         label: Text(_worldText(context, 'فتح ألبومات الصور', 'Open photo albums')),
                       )),
                     const SizedBox(height: 20),
-                    if (!canSync)
+                    if (!canSync && widget.worldIndex == 1)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _purple,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: _lavender.withValues(alpha: .2)),
+                        ),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          Text(_worldText(context, 'اربط عالمكما', 'Connect your shared world'), style: const TextStyle(color: _gold, fontSize: 17, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 7),
+                          Text(_worldText(context, 'أنشئ عالمًا وادعُ شريكك، أو انضم إلى عالمه برمز الدعوة. المحادثة الخاصة مستقلة عن هذا العالم.', 'Create a world and invite your partner, or join theirs with an invite code. Private chat stays separate.'), style: const TextStyle(color: _lavender, height: 1.5)),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(onPressed: _createSharedWorld, icon: const Icon(Icons.add_rounded), label: Text(_worldText(context, 'إنشاء عالم مشترك', 'Create shared world'))),
+                          OutlinedButton.icon(onPressed: _joinSharedWorld, icon: const Icon(Icons.key_rounded), label: Text(_worldText(context, 'لدي رمز دعوة', 'I have an invite code'))),
+                        ]),
+                      )
+                    else if (!canSync)
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: _purple,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: _lavender.withOpacity(.2)),
+                          border: Border.all(color: _lavender.withValues(alpha: .2)),
                         ),
                         child: Row(children: [
                           const Icon(Icons.visibility_outlined, color: _gold),
