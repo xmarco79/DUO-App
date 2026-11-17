@@ -26,6 +26,59 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android --org com.ours --project-name ours .
 
+      - name: Configure reliable Maven Central mirror
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          candidates = [Path("android/settings.gradle.kts"), Path("android/settings.gradle")]
+          settings = next((p for p in candidates if p.exists()), None)
+          if settings is None:
+              raise SystemExit("Android settings.gradle file was not generated")
+
+          text = settings.read_text()
+          kotlin_dsl = settings.suffix == ".kts"
+          mirror = (
+              'maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2/") }'
+              if kotlin_dsl else
+              "maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }"
+          )
+
+          def add_mirror(block_name, source):
+              match = re.search(r"\\b" + re.escape(block_name) + r"\\s*\\{", source)
+              if not match:
+                  return source, False
+              start = match.end()
+              depth = 1
+              i = start
+              while i < len(source) and depth:
+                  if source[i] == "{":
+                      depth += 1
+                  elif source[i] == "}":
+                      depth -= 1
+                  i += 1
+              block = source[match.start():i]
+              if "maven-central.storage-download.googleapis.com" in block:
+                  return source, False
+              repos = re.search(r"repositories\\s*\\{", block)
+              if not repos:
+                  return source, False
+              insert_at = match.start() + repos.end()
+              return source[:insert_at] + "\\n        " + mirror + source[insert_at:], True
+
+          changed = False
+          for block_name in ("pluginManagement", "dependencyResolutionManagement"):
+              text, did_change = add_mirror(block_name, text)
+              changed = changed or did_change
+
+          if not changed:
+              raise SystemExit("Could not add Maven mirror to Gradle repository configuration")
+          settings.write_text(text)
+          print("Added Google-hosted Maven Central mirror before the default repositories.")
+          PY
+
       - name: Configure Firebase Android app
         shell: bash
         run: |
@@ -302,7 +355,21 @@ jobs:
           PY
 
       - name: Build APK
-        run: flutter build apk --release
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Release build attempt $attempt/3"
+            if flutter build apk --release; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Gradle dependency resolution failed; retrying after a short backoff."
+              sleep $((attempt * 20))
+            fi
+          done
+          echo "Release APK build failed after three attempts."
+          exit 1
 
       - name: Validate release APK
         shell: bash
