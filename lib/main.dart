@@ -258,7 +258,7 @@ class _LoginPageState extends State<LoginPage> {
     final user = username.text.trim().toLowerCase();
 
     if (user.isEmpty || password.text.isEmpty) {
-      showMessage('أدخل اسم المستخدم وكلمة المرور');
+      showMessage(oursText(context, 'أدخل اسم المستخدم وكلمة المرور', 'Enter your username and password'));
       return;
     }
 
@@ -278,13 +278,13 @@ class _LoginPageState extends State<LoginPage> {
           : <String, dynamic>{};
 
       if (response.status != 200) {
-        throw Exception(data['error'] ?? 'تعذر تسجيل الدخول');
+        throw Exception(data['error'] ?? oursText(context, 'تعذر تسجيل الدخول', 'Could not log in'));
       }
 
       final refreshToken = data['refresh_token'];
 
       if (refreshToken == null) {
-        throw Exception('لم يتم استلام بيانات الجلسة');
+        throw Exception(oursText(context, 'لم يتم استلام بيانات الجلسة', 'Session data was not received'));
       }
 
       await db.auth.setSession(refreshToken);
@@ -311,18 +311,18 @@ class _LoginPageState extends State<LoginPage> {
     if (!RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(user)) {
       showMessage(
         'اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا، '
-        'ويحتوي على أحرف إنجليزية أو أرقام أو _ فقط',
+        'ويحتوي على أحرف إنجليزية أو أرقام أو _ فقط', 'Username must be 3–20 characters using English letters, numbers, or _ only'),
       );
       return;
     }
 
     if (pass.length < 8) {
-      showMessage('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+      showMessage(oursText(context, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'Password must be at least 8 characters'));
       return;
     }
 
     if (pass != confirm) {
-      showMessage('كلمتا المرور غير متطابقتين');
+      showMessage(oursText(context, 'كلمتا المرور غير متطابقتين', 'Passwords do not match'));
       return;
     }
 
@@ -342,7 +342,7 @@ class _LoginPageState extends State<LoginPage> {
           : <String, dynamic>{};
 
       if (response.status < 200 || response.status >= 300) {
-        throw Exception(data['error'] ?? 'تعذر إنشاء الحساب');
+        throw Exception(data['error'] ?? oursText(context, 'تعذر إنشاء الحساب', 'Could not create account'));
       }
 
       final loginResponse = await db.functions.invoke(
@@ -359,14 +359,14 @@ class _LoginPageState extends State<LoginPage> {
 
       if (loginResponse.status != 200) {
         throw Exception(
-          loginData['error'] ?? 'تم إنشاء الحساب، تعذر تسجيل الدخول',
+          loginData['error'] ?? oursText(context, 'تم إنشاء الحساب، تعذر تسجيل الدخول', 'Account created, but login failed'),
         );
       }
 
       final refreshToken = loginData['refresh_token'];
 
       if (refreshToken == null) {
-        throw Exception('لم يتم استلام بيانات الجلسة');
+        throw Exception(oursText(context, 'لم يتم استلام بيانات الجلسة', 'Session data was not received'));
       }
 
       await db.auth.setSession(refreshToken);
@@ -436,7 +436,7 @@ class _LoginPageState extends State<LoginPage> {
                   autocorrect: false,
                   decoration: InputDecoration(
                     labelText: oursText(context, 'اسم المستخدم', 'Username'),
-                    hintText: 'مثال: ours_user',
+                    hintText: 'e.g. ours_user',
                     prefixIcon: Icon(Icons.person_outline),
                     border: OutlineInputBorder(),
                   ),
@@ -464,14 +464,14 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'اسم المستخدم: أحرف إنجليزية وأرقام و _ فقط',
+                    oursText(context, 'اسم المستخدم: أحرف إنجليزية وأرقام و _ فقط', 'Username: English letters, numbers and _ only'),
                     style: TextStyle(
                       color: lavender,
                       fontSize: 12,
                     ),
                   ),
                   const Text(
-                    'كلمة المرور: 8 أحرف على الأقل',
+                    oursText(context, 'كلمة المرور: 8 أحرف على الأقل', 'Password: at least 8 characters'),
                     style: TextStyle(
                       color: lavender,
                       fontSize: 12,
@@ -685,7 +685,7 @@ class _HomePageState extends State<HomePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('إلغاء'),
+            child: const Text(oursText(context, 'إلغاء', 'Cancel')),
           ),
           FilledButton(
             onPressed: loading
@@ -774,11 +774,11 @@ class _HomePageState extends State<HomePage> {
                 builder: (dialogContext) => AlertDialog(
                   backgroundColor: purple,
                   icon: const Icon(Icons.logout_rounded, color: gold),
-                  title: const Text('تسجيل الخروج'),
-                  content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟'),
+                  title: const Text(oursText(context, 'تسجيل الخروج', 'Log out')),
+                  content: const Text(oursText(context, 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟', 'Are you sure you want to log out?')),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
-                    FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('تسجيل الخروج')),
+                    TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text(oursText(context, 'إلغاء', 'Cancel'))),
+                    FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text(oursText(context, 'تسجيل الخروج', 'Log out'))),
                   ],
                 ),
               );
@@ -1220,7 +1220,7 @@ class _ChatPageState extends State<ChatPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('إلغاء'),
+            child: const Text(oursText(context, 'إلغاء', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
@@ -2172,7 +2172,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   Future<void> loadProfile() async {
     try {
       final user = db.auth.currentUser;
-      if (user == null) throw Exception('انتهت جلسة تسجيل الدخول');
+      if (user == null) throw Exception(oursText(context, 'انتهت جلسة تسجيل الدخول', 'Your session has expired'));
 
       email = user.email ?? '';
       final profile = await db
@@ -2192,7 +2192,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => loading = false);
-      showMessage('تعذر تحميل الملف الشخصي: $e');
+      showMessage(oursText(context, 'تعذر تحميل الملف الشخصي: $e', 'Could not load profile: $e'));
     }
   }
 
@@ -2213,12 +2213,12 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined, color: gold),
-              title: const Text('اختيار من المعرض'),
+              title: Text(oursText(context, 'اختيار من المعرض', 'Choose from gallery')),
               onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined, color: gold),
-              title: const Text('التقاط صورة بالكاميرا'),
+              title: Text(oursText(context, 'التقاط صورة بالكاميرا', 'Take a photo')),
               onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
             ),
           ]),
@@ -2233,7 +2233,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       );
       if (picked == null) return;
       final user = db.auth.currentUser;
-      if (user == null) throw Exception('انتهت جلسة تسجيل الدخول');
+      if (user == null) throw Exception(oursText(context, 'انتهت جلسة تسجيل الدخول', 'Your session has expired'));
       setState(() => uploadingAvatar = true);
       final extension = picked.name.split('.').last.toLowerCase();
       final safeExtension = ['jpg', 'jpeg', 'png', 'webp'].contains(extension) ? extension : 'jpg';
@@ -2241,7 +2241,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       final oldPath = oldProfile?['avatar_path']?.toString();
       final path = '${user.id}/avatar_${DateTime.now().microsecondsSinceEpoch}.$safeExtension';
       final bytes = await picked.readAsBytes();
-      if (bytes.length > 5 * 1024 * 1024) throw Exception('حجم الصورة يتجاوز 5 ميجابايت');
+      if (bytes.length > 5 * 1024 * 1024) throw Exception(oursText(context, 'حجم الصورة يتجاوز 5 ميجابايت', 'Image exceeds 5 MB'));
       await db.storage.from('ours-avatars').uploadBinary(
         path,
         bytes,
@@ -2258,9 +2258,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       }
       if (!mounted) return;
       setState(() => avatarUrl = db.storage.from('ours-avatars').getPublicUrl(path) + '?v=' + DateTime.now().millisecondsSinceEpoch.toString());
-      showMessage('تم تحديث الصورة الشخصية');
+      showMessage(oursText(context, 'تم تحديث الصورة الشخصية', 'Profile photo updated'));
     } catch (e) {
-      showMessage('تعذر تحديث الصورة: $e');
+      showMessage(oursText(context, 'تعذر تحديث الصورة: $e', 'Could not update photo: $e'));
     } finally {
       if (mounted) setState(() => uploadingAvatar = false);
     }
@@ -2269,13 +2269,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   Future<void> saveProfile() async {
     final value = displayNameController.text.trim();
     if (value.length > 30) {
-      showMessage('الاسم الظاهر يجب ألا يتجاوز 30 حرفًا');
+      showMessage(oursText(context, 'الاسم الظاهر يجب ألا يتجاوز 30 حرفًا', 'Display name must be 30 characters or less'));
       return;
     }
 
     final userId = db.auth.currentUser?.id;
     if (userId == null) {
-      showMessage('انتهت جلسة تسجيل الدخول');
+      showMessage(oursText(context, 'انتهت جلسة تسجيل الدخول', 'Your session has expired'));
       return;
     }
 
@@ -2283,7 +2283,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     try {
       final bio = bioController.text.trim();
       if (bio.length > 160) {
-        showMessage('النبذة يجب ألا تتجاوز 160 حرفًا');
+        showMessage(oursText(context, 'النبذة يجب ألا تتجاوز 160 حرفًا', 'Bio must be 160 characters or less'));
         return;
       }
       await db
@@ -2295,9 +2295,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           .eq('user_id', userId);
 
       if (!mounted) return;
-      showMessage('تم حفظ الملف الشخصي');
+      showMessage(oursText(context, 'تم حفظ الملف الشخصي', 'Profile saved'));
     } catch (e) {
-      showMessage('تعذر حفظ التغييرات: $e');
+      showMessage(oursText(context, 'تعذر حفظ التغييرات: $e', 'Could not save changes: $e'));
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -2309,11 +2309,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: purple,
         icon: const Icon(Icons.logout_rounded, color: gold),
-        title: const Text('تسجيل الخروج'),
-        content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟'),
+        title: const Text(oursText(context, 'تسجيل الخروج', 'Log out')),
+        content: const Text(oursText(context, 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟', 'Are you sure you want to log out?')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('تسجيل الخروج')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text(oursText(context, 'إلغاء', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text(oursText(context, 'تسجيل الخروج', 'Log out'))),
         ],
       ),
     );
@@ -2337,24 +2337,24 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: purple,
-        title: const Text('تغيير كلمة المرور'),
+        title: Text(oursText(context, 'تغيير كلمة المرور', 'Change password')),
         content: TextField(
           controller: controller,
           obscureText: true,
           autofocus: true,
           decoration: InputDecoration(
-            labelText: 'كلمة المرور الجديدة',
+            labelText: oursText(context, 'كلمة المرور الجديدة', 'New password'),
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('إلغاء'),
+            child: const Text(oursText(context, 'إلغاء', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: const Text('حفظ'),
+            child: Text(oursText(context, 'حفظ', 'Save')),
           ),
         ],
       ),
@@ -2362,14 +2362,14 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     controller.dispose();
     if (password == null) return;
     if (password.length < 8) {
-      showMessage('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+      showMessage(oursText(context, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'Password must be at least 8 characters'));
       return;
     }
     try {
       await db.auth.updateUser(UserAttributes(password: password));
-      showMessage('تم تحديث كلمة المرور');
+      showMessage(oursText(context, 'تم تحديث كلمة المرور', 'Password updated'));
     } catch (e) {
-      showMessage('تعذر تغيير كلمة المرور: $e');
+      showMessage(oursText(context, 'تعذر تغيير كلمة المرور: $e', 'Could not change password: $e'));
     }
   }
 
@@ -2589,7 +2589,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 OutlinedButton.icon(
                   onPressed: signOut,
                   icon: const Icon(Icons.logout),
-                  label: Text(oursText(context, 'تسجيل الخروج', 'Log out')),
+                  label: Text(oursText(context, oursText(context, 'تسجيل الخروج', 'Log out'), 'Log out')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: gold,
                     side: const BorderSide(color: gold),
