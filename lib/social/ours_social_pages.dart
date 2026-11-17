@@ -190,7 +190,6 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
   }
 
   Future<void> createInvite({bool showSuccess = true}) async {
-    if (busy && widget.spaceId == null) return;
     try {
       final code = await db.rpc('create_duo_invite');
       if (!mounted) return;
