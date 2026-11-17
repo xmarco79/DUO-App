@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../games/ours_tic_tac_toe_page.dart';
 import '../memories/ours_albums_page.dart';
+import 'ours_universe_page.dart';
 
 const _navy = Color(0xFF10101C);
 const _purple = Color(0xFF29213D);
@@ -24,11 +25,13 @@ class OursWorldHubPage extends StatefulWidget {
     required this.spaceId,
     required this.worldIndex,
     this.onSpaceChanged,
+    this.classicUniverse = false,
   });
 
   final String? spaceId;
   final int worldIndex;
   final ValueChanged<String>? onSpaceChanged;
+  final bool classicUniverse;
 
   @override
   State<OursWorldHubPage> createState() => _OursWorldHubPageState();
@@ -609,6 +612,20 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.worldIndex == 1 && !widget.classicUniverse) {
+      return OursUniversePage(
+        spaceId: widget.spaceId,
+        onOpenClassic: () {
+          Navigator.push(context, MaterialPageRoute(
+            builder: (_) => OursWorldHubPage(
+              spaceId: widget.spaceId,
+              worldIndex: 1,
+              classicUniverse: true,
+            ),
+          ));
+        },
+      );
+    }
     final world = worlds[widget.worldIndex];
     final worldFeatures = features[widget.worldIndex];
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
