@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'ours_direct_chat_page.dart';
 import '../worlds/world_hub_page.dart';
 import '../notifications/ours_notifications.dart';
 
@@ -14,7 +14,8 @@ const _gold = Color(0xFFD9BC86);
 
 class OursSocialHomePage extends StatefulWidget {
   final VoidCallback onProfileTap;
-  const OursSocialHomePage({super.key, required this.onProfileTap});
+  final ValueChanged<String> onChatTap;
+  const OursSocialHomePage({super.key, required this.onProfileTap, required this.onChatTap});
   @override
   State<OursSocialHomePage> createState() => _OursSocialHomePageState();
 }
@@ -22,6 +23,7 @@ class OursSocialHomePage extends StatefulWidget {
 class _OursSocialHomePageState extends State<OursSocialHomePage> {
   int index = 0;
   String? spaceId;
+  bool loadingSpace = true;
   final db = Supabase.instance.client;
 
   @override
@@ -40,15 +42,24 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
     } catch (e) {
       debugPrint('OURS world membership lookup failed: $e');
     } finally {
+      if (mounted) setState(() => loadingSpace = false);
     }
   }
 
-  void _updateSpace(String id) { if (mounted) setState(() => spaceId = id); }
+  void _updateSpace(String id) {
+    if (mounted) setState(() { spaceId = id; loadingSpace = false; });
+  }
 
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const OursConnectHubPage(),
+      OursConnectHubPage(
+        key: const ValueKey('private-pair'),
+        spaceId: spaceId,
+        loading: loadingSpace,
+        onSpaceChanged: _updateSpace,
+        onChatTap: widget.onChatTap,
+      ),
       OursWorldHubPage(key: ValueKey('universe-$spaceId'), spaceId: spaceId, worldIndex: 1, onSpaceChanged: _updateSpace),
       OursWorldHubPage(key: ValueKey('play-$spaceId'), spaceId: spaceId, worldIndex: 2, onSpaceChanged: _updateSpace),
       OursWorldHubPage(key: ValueKey('memories-$spaceId'), spaceId: spaceId, worldIndex: 3, onSpaceChanged: _updateSpace),
@@ -83,32 +94,303 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
   }
 }
 
-class OursConnectHubPage extends StatelessWidget {
-  const OursConnectHubPage({super.key});
+class OursConnectHubPage extends StatefulWidget {
+  final String? spaceId;
+  final bool loading;
+  final ValueChanged<String> onSpaceChanged;
+  final ValueChanged<String> onChatTap;
+
+  const OursConnectHubPage({
+    super.key,
+    required this.spaceId,
+    required this.loading,
+    required this.onSpaceChanged,
+    required this.onChatTap,
+  });
+
   @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Column(children: [
-        Material(
-          color: _navy,
-          child: TabBar(
-            labelColor: _gold,
-            unselectedLabelColor: _lavender,
-            indicatorColor: _gold,
-            tabs: [
-              Tab(text: _oursText(context, 'المحادثات', 'Chats')),
-              Tab(text: _oursText(context, 'ابحث عن شريك', 'Find partner')),
-              Tab(text: _oursText(context, 'الطلبات', 'Requests')),
-            ],
+  State<OursConnectHubPage> createState() => _OursConnectHubPageState();
+}
+
+class _OursConnectHubPageState extends State<OursConnectHubPage> {
+  final db = Supabase.instance.client;
+  final inviteController = TextEditingController();
+  Map<String, dynamic>? partner;
+  bool loadingPartner = false;
+  bool busy = false;
+  String? inviteCode;
+  String? loadError;
+
+  String get uid => db.auth.currentUser!.id;
+
+  @override
+  void initState() {
+    super.initState();
+    loadPartner();
+  }
+
+  @override
+  void didUpdateWidget(covariant OursConnectHubPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.spaceId != widget.spaceId) {
+      partner = null;
+      inviteCode = null;
+      loadPartner();
+    }
+  }
+
+  Future<void> loadPartner() async {
+    final space = widget.spaceId;
+    if (space == null) {
+      if (mounted) setState(() { partner = null; loadingPartner = false; });
+      return;
+    }
+    setState(() { loadingPartner = true; loadError = null; });
+    try {
+      final members = await db.from('duo_members')
+          .select('user_id, role')
+          .eq('space_id', space);
+      if (members.length > 2) {
+        throw Exception(_oursText(context, 'تم رصد عدد أعضاء غير متوقع. تم إيقاف عرض المساحة لحماية خصوصيتكما.', 'Unexpected member count detected. The space is hidden to protect your privacy.'));
+      }
+      final other = members.where((m) => m['user_id'].toString() != uid).toList();
+      Map<String, dynamic>? profile;
+      if (other.isNotEmpty) {
+        profile = await db.from('duo_profiles')
+            .select('username, display_name, avatar_path, bio')
+            .eq('user_id', other.first['user_id'])
+            .maybeSingle();
+      }
+      if (!mounted) return;
+      setState(() { partner = profile; loadingPartner = false; });
+    } catch (e) {
+      if (mounted) setState(() { loadingPartner = false; loadError = e.toString(); });
+    }
+  }
+
+  void showMessage(String value) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+  }
+
+  Future<void> createSpace() async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      final result = await db.rpc('create_duo_space');
+      final id = result.toString();
+      if (id.isEmpty || id == 'null') throw Exception('No space id returned');
+      widget.onSpaceChanged(id);
+      await createInvite(showSuccess: false);
+      showMessage(_oursText(context, 'تم إنشاء عالمكما الخاص', 'Your private world is ready'));
+    } catch (e) {
+      showMessage(_oursText(context, 'تعذر إنشاء المساحة: $e', 'Could not create your space: $e'));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> createInvite({bool showSuccess = true}) async {
+    if (busy && widget.spaceId == null) return;
+    try {
+      final code = await db.rpc('create_duo_invite');
+      if (!mounted) return;
+      setState(() => inviteCode = code.toString());
+      if (showSuccess) showMessage(_oursText(context, 'تم إنشاء رمز دعوة صالح لمدة 24 ساعة', 'A 24-hour invite code has been created'));
+    } catch (e) {
+      showMessage(_oursText(context, 'تعذر إنشاء رمز الدعوة: $e', 'Could not create invite code: $e'));
+    }
+  }
+
+  Future<void> joinSpace() async {
+    final code = inviteController.text.trim().toUpperCase();
+    if (code.length != 8) {
+      showMessage(_oursText(context, 'أدخل رمز الدعوة المكوّن من 8 خانات', 'Enter the 8-character invite code'));
+      return;
+    }
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      final result = await db.rpc('redeem_duo_invite', params: {'p_code': code});
+      final id = result.toString();
+      if (id.isEmpty || id == 'null') throw Exception('No space id returned');
+      inviteController.clear();
+      widget.onSpaceChanged(id);
+      await loadPartner();
+      showMessage(_oursText(context, 'انضممتما إلى عالمكما الخاص', 'You joined your private world'));
+    } catch (e) {
+      showMessage(_oursText(context, 'تعذر الانضمام: $e', 'Could not join the space: $e'));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> showJoinDialog() async {
+    inviteController.clear();
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _purple,
+        title: Text(_oursText(context, 'الانضمام إلى عالمكما', 'Join your world')),
+        content: TextField(
+          controller: inviteController,
+          maxLength: 8,
+          textCapitalization: TextCapitalization.characters,
+          decoration: InputDecoration(
+            hintText: _oursText(context, 'رمز الدعوة', 'Invite code'),
+            prefixIcon: const Icon(Icons.vpn_key_outlined),
           ),
         ),
-        const Expanded(child: TabBarView(children: [
-          OursConversationsPage(),
-          OursPeopleSearchPage(),
-          OursFriendRequestsPage(),
-        ])),
-      ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(_oursText(context, 'إلغاء', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(_oursText(context, 'انضمام', 'Join'))),
+        ],
+      ),
+    );
+    if (accepted == true) await joinSpace();
+  }
+
+  @override
+  void dispose() {
+    inviteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.loading || loadingPartner) {
+      return const Center(child: CircularProgressIndicator(color: _gold));
+    }
+    if (widget.spaceId == null) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(26),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.all_inclusive_rounded, color: _gold, size: 72),
+            const SizedBox(height: 18),
+            Text(_oursText(context, 'عالمكما يبدأ من هنا', 'Your world starts here'),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 10),
+            Text(_oursText(context, 'OURS مساحة خاصة لا تضم إلا حسابيكما. أنشئ المساحة وأرسل رمز الدعوة لشريكك، أو أدخل الرمز الذي وصلك.', 'OURS is a private space for only your two accounts. Create it and share an invite with your partner, or enter the code you received.'),
+                textAlign: TextAlign.center, style: const TextStyle(color: _lavender, height: 1.7)),
+            const SizedBox(height: 26),
+            SizedBox(width: double.infinity, child: FilledButton.icon(
+              onPressed: busy ? null : createSpace,
+              icon: const Icon(Icons.add_circle_outline),
+              label: Text(_oursText(context, 'إنشاء عالمكما', 'Create your world')),
+            )),
+            const SizedBox(height: 10),
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(
+              onPressed: busy ? null : showJoinDialog,
+              icon: const Icon(Icons.vpn_key_outlined),
+              label: Text(_oursText(context, 'لديّ رمز دعوة', 'I have an invite code')),
+            )),
+            if (busy) const Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator(color: _gold)),
+          ]),
+        ),
+      );
+    }
+
+    final avatarPath = partner?['avatar_path']?.toString();
+    final avatarUrl = avatarPath == null ? null : db.storage.from('ours-avatars').getPublicUrl(avatarPath);
+    final displayName = partner?['display_name']?.toString().trim() ?? '';
+    final username = partner?['username']?.toString() ?? '';
+    final hasPartner = partner != null;
+
+    return RefreshIndicator(
+      color: _gold,
+      onRefresh: loadPartner,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(18, 24, 18, 36),
+        children: [
+          const Icon(Icons.all_inclusive_rounded, color: _gold, size: 54),
+          const SizedBox(height: 12),
+          Text(_oursText(context, 'عالمكما الخاص', 'Your private universe'),
+              textAlign: TextAlign.center, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          Text(_oursText(context, 'شخصان فقط · مساحة واحدة · ذكرياتكما معًا', 'Two people only · One space · Your memories together'),
+              textAlign: TextAlign.center, style: const TextStyle(color: _lavender)),
+          const SizedBox(height: 24),
+          Card(
+            color: _purple,
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(children: [
+                CircleAvatar(
+                  radius: 38,
+                  backgroundColor: _navy,
+                  backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl),
+                  child: avatarUrl == null ? const Icon(Icons.person_outline, color: _gold, size: 36) : null,
+                ),
+                const SizedBox(height: 12),
+                Text(hasPartner ? (displayName.isEmpty ? '@$username' : displayName) : _oursText(context, 'بانتظار شريكك', 'Waiting for your partner'),
+                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
+                if (hasPartner && username.isNotEmpty)
+                  Text('@$username', style: const TextStyle(color: _lavender)),
+                if (hasPartner && (partner?['bio']?.toString().isNotEmpty ?? false))
+                  Padding(padding: const EdgeInsets.only(top: 8), child: Text(partner!['bio'].toString(),
+                      textAlign: TextAlign.center, style: const TextStyle(color: _lavender, height: 1.5))),
+                const SizedBox(height: 14),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Icon(Icons.lock_outline, color: _gold, size: 17),
+                  const SizedBox(width: 7),
+                  Text(hasPartner
+                    ? _oursText(context, 'المساحة مكتملة بحسابيكما', 'Your space is complete with both accounts')
+                    : _oursText(context, 'حساب واحد من أصل حسابين', 'One of two accounts connected'),
+                    style: const TextStyle(color: _gold, fontSize: 12)),
+                ]),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (loadError != null)
+            Card(color: _purple, child: ListTile(
+              leading: const Icon(Icons.error_outline, color: _gold),
+              title: Text(_oursText(context, 'تعذر تحميل بيانات الشريك', 'Could not load partner details')),
+              subtitle: Text(loadError!, style: const TextStyle(color: _lavender)),
+              trailing: IconButton(onPressed: loadPartner, icon: const Icon(Icons.refresh, color: _gold)),
+            )),
+          if (hasPartner)
+            SizedBox(width: double.infinity, child: FilledButton.icon(
+              onPressed: () => widget.onChatTap(widget.spaceId!),
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: Text(_oursText(context, 'فتح محادثتكما', 'Open your chat')),
+            ))
+          else ...[
+            Card(color: _purple, child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(children: [
+                Text(_oursText(context, 'رمز دعوة شريكك', 'Your partner invite code'),
+                    style: const TextStyle(color: _gold, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                if (inviteCode != null) ...[
+                  SelectableText(inviteCode!, style: const TextStyle(fontSize: 27, color: _gold, letterSpacing: 5, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => Clipboard.setData(ClipboardData(text: inviteCode!)),
+                    icon: const Icon(Icons.copy),
+                    label: Text(_oursText(context, 'نسخ الرمز', 'Copy code')),
+                  ),
+                ] else
+                  Text(_oursText(context, 'أنشئ رمزًا خاصًا وشاركه مع شريكك فقط. تنتهي صلاحيته بعد 24 ساعة.', 'Create a private code and share it only with your partner. It expires after 24 hours.'),
+                      textAlign: TextAlign.center, style: const TextStyle(color: _lavender, height: 1.5)),
+                const SizedBox(height: 8),
+                FilledButton.tonalIcon(
+                  onPressed: busy ? null : createInvite,
+                  icon: const Icon(Icons.key_outlined),
+                  label: Text(_oursText(context, 'إنشاء / تجديد الرمز', 'Create / renew code')),
+                ),
+              ]),
+            )),
+          ],
+          const SizedBox(height: 18),
+          Card(color: _purple, child: ListTile(
+            leading: const Icon(Icons.shield_outlined, color: _gold),
+            title: Text(_oursText(context, 'خصوصيتكما أولويتنا', 'Your privacy comes first')),
+            subtitle: Text(_oursText(context, 'لا يوجد بحث عام أو قائمة أصدقاء. لا يمكن أن تضم المساحة أكثر من حسابين.', 'No public search or friend list. Your space cannot contain more than two accounts.'),
+                style: const TextStyle(color: _lavender, height: 1.5)),
+          )),
+        ],
+      ),
     );
   }
 }
