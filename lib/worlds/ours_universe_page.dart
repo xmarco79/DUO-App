@@ -341,7 +341,9 @@ class _OursUniversePageState extends State<OursUniversePage> {
         Text(ar ? 'مقتنيات تجميلية بعملات اللعب فقط.' : 'Cosmetics purchased with in-game coins only.',
           style: const TextStyle(color: _muted, fontSize: 12)),
       ])),
-    if (catalog.isEmpty) const Center(child: CircularProgressIndicator(color: _gold))
+    if (catalog.isEmpty) Padding(padding: const EdgeInsets.all(22),
+      child: Text(ar ? 'سيظهر المتجر بعد تجهيز بيانات العالم.' : 'The store will appear when universe data is ready.',
+        textAlign: TextAlign.center, style: const TextStyle(color: _muted)))
     else Padding(padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Column(children: catalog.map((v) => Padding(
         padding: const EdgeInsets.only(bottom: 10), child: itemCard(v, owned: false))).toList())),
