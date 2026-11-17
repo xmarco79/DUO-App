@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -98,19 +99,19 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   try{if(!await r.hasPermission()){_show(t('اسمح باستخدام الميكروفون أولًا','Allow microphone access first'));return;}
    final d=await getTemporaryDirectory();final p=d.path+'/ours_'+DateTime.now().microsecondsSinceEpoch.toString()+'.m4a';
    await r.start(const RecordConfig(encoder:AudioEncoder.aacLc,bitRate:96000,sampleRate:44100,numChannels:1,echoCancel:true,noiseSuppress:true),path:p);
-   if(mounted)setState(()=>{recordingPath=p,recording=true});
+   if(mounted)setState((){recordingPath=p;recording=true;});
   }catch(e){_show(t('تعذر بدء التسجيل: $e','Could not start recording: $e'));}
  }
  Future<void> _cancelRecording() async{
   final p=recordingPath;try{await recorder?.cancel();if(p!=null&&await File(p).exists())await File(p).delete();}catch(_){}
-  if(mounted)setState(()=>{recording=false,recordingPath=null});
+  if(mounted)setState((){recording=false;recordingPath=null;});
  }
  Future<void> _sendRecording() async{
-  final r=recorder;if(r==null||!recording)return;setState(()=>{sending=true,recording=false});String? p;
+  final r=recorder;if(r==null||!recording)return;setState((){sending=true;recording=false;});String? p;
   try{p=await r.stop();if(p==null)throw Exception('Recording unavailable');final f=File(p);if(!await f.exists())throw Exception('Recording not found');
    await _upload(await f.readAsBytes(),'voice_'+DateTime.now().millisecondsSinceEpoch.toString()+'.m4a','audio');
   }catch(e){_show(t('تعذر إرسال التسجيل: $e','Could not send recording: $e'));}
-  finally{if(p!=null&&await File(p).exists())await File(p).delete();if(mounted)setState(()=>{sending=false,recordingPath=null});}
+  finally{if(p!=null&&await File(p).exists())await File(p).delete();if(mounted)setState((){sending=false;recordingPath=null;});}
  }
  Future<String> _signed(String path){
   final old=urls[path];if(old!=null)return old;final f=db.storage.from(_bucket).createSignedUrl(path,900);urls[path]=f;
