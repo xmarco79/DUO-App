@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'notifications/ours_push_service.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'worlds/world_hub_page.dart';
 import 'social/ours_social_pages.dart';
 import 'notifications/ours_notifications.dart';
@@ -77,6 +78,11 @@ class OursApp extends StatelessWidget {
         title: 'OURS',
         locale: locale,
         supportedLocales: const [Locale('ar'), Locale('en')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         builder: (context, child) => Directionality(
           textDirection: locale.languageCode == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
           child: child ?? const SizedBox.shrink(),
