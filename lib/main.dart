@@ -1074,7 +1074,6 @@ class _ChatPageState extends State<ChatPage> {
           controller: controller,
           autofocus: true,
           maxLength: 40,
-          textDirection: TextDirection.rtl,
           decoration: const InputDecoration(
             hintText: 'اكتب عبارة قصيرة أو إيموجي',
             border: OutlineInputBorder(),
@@ -1261,7 +1260,6 @@ class _ChatPageState extends State<ChatPage> {
           child: Text(
             data['content']?.toString() ?? '',
             textAlign: TextAlign.center,
-            textDirection: TextDirection.rtl,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 25,
