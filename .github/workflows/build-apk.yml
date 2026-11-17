@@ -1,5 +1,5 @@
 
-name: Build DUO APK
+name: Build OURS APK
 
 on:
   workflow_dispatch:
@@ -21,7 +21,10 @@ jobs:
           channel: stable
 
       - name: Generate Android project
-        run: flutter create --platforms=android --org com.duoapp --project-name duo .
+        run: flutter create --platforms=android --org com.duoapp --project-name ours .
+
+      - name: Set OURS Android app label
+        run: sed -i 's/android:label="ours"/android:label="OURS"/' android/app/src/main/AndroidManifest.xml
 
       - name: Install dependencies
         run: flutter pub get
@@ -32,6 +35,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: DUO-Android
+          name: OURS-Android
           path: build/app/outputs/flutter-apk/app-release.apk
           
