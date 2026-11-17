@@ -346,7 +346,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
           content: Text(_worldText(context, 'هل تريد حذف هذا العنصر من المساحة المشتركة؟', 'Delete this item from your shared world?')),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: Text(_worldText(context, 'إلغاء', 'Cancel'))),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(_worldText(context, 'حذف', 'Delete'))),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(_worldText(menuContext, 'حذف', 'Delete'))),
           ],
         ),
       );
@@ -703,8 +703,8 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                       if (value == 'pin') togglePin(item);
                                       if (value == 'delete') deleteItem(item);
                                     },
-                                    itemBuilder: (_) => const [
-                                      PopupMenuItem(value: 'pin', child: Text(_worldText(context, 'تثبيت / إلغاء التثبيت', 'Pin / unpin'))),
+                                    itemBuilder: (menuContext) => [
+                                      PopupMenuItem(value: 'pin', child: Text(_worldText(menuContext, 'تثبيت / إلغاء التثبيت', 'Pin / unpin'))),
                                       PopupMenuItem(value: 'delete', child: Text(_worldText(context, 'حذف', 'Delete'))),
                                     ],
                                   ),
