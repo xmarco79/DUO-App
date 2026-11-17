@@ -3,6 +3,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
+import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ai_page.dart';
 import 'settings_page.dart';
@@ -860,38 +863,68 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  Future<Uint8List> _createAiImage({
-    required String action,
-    String? prompt,
-    Uint8List? source,
-    String mimeType = 'image/jpeg',
-  }) async {
-    final response = await db.functions.invoke(
-      'ours-sticker-ai',
-      body: {
-        'space_id': widget.spaceId,
-        'action': action,
-        if (prompt != null) 'prompt': prompt,
-        if (source != null) 'image_base64': base64Encode(source),
-        if (source != null) 'mime_type': mimeType,
-      },
+  Future<Uint8List> _removeBackgroundLocally(XFile pickedImage) async {
+    final segmenter = SelfieSegmenter(
+      mode: SegmenterMode.single,
+      enableRawSizeMask: true,
     );
-    final data = response.data is Map
-        ? Map<String, dynamic>.from(response.data)
-        : <String, dynamic>{};
-    if (response.status != 200) {
-      final error = data['error']?.toString() ?? '';
-      if (error == 'AI_SETUP_REQUIRED') {
-        throw Exception('ميزة الصور تحتاج إلى تفعيل مفتاح الذكاء الاصطناعي في الخادم.');
+
+    try {
+      final input = InputImage.fromFilePath(pickedImage.path);
+      final mask = await segmenter.processImage(input);
+      if (mask == null) {
+        throw Exception('لم يتمكن التطبيق من تحديد الشخص في الصورة.');
       }
-      if (error == 'AI_LIMIT_REACHED') {
-        throw Exception('وصلنا إلى حد الاستخدام. حاول لاحقًا.');
+
+      final sourceBytes = await pickedImage.readAsBytes();
+      final decoded = img.decodeImage(sourceBytes);
+      if (decoded == null) {
+        throw Exception('تعذر قراءة الصورة المختارة.');
       }
-      throw Exception('تعذر إنشاء الصورة بالذكاء الاصطناعي.');
+      final source = img.bakeOrientation(decoded);
+      final output = img.Image(
+        width: source.width,
+        height: source.height,
+        numChannels: 4,
+      );
+
+      final maskWidth = mask.width;
+      final maskHeight = mask.height;
+      final confidences = mask.confidences;
+      if (maskWidth <= 0 || maskHeight <= 0 ||
+          confidences.length < maskWidth * maskHeight) {
+        throw Exception('قناع إزالة الخلفية غير صالح.');
+      }
+
+      for (var y = 0; y < source.height; y++) {
+        final my = ((y * maskHeight) / source.height)
+            .floor()
+            .clamp(0, maskHeight - 1);
+        for (var x = 0; x < source.width; x++) {
+          final mx = ((x * maskWidth) / source.width)
+              .floor()
+              .clamp(0, maskWidth - 1);
+          final confidence = confidences[my * maskWidth + mx]
+              .clamp(0.0, 1.0);
+          final alpha = (((confidence - 0.28) / 0.55) * 255)
+              .clamp(0.0, 255.0)
+              .round();
+          final pixel = source.getPixel(x, y);
+          output.setPixelRgba(
+            x,
+            y,
+            pixel.r.toInt(),
+            pixel.g.toInt(),
+            pixel.b.toInt(),
+            alpha,
+          );
+        }
+      }
+
+      return Uint8List.fromList(img.encodePng(output));
+    } finally {
+      await segmenter.close();
     }
-    final encoded = data['image_base64']?.toString() ?? '';
-    if (encoded.isEmpty) throw Exception('لم تصل الصورة الناتجة.');
-    return base64Decode(encoded);
   }
 
   Future<void> _saveStickerPng(Uint8List bytes) async {
@@ -934,59 +967,13 @@ class _ChatPageState extends State<ChatPage> {
       if (!['image/png', 'image/jpeg', 'image/webp'].contains(mime)) {
         throw Exception('صيغة الصورة غير مدعومة.');
       }
-      final result = await _createAiImage(
-        action: 'remove_background',
-        source: bytes,
-        mimeType: mime,
-      );
+      if (!['image/png', 'image/jpeg', 'image/webp'].contains(mime)) {
+        throw Exception('صيغة الصورة غير مدعومة.');
+      }
+      final result = await _removeBackgroundLocally(image);
       await _saveStickerPng(result);
     } catch (e) {
       showMessage('تعذر إزالة الخلفية: ${e.toString().replaceFirst('Exception: ', '')}');
-    }
-  }
-
-  Future<void> createAiSticker() async {
-    final controller = TextEditingController();
-    final prompt = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: purple,
-        title: const Text('إنشاء ملصق بالذكاء الاصطناعي'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 500,
-          minLines: 2,
-          maxLines: 4,
-          textDirection: TextDirection.rtl,
-          decoration: const InputDecoration(
-            hintText: 'صف الملصق الذي تتخيله...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
-            child: const Text('إنشاء'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (prompt == null || prompt.trim().isEmpty) return;
-    try {
-      showMessage('يجري تصميم ملصقك... قد يستغرق بعض الوقت');
-      final result = await _createAiImage(
-        action: 'generate',
-        prompt: prompt.trim(),
-      );
-      await _saveStickerPng(result);
-    } catch (e) {
-      showMessage('تعذر إنشاء الملصق: ${e.toString().replaceFirst('Exception: ', '')}');
     }
   }
 
@@ -1120,15 +1107,7 @@ class _ChatPageState extends State<ChatPage> {
                       icon: const Icon(Icons.text_fields, color: gold),
                     ),
                     IconButton(
-                      tooltip: 'إنشاء ملصق بالذكاء الاصطناعي',
-                      onPressed: () {
-                        Navigator.pop(sheetContext);
-                        createAiSticker();
-                      },
-                      icon: const Icon(Icons.auto_awesome, color: gold),
-                    ),
-                    IconButton(
-                      tooltip: 'صورة مع إزالة الخلفية تلقائيًا',
+                      tooltip: 'إزالة خلفية صورة شخص على الجهاز',
                       onPressed: () {
                         Navigator.pop(sheetContext);
                         createImageSticker();
