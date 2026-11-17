@@ -912,7 +912,6 @@ class _ChatPageState extends State<ChatPage> {
         'body': jsonEncode(payload),
         'message_type': 'sticker',
       });
-      if (mounted) Navigator.of(context).maybePop();
     } catch (e) {
       showMessage('تعذر إرسال الملصق: $e');
     }
@@ -1050,7 +1049,10 @@ class _ChatPageState extends State<ChatPage> {
                             final isText = sticker['sticker_type'] == 'text';
                             return InkWell(
                               borderRadius: BorderRadius.circular(16),
-                              onTap: () => _sendSticker(sticker),
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+                                _sendSticker(sticker);
+                              },
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: purple,
