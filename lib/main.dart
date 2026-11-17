@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'ai_page.dart';
 
 // ==================== COLORS ====================
 
@@ -633,6 +634,18 @@ class _HomePageState extends State<HomePage> {
                       label: const Text(
                         'فتح المحادثة',
                         style: TextStyle(fontSize: 17),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  actionCard(
+                    icon: Icons.auto_awesome,
+                    title: 'OURS AI',
+                    subtitle: 'مساعد ذكي للمحادثة وتلخيص الذكريات واقتراح الأفكار',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => OursAiPage(spaceId: spaceId!),
                       ),
                     ),
                   ),
