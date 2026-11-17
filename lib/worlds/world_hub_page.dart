@@ -173,24 +173,24 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
   String _friendlyError(Object e) {
     final value = e.toString();
     if (value.contains('SocketException') || value.contains('Failed host lookup')) {
-      return 'تعذر الاتصال بالإنترنت. تحقق من الشبكة ثم أعد المحاولة.';
+      return _worldText(context, 'تعذر الاتصال بالإنترنت. تحقق من الشبكة ثم أعد المحاولة.', 'No internet connection. Check your network and try again.');
     }
     if (value.contains('PGRST') || value.contains('duo_world_items')) {
-      return 'ميزة التخزين لم تجهز بعد. حدّث التطبيق أو راجع إعداد قاعدة البيانات.';
+      return _worldText(context, 'ميزة التخزين لم تجهز بعد. حدّث التطبيق أو راجع إعداد قاعدة البيانات.', 'World storage is not ready yet. Update the app or check the database setup.');
     }
-    return 'حدث خطأ غير متوقع. حاول مرة أخرى.';
+    return _worldText(context, 'حدث خطأ غير متوقع. حاول مرة أخرى.', 'An unexpected error occurred. Please try again.');
   }
 
   Future<void> recordVoiceEntry(String title, String content) async {
     if (!canSync) {
-      _snack('تسجيل اليوميات الصوتية يتطلب تسجيل الدخول إلى مساحة مشتركة.');
+      _snack(_worldText(context, 'تسجيل اليوميات الصوتية يتطلب تسجيل الدخول إلى مساحة مشتركة.', 'Sign in and connect to a shared world to record voice diary entries.'));
       return;
     }
     try {
       if (!recordingVoice) {
         final permitted = await voiceRecorder.hasPermission();
         if (!permitted) {
-          _snack('اسمح باستخدام الميكروفون لتسجيل اليوميات الصوتية.');
+          _snack(_worldText(context, 'اسمح باستخدام الميكروفون لتسجيل اليوميات الصوتية.', 'Allow microphone access to record a voice diary entry.'));
           return;
         }
         final dir = await getTemporaryDirectory();
@@ -215,7 +215,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       final file = File(path);
       final bytes = await file.readAsBytes();
       if (bytes.isEmpty || bytes.length > 15 * 1024 * 1024) {
-        _snack('التسجيل فارغ أو يتجاوز الحد المسموح (15 MB).');
+        _snack(_worldText(context, 'التسجيل فارغ أو يتجاوز الحد المسموح (15 MB).', 'The recording is empty or exceeds the 15 MB limit.'));
         return;
       }
       final userId = db.auth.currentUser!.id;
@@ -230,14 +230,14 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
         ),
       );
       try {
-        await createItem('Voice Diary', title.trim().isEmpty ? 'يوميات صوتية' : title,
+        await createItem('Voice Diary', title.trim().isEmpty ? _worldText(context, 'يوميات صوتية', 'Voice diary') : title,
           content, payload: {'audio_path': storagePath, 'audio_mime': 'audio/mp4'}, rethrowErrors: true);
       } catch (_) {
         await db.storage.from('duo-private').remove([storagePath]);
         rethrow;
       }
       await file.delete();
-      _snack('تم حفظ التسجيل الصوتي في يومياتكما');
+      _snack(_worldText(context, 'تم حفظ التسجيل الصوتي في يومياتكما', 'Voice recording saved to your diary.'));
     } catch (e) {
       if (mounted) {
         setState(() => recordingVoice = false);
@@ -256,13 +256,13 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       if (mounted) setState(() => playingVoicePath = path);
       await voicePlayer.play(UrlSource(url));
     } catch (e) {
-      _snack('تعذر تشغيل التسجيل الصوتي. تحقق من الاتصال والصلاحيات.');
+      _snack(_worldText(context, 'تعذر تشغيل التسجيل الصوتي. تحقق من الاتصال والصلاحيات.', 'Could not play the recording. Check your connection and permissions.'));
     }
   }
 
   Future<void> createItem(String kind, String title, String content, {Map<String, dynamic> payload = const {}, DateTime? dueAt, bool rethrowErrors = false}) async {
     if (!canSync) {
-      _snack('هذه معاينة فقط. سجّل الدخول وأنشئ مساحة لحفظ بياناتكما.');
+      _snack(_worldText(context, 'هذه معاينة فقط. سجّل الدخول وأنشئ مساحة لحفظ بياناتكما.', 'Preview only. Sign in and create or join a shared world to save your data.'));
       return;
     }
     try {
@@ -277,7 +277,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
         'due_at': dueAt?.toUtc().toIso8601String(),
       });
       if (!mounted) return;
-      _snack('تم الحفظ في مساحتكما');
+      _snack(_worldText(context, 'تم الحفظ في مساحتكما', 'Saved to your shared world.'));
       await loadItems();
     } catch (e) {
       _snack(_friendlyError(e));
@@ -728,7 +728,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                       const Icon(Icons.event, size: 15, color: _gold),
                                       const SizedBox(width: 5),
                                       Text(
-                                        '${isTimeCapsule ? 'تُفتح الذكرى' : 'الموعد'}: ${DateFormat('dd/MM/yyyy').format(unlockAt ?? DateTime.parse(item['due_at'].toString()).toLocal())}',
+                                        '${isTimeCapsule ? _worldText(context, 'تُفتح الذكرى', 'Unlocks') : _worldText(context, 'الموعد', 'Date')}: ${DateFormat('dd/MM/yyyy').format(unlockAt ?? DateTime.parse(item['due_at'].toString()).toLocal())}',
                                         style: const TextStyle(color: _gold, fontSize: 12),
                                       ),
                                     ]),
@@ -746,7 +746,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                       const Icon(Icons.lock_clock, color: _gold, size: 18),
                                       const SizedBox(width: 8),
                                       Expanded(child: Text(
-                                        'رسالة مغلقة حتى ${DateFormat('dd/MM/yyyy').format(unlockAt)}',
+                                        _worldText(context, 'رسالة مغلقة حتى ${DateFormat('dd/MM/yyyy').format(unlockAt)}', 'Locked until ${DateFormat('dd/MM/yyyy').format(unlockAt)}'),
                                         style: const TextStyle(color: _gold),
                                       )),
                                     ]),
@@ -772,14 +772,14 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                             ? TextDecoration.lineThrough : TextDecoration.none,
                                       )),
                                   )),
-                                  Text('${tasks.where((task) => task['done'] == true).length} / ${tasks.length} مكتملة',
+                                  Text('${tasks.where((task) => task['done'] == true).length} / ${tasks.length} completed',
                                     style: const TextStyle(color: _lavender, fontSize: 12)),
                                 ],
                                 if (quizFinished)
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 8),
                                     child: Text(
-                                      'الإجابة الصحيحة: ${choices[correctIndex]}',
+                                      _worldText(context, 'الإجابة الصحيحة: ${choices[correctIndex]}', 'Correct answer: ${choices[correctIndex]}'),
                                       style: const TextStyle(color: _gold, fontWeight: FontWeight.w600),
                                     ),
                                   ),
