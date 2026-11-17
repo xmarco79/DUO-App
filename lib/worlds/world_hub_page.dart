@@ -14,6 +14,9 @@ const _purple = Color(0xFF29213D);
 const _lavender = Color(0xFFB9A2D5);
 const _gold = Color(0xFFD9BC86);
 
+String _worldText(BuildContext context, String ar, String en) =>
+    Localizations.localeOf(context).languageCode == 'ar' ? ar : en;
+
 class OursWorldHubPage extends StatefulWidget {
   const OursWorldHubPage({
     super.key,
@@ -339,11 +342,11 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: _purple,
-          title: const Text('تأكيد الحذف'),
-          content: const Text('هل تريد حذف هذا العنصر من المساحة المشتركة؟'),
+          title: Text(_worldText(context, 'تأكيد الحذف', 'Confirm deletion')),
+          content: Text(_worldText(context, 'هل تريد حذف هذا العنصر من المساحة المشتركة؟', 'Delete this item from your shared world?')),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(_worldText(context, 'إلغاء', 'Cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(_worldText(context, 'حذف', 'Delete'))),
           ],
         ),
       );
@@ -387,11 +390,11 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
               Row(children: [
                 Icon(feature.$3, color: _gold),
                 const SizedBox(width: 10),
-                Expanded(child: Text(feature.$1,
+                Expanded(child: Text(_worldText(context, feature.$2, feature.$1),
                     style: const TextStyle(fontSize: 20, color: _gold))),
               ]),
               const SizedBox(height: 8),
-              Text(feature.$2, style: const TextStyle(color: _lavender)),
+              if (isArabic) Text(feature.$2, style: const TextStyle(color: _lavender)),
               const SizedBox(height: 18),
               TextField(controller: title, maxLength: 140,
                 decoration: const InputDecoration(
@@ -410,7 +413,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                       setSheetState(() {});
                     },
                     icon: Icon(recordingVoice ? Icons.stop_circle_outlined : Icons.mic_none_rounded),
-                    label: Text(recordingVoice ? 'إيقاف التسجيل وحفظه' : 'بدء تسجيل صوتي'),
+                    label: Text(recordingVoice ? _worldText(context, 'إيقاف التسجيل وحفظه', 'Stop and save recording') : _worldText(context, 'بدء تسجيل صوتي', 'Start voice recording')),
                     style: FilledButton.styleFrom(
                       backgroundColor: recordingVoice ? Colors.red.shade800 : _gold,
                       foregroundColor: recordingVoice ? Colors.white : _navy,
@@ -425,8 +428,8 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     minLines: 2,
                     maxLines: 5,
                     decoration: InputDecoration(
-                      labelText: (kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List') ? 'المهام (كل مهمة في سطر)' : 'الخيارات (كل خيار في سطر)',
-                      hintText: 'الخيار الأول\nالخيار الثاني',
+                      labelText: (kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List') ? _worldText(context, 'المهام (كل مهمة في سطر)', 'Tasks (one per line)') : _worldText(context, 'الخيارات (كل خيار في سطر)', 'Options (one per line)'),
+                      hintText: _worldText(context, 'الخيار الأول\nالخيار الثاني', 'Option one\nOption two'),
                       border: const OutlineInputBorder(),
                     ),
                   ),
@@ -464,8 +467,8 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     },
                     icon: const Icon(Icons.calendar_month_outlined),
                     label: Text(dueDate == null
-                        ? (kind == 'Time Capsule' ? 'تحديد تاريخ فتح الرسالة' : 'تحديد التاريخ (اختياري)')
-                        : 'التاريخ: ${dueDate!.day}/${dueDate!.month}/${dueDate!.year}'),
+                        ? (kind == 'Time Capsule' ? _worldText(context, 'تحديد تاريخ فتح الرسالة', 'Choose unlock date') : _worldText(context, 'تحديد التاريخ (اختياري)', 'Choose a date (optional)'))
+                        : _worldText(context, 'التاريخ: ${dueDate!.day}/${dueDate!.month}/${dueDate!.year}', 'Date: ${dueDate!.day}/${dueDate!.month}/${dueDate!.year}')),
                   ),
                 ),
               const SizedBox(height: 16),
@@ -474,7 +477,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                   onPressed: () {
                     if (title.text.trim().isNotEmpty) Navigator.pop(context, true);
                   },
-                  child: const Text('حفظ'),
+                  child: Text(_worldText(context, 'حفظ', 'Save')),
                 ),
             ],
           ),
@@ -496,7 +499,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
               ? <String, dynamic>{'options': quizOptions, 'votes': <String, dynamic>{}, 'correct_index': correct}
               : lines.length >= 2 ? <String, dynamic>{'options': quizOptions, 'votes': <String, dynamic>{}} : <String, dynamic>{};
       if (isQuiz && (quizOptions.length < 2 || correct < 0)) {
-        _snack('أضف خيارين على الأقل وحدد الإجابة الصحيحة من بينها.');
+        _snack(_worldText(context, 'أضف خيارين على الأقل وحدد الإجابة الصحيحة من بينها.', 'Add at least two options and select the correct answer.'));
       } else {
         await createItem(kind, title.text, body.text, payload: payload, dueAt: dueDate);
       }
@@ -522,6 +525,17 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
   Widget build(BuildContext context) {
     final world = worlds[widget.worldIndex];
     final worldFeatures = features[widget.worldIndex];
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final worldTitle = isArabic
+        ? ['تواصل', 'العالم', 'اللعب', 'الذكريات', 'معًا'][widget.worldIndex]
+        : world.$1;
+    final worldDescription = isArabic ? world.$2 : [
+      'Chat and share your daily moments',
+      'Build and decorate your own universe',
+      'Questions, games and light challenges',
+      'Collect moments and messages to remember',
+      'Plan the things you want to do together',
+    ][widget.worldIndex];
     return Scaffold(
       backgroundColor: _navy,
       floatingActionButton: canSync
@@ -549,25 +563,25 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     Row(children: [
                       Icon(world.$3, color: _gold, size: 34),
                       const SizedBox(width: 12),
-                      Text(world.$1, style: const TextStyle(
+                      Text(worldTitle, style: const TextStyle(
                           color: _gold, fontSize: 29, fontWeight: FontWeight.w600)),
                     ]),
                     const SizedBox(height: 8),
-                    Text(world.$2, style: const TextStyle(color: _lavender)),
+                    Text(worldDescription, style: const TextStyle(color: _lavender)),
                     const SizedBox(height: 16),
                     if (canSync && widget.worldIndex == 2)
                       SizedBox(width: double.infinity, child: FilledButton.icon(
                         onPressed: () => Navigator.push(context, MaterialPageRoute(
                           builder: (_) => OursTicTacToePage(spaceId: widget.spaceId!))),
                         icon: const Icon(Icons.grid_3x3_rounded),
-                        label: const Text('العبا XO مباشرة'),
+                        label: Text(_worldText(context, 'العبا XO مباشرة', 'Play XO together')),
                       )),
                     if (canSync && widget.worldIndex == 3)
                       SizedBox(width: double.infinity, child: OutlinedButton.icon(
                         onPressed: () => Navigator.push(context, MaterialPageRoute(
                           builder: (_) => OursAlbumsPage(spaceId: widget.spaceId!))),
                         icon: const Icon(Icons.photo_album_outlined),
-                        label: const Text('فتح ألبومات الصور'),
+                        label: Text(_worldText(context, 'فتح ألبومات الصور', 'Open photo albums')),
                       )),
                     const SizedBox(height: 20),
                     if (!canSync)
@@ -587,7 +601,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                         ]),
                       ),
                     const SizedBox(height: 18),
-                    const Text('الميزات', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
+                    Text(_worldText(context, 'الميزات', 'Features'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 10),
                   ],
                 ),
@@ -603,7 +617,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     final active = selectedKind == feature.$1;
                     return ActionChip(
                       avatar: Icon(feature.$3, size: 17, color: active ? _navy : _gold),
-                      label: Text(feature.$1),
+                      label: Text(isArabic ? feature.$2 : feature.$1),
                       backgroundColor: active ? _gold : _purple,
                       labelStyle: TextStyle(color: active ? _navy : Colors.white),
                       onPressed: () {
@@ -640,10 +654,10 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                         padding: const EdgeInsets.all(22),
                         decoration: BoxDecoration(color: _purple,
                           borderRadius: BorderRadius.circular(18)),
-                        child: const Column(children: [
+                        child: Column(children: [
                           Icon(Icons.auto_awesome_outlined, color: _gold, size: 32),
                           SizedBox(height: 10),
-                          Text('لا توجد إضافات بعد', style: TextStyle(fontSize: 17)),
+                          Text(_worldText(context, 'لا توجد إضافات بعد', 'Nothing here yet'), style: const TextStyle(fontSize: 17)),
                           SizedBox(height: 6),
                           Text('اختارا ميزة وابدآ بإضافة أول ذكرى أو فكرة أو ملاحظة.',
                             textAlign: TextAlign.center,
@@ -692,8 +706,8 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                       if (value == 'delete') deleteItem(item);
                                     },
                                     itemBuilder: (_) => const [
-                                      PopupMenuItem(value: 'pin', child: Text('تثبيت / إلغاء التثبيت')),
-                                      PopupMenuItem(value: 'delete', child: Text('حذف')),
+                                      PopupMenuItem(value: 'pin', child: Text(_worldText(context, 'تثبيت / إلغاء التثبيت', 'Pin / unpin'))),
+                                      PopupMenuItem(value: 'delete', child: Text(_worldText(context, 'حذف', 'Delete'))),
                                     ],
                                   ),
                                 ]),
@@ -706,7 +720,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                         playingVoicePath == audioPath && voicePlayer.state == PlayerState.playing
                                             ? Icons.pause_rounded : Icons.play_arrow_rounded,
                                       ),
-                                      label: const Text('تشغيل التسجيل الصوتي'),
+                                      label: Text(_worldText(context, 'تشغيل التسجيل الصوتي', 'Play voice recording')),
                                     ),
                                   ),
                                 if (item['due_at'] != null)
@@ -796,7 +810,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                                       ),
                                     );
                                   }),
-                                  Text('عدد الأصوات: ${votes.length}',
+                                  Text(_worldText(context, 'عدد الأصوات: ${votes.length}', 'Votes: ${votes.length}'),
                                       style: const TextStyle(color: _lavender, fontSize: 12)),
                                 ],
                               ],
@@ -808,7 +822,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     ...worldFeatures.map((feature) => OutlinedButton.icon(
                       onPressed: () => _showEditor(feature.$1),
                       icon: Icon(feature.$3, size: 18),
-                      label: Text('إضافة إلى ${feature.$1}'),
+                      label: Text(_worldText(context, 'إضافة إلى ${feature.$2}', 'Add to ${feature.$1}')),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _lavender,
                         side: BorderSide(color: _lavender.withOpacity(.25)),
