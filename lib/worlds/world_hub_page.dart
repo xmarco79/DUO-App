@@ -407,10 +407,10 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       final result = await db.rpc('create_duo_space');
       final id = result?.toString() ?? '';
       if (id.isEmpty) throw Exception('No world ID returned');
-      widget.onSpaceChanged?.call(id);
       if (!mounted) return;
       _snack(_worldText(context, 'تم إنشاء عالمكما المشترك', 'Your shared world has been created'));
       await _invitePartnerToWorld();
+      if (mounted) widget.onSpaceChanged?.call(id);
     } catch (e) {
       _snack(_worldText(context, 'تعذر إنشاء العالم: $e', 'Could not create world: $e'));
     }
@@ -445,8 +445,8 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       final result = await db.rpc('redeem_duo_invite', params: {'p_code': code});
       final id = result?.toString() ?? '';
       if (id.isEmpty) throw Exception('No world ID returned');
-      widget.onSpaceChanged?.call(id);
       if (mounted) _snack(_worldText(context, 'تم الانضمام إلى العالم المشترك', 'You joined the shared world'));
+      if (mounted) widget.onSpaceChanged?.call(id);
     } catch (e) {
       _snack(_worldText(context, 'تعذر الانضمام إلى العالم: $e', 'Could not join world: $e'));
     }
