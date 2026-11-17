@@ -1,5 +1,7 @@
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ai_page.dart';
 
@@ -682,6 +684,9 @@ class _ChatPageState extends State<ChatPage> {
   SupabaseClient get db => Supabase.instance.client;
 
   List<Map<String, dynamic>> messages = [];
+  List<Map<String, dynamic>> stickerShelf = [];
+  final Map<String, Future<String>> signedStickerUrls = {};
+  final ImagePicker imagePicker = ImagePicker();
 
   bool loading = true;
   bool sending = false;
@@ -694,6 +699,7 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     loadMessages();
+    loadStickerShelf();
     listenToMessages();
   }
 
@@ -780,6 +786,308 @@ class _ChatPageState extends State<ChatPage> {
         setState(() => sending = false);
       }
     }
+  }
+
+
+  Future<void> loadStickerShelf() async {
+    try {
+      final rows = await db
+          .from('duo_stickers')
+          .select()
+          .eq('space_id', widget.spaceId)
+          .order('created_at', ascending: false);
+      if (!mounted) return;
+      setState(() => stickerShelf = List<Map<String, dynamic>>.from(rows));
+    } catch (e) {
+      showMessage('تعذر تحميل الملصقات: $e');
+    }
+  }
+
+  Future<void> createTextSticker() async {
+    final controller = TextEditingController();
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: purple,
+        title: const Text('إنشاء ملصق نصّي'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 40,
+          textDirection: TextDirection.rtl,
+          decoration: const InputDecoration(
+            hintText: 'اكتب عبارة قصيرة أو إيموجي',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('إنشاء'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null || value.trim().isEmpty) return;
+
+    try {
+      final row = await db.from('duo_stickers').insert({
+        'space_id': widget.spaceId,
+        'created_by': currentUserId,
+        'sticker_type': 'text',
+        'content': value.trim(),
+      }).select().single();
+      if (!mounted) return;
+      setState(() => stickerShelf.insert(0, Map<String, dynamic>.from(row)));
+      await _sendSticker(Map<String, dynamic>.from(row));
+    } catch (e) {
+      showMessage('تعذر إنشاء الملصق: $e');
+    }
+  }
+
+  Future<void> createImageSticker() async {
+    try {
+      final image = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 88,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      final extension = image.name.toLowerCase().split('.').last;
+      final safeExtension = ['png', 'jpg', 'jpeg', 'webp'].contains(extension)
+          ? extension
+          : 'jpg';
+      final contentType = safeExtension == 'png'
+          ? 'image/png'
+          : safeExtension == 'webp'
+              ? 'image/webp'
+              : 'image/jpeg';
+      final id = const Uuid().v4();
+      final path = '${widget.spaceId}/$id.$safeExtension';
+
+      await db.storage.from('ours-stickers').uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(
+          contentType: contentType,
+          upsert: false,
+        ),
+      );
+
+      final row = await db.from('duo_stickers').insert({
+        'space_id': widget.spaceId,
+        'created_by': currentUserId,
+        'sticker_type': 'image',
+        'content': '',
+        'storage_path': path,
+      }).select().single();
+
+      if (!mounted) return;
+      final sticker = Map<String, dynamic>.from(row);
+      setState(() => stickerShelf.insert(0, sticker));
+      await _sendSticker(sticker);
+    } catch (e) {
+      showMessage('تعذر إنشاء ملصق من الصورة: $e');
+    }
+  }
+
+  Future<void> _sendSticker(Map<String, dynamic> sticker) async {
+    try {
+      final payload = {
+        'id': sticker['id'],
+        'sticker_type': sticker['sticker_type'],
+        'content': sticker['content'] ?? '',
+        'storage_path': sticker['storage_path'],
+      };
+      await db.from('duo_messages').insert({
+        'space_id': widget.spaceId,
+        'sender_id': currentUserId,
+        'body': jsonEncode(payload),
+        'message_type': 'sticker',
+      });
+      if (mounted) Navigator.of(context).maybePop();
+    } catch (e) {
+      showMessage('تعذر إرسال الملصق: $e');
+    }
+  }
+
+  Future<String> _getStickerUrl(String path) {
+    return signedStickerUrls.putIfAbsent(
+      path,
+      () => db.storage.from('ours-stickers').createSignedUrl(path, 3600),
+    );
+  }
+
+  Widget _buildStickerMessage(Map<String, dynamic> item) {
+    try {
+      final data = jsonDecode(item['body']?.toString() ?? '{}') as Map<String, dynamic>;
+      if (data['sticker_type'] == 'text') {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+          decoration: BoxDecoration(
+            color: const Color(0xFF382D4B),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: gold.withOpacity(.55), width: 1.3),
+          ),
+          child: Text(
+            data['content']?.toString() ?? '',
+            textAlign: TextAlign.center,
+            textDirection: TextDirection.rtl,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 25,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        );
+      }
+      final path = data['storage_path']?.toString() ?? '';
+      if (path.isEmpty || !path.startsWith('${widget.spaceId}/')) {
+        return const Text('ملصق غير متاح');
+      }
+      return FutureBuilder<String>(
+        future: _getStickerUrl(path),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const SizedBox(
+              width: 100,
+              height: 100,
+              child: Center(child: CircularProgressIndicator(color: gold)),
+            );
+          }
+          return Image.network(
+            snapshot.data!,
+            width: 150,
+            height: 150,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Text('تعذر عرض الملصق'),
+          );
+        },
+      );
+    } catch (_) {
+      return const Text('ملصق غير صالح');
+    }
+  }
+
+  Future<void> openStickerPicker() async {
+    await loadStickerShelf();
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: navy,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: SizedBox(
+            height: MediaQuery.of(sheetContext).size.height * .62,
+            child: Column(
+              children: [
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: lavender.withOpacity(.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'ملصقاتنا',
+                        style: TextStyle(color: gold, fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'إنشاء ملصق نصي',
+                      onPressed: () {
+                        Navigator.pop(sheetContext);
+                        createTextSticker();
+                      },
+                      icon: const Icon(Icons.text_fields, color: gold),
+                    ),
+                    IconButton(
+                      tooltip: 'إنشاء ملصق من صورة',
+                      onPressed: () {
+                        Navigator.pop(sheetContext);
+                        createImageSticker();
+                      },
+                      icon: const Icon(Icons.add_photo_alternate_outlined, color: gold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: stickerShelf.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'ما عندكم ملصقات بعد\nأنشئوا أول ملصق لكم',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: lavender, height: 1.7),
+                          ),
+                        )
+                      : GridView.builder(
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                          ),
+                          itemCount: stickerShelf.length,
+                          itemBuilder: (context, index) {
+                            final sticker = stickerShelf[index];
+                            final isText = sticker['sticker_type'] == 'text';
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () => _sendSticker(sticker),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: purple,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: gold.withOpacity(.25)),
+                                ),
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.all(8),
+                                child: isText
+                                    ? Text(
+                                        sticker['content']?.toString() ?? '',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(fontSize: 21),
+                                      )
+                                    : FutureBuilder<String>(
+                                        future: _getStickerUrl(sticker['storage_path'].toString()),
+                                        builder: (context, snapshot) => snapshot.hasData
+                                            ? Image.network(snapshot.data!, fit: BoxFit.contain)
+                                            : const Icon(Icons.image_outlined, color: lavender, size: 32),
+                                      ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'الملصقات التي تنشئها تظهر لكما داخل هذه المساحة فقط',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: lavender, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void scrollToBottom() {
@@ -876,13 +1184,15 @@ class _ChatPageState extends State<ChatPage> {
                                   color: gold.withOpacity(0.25),
                                 ),
                               ),
-                              child: Text(
-                                item['body']?.toString() ?? '',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                ),
-                              ),
+                              child: item['message_type'] == 'sticker'
+                                  ? _buildStickerMessage(item)
+                                  : Text(
+                                      item['body']?.toString() ?? '',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                      ),
+                                    ),
                             ),
                           );
                         },
@@ -900,6 +1210,11 @@ class _ChatPageState extends State<ChatPage> {
             ),
             child: Row(
               children: [
+                IconButton(
+                  tooltip: 'الملصقات',
+                  onPressed: openStickerPicker,
+                  icon: const Icon(Icons.emoji_emotions_outlined, color: gold, size: 27),
+                ),
                 Expanded(
                   child: TextField(
                     controller: messageController,
