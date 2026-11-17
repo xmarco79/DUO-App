@@ -2421,201 +2421,355 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     super.dispose();
   }
 
+  Widget sectionTitle(String title, String subtitle, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 22, 4, 10),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: gold.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: gold.withOpacity(0.18)),
+            ),
+            child: Icon(icon, color: gold, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(color: gold, fontSize: 15, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: const TextStyle(color: lavender, fontSize: 11)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget settingsCard({required List<Widget> children}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: purple.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: gold.withOpacity(0.12)),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget settingsRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+    Widget? trailing,
+    Color? iconColor,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: (iconColor ?? gold).withOpacity(0.10),
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Icon(icon, color: iconColor ?? gold, size: 20),
+      ),
+      title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Text(subtitle, style: const TextStyle(color: lavender, fontSize: 11, height: 1.35)),
+      ),
+      trailing: trailing ?? (onTap == null ? null : const Icon(Icons.chevron_right_rounded, color: lavender)),
+      onTap: onTap,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final displayName = displayNameController.text.trim();
+    final accountTitle = displayName.isNotEmpty
+        ? displayName
+        : (username.isNotEmpty ? '@$username' : oursText(context, 'حساب OURS', 'OURS account'));
+
     return Scaffold(
+      backgroundColor: navy,
       appBar: AppBar(
-        title: Text(
-          oursText(context, 'الملف الشخصي والإعدادات', 'Profile & settings'),
-          style: TextStyle(color: gold, fontSize: 18),
-        ),
+        elevation: 0,
         backgroundColor: navy,
+        centerTitle: false,
+        title: Text(
+          oursText(context, 'الإعدادات', 'Settings'),
+          style: const TextStyle(color: gold, fontSize: 19, fontWeight: FontWeight.w700),
+        ),
+        actions: [
+          IconButton(
+            tooltip: oursText(context, 'تحديث البيانات', 'Refresh account'),
+            onPressed: loading ? null : () {
+              setState(() => loading = true);
+              loadProfile();
+              loadPreferences();
+            },
+            icon: const Icon(Icons.refresh_rounded, color: lavender),
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: gold))
           : ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 34),
               children: [
-                const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: uploadingAvatar ? null : chooseAvatar,
-                  child: Stack(
-                    alignment: Alignment.center,
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [purple, navy.withOpacity(0.96)],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: gold.withOpacity(0.24)),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 18, offset: const Offset(0, 8)),
+                    ],
+                  ),
+                  child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 48,
-                        backgroundColor: purple,
-                        backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
-                        child: avatarUrl == null ? const Icon(Icons.person_rounded, color: gold, size: 48) : null,
+                      GestureDetector(
+                        onTap: uploadingAvatar ? null : chooseAvatar,
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 34,
+                              backgroundColor: navy,
+                              backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
+                              child: avatarUrl == null ? const Icon(Icons.person_rounded, color: gold, size: 34) : null,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                width: 23,
+                                height: 23,
+                                decoration: const BoxDecoration(color: gold, shape: BoxShape.circle),
+                                child: uploadingAvatar
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(5),
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: navy),
+                                      )
+                                    : const Icon(Icons.edit_rounded, color: navy, size: 13),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      Positioned(
-                        bottom: 0, right: 0,
-                        child: CircleAvatar(
-                          radius: 16, backgroundColor: gold,
-                          child: uploadingAvatar
-                              ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: navy))
-                              : const Icon(Icons.camera_alt_outlined, color: navy, size: 17),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(accountTitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 4),
+                            Text(email.isEmpty ? oursText(context, 'البريد غير متاح', 'Email unavailable') : email,
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: lavender, fontSize: 11)),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: gold.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: gold.withOpacity(0.22)),
+                              ),
+                              child: Text(
+                                username.isEmpty ? 'OURS · PRIVATE ACCOUNT' : '@$username  ·  OURS',
+                                style: const TextStyle(color: gold, fontSize: 10, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(oursText(context, 'اضغط لتغيير الصورة', 'Tap to change photo'), style: const TextStyle(color: lavender, fontSize: 12)),
-                const SizedBox(height: 14),
-                Center(
-                  child: Text(
-                    username.isEmpty ? oursText(context, 'حساب OURS', 'OURS account') : '@$username',
-                    style: const TextStyle(
-                      color: lavender,
-                      letterSpacing: 1,
+
+                sectionTitle(
+                  oursText(context, 'الملف الشخصي', 'Profile'),
+                  oursText(context, 'عدّل المعلومات التي تظهر لشريكك', 'Manage the details your partner sees'),
+                  Icons.person_outline_rounded,
+                ),
+                settingsCard(children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    child: TextField(
+                      controller: displayNameController,
+                      maxLength: 30,
+                      decoration: InputDecoration(
+                        labelText: oursText(context, 'الاسم الظاهر', 'Display name'),
+                        hintText: oursText(context, 'اكتب اسمك', 'Enter your name'),
+                        prefixIcon: const Icon(Icons.badge_outlined),
+                        filled: true,
+                        fillColor: navy.withOpacity(0.6),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        counterStyle: const TextStyle(color: lavender, fontSize: 10),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 28),
-                Text(
-                  oursText(context, 'معلومات الحساب', 'Account information'),
-                  style: TextStyle(color: gold, fontSize: 18),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: displayNameController,
-                  maxLength: 30,
-                  decoration: InputDecoration(
-                    labelText: oursText(context, 'الاسم الظاهر', 'Display name'),
-                    hintText: oursText(context, 'كيف تريد أن يظهر اسمك؟', 'How should your name appear?'),
-                    prefixIcon: Icon(Icons.badge_outlined),
-                    border: OutlineInputBorder(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                    child: TextField(
+                      controller: bioController,
+                      maxLength: 160,
+                      minLines: 2,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: oursText(context, 'نبذة شخصية', 'About you'),
+                        hintText: oursText(context, 'مساحة صغيرة تعبّر عنك', 'A short introduction'),
+                        prefixIcon: const Icon(Icons.notes_rounded),
+                        filled: true,
+                        fillColor: navy.withOpacity(0.6),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        counterStyle: const TextStyle(color: lavender, fontSize: 10),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: bioController,
-                  maxLength: 160,
-                  minLines: 2,
-                  maxLines: 4,
-                  decoration: InputDecoration(
-                    labelText: oursText(context, 'نبذة عنك', 'About you'),
-                    hintText: oursText(context, 'اكتب نبذة قصيرة تظهر في ملفك الشخصي', 'Write a short profile bio'),
-                    prefixIcon: Icon(Icons.notes_rounded),
-                    border: OutlineInputBorder(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: FilledButton.icon(
+                        onPressed: saving ? null : saveProfile,
+                        icon: saving
+                            ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2, color: navy))
+                            : const Icon(Icons.check_rounded),
+                        label: Text(oursText(context, 'حفظ الملف الشخصي', 'Save profile')),
+                      ),
+                    ),
                   ),
+                ]),
+
+                sectionTitle(
+                  oursText(context, 'التفضيلات', 'Preferences'),
+                  oursText(context, 'تحكّم بتجربة استخدام OURS', 'Make OURS work the way you like'),
+                  Icons.tune_rounded,
                 ),
-                const SizedBox(height: 8),
-                InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: oursText(context, 'اسم المستخدم', 'Username'),
-                    prefixIcon: Icon(Icons.alternate_email),
-                    border: OutlineInputBorder(),
+                settingsCard(children: [
+                  settingsRow(
+                    icon: Icons.notifications_off_outlined,
+                    title: oursText(context, 'الوضع الهادئ', 'Quiet mode'),
+                    subtitle: oursText(context, 'كتم التنبيهات أثناء استخدام التطبيق', 'Mute notifications while using the app'),
+                    trailing: Switch(
+                      value: quietMode,
+                      activeColor: gold,
+                      onChanged: (value) async {
+                        setState(() => quietMode = value);
+                        await savePreference('ours_quiet_mode', value);
+                      },
+                    ),
                   ),
-                  child: Text(username.isEmpty ? '—' : username),
-                ),
-                const SizedBox(height: 14),
-                InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: oursText(context, 'البريد المرتبط بالحساب', 'Account email'),
-                    prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.language_rounded,
+                    title: oursText(context, 'لغة التطبيق', 'App language'),
+                    subtitle: languageCode == 'ar' ? 'العربية' : 'English',
+                    trailing: DropdownButton<String>(
+                      value: languageCode,
+                      underline: const SizedBox.shrink(),
+                      dropdownColor: purple,
+                      items: const [
+                        DropdownMenuItem(value: 'ar', child: Text('العربية')),
+                        DropdownMenuItem(value: 'en', child: Text('English')),
+                      ],
+                      onChanged: (value) async {
+                        if (value == null) return;
+                        setState(() => languageCode = value);
+                        await OursAppSettings.setLanguage(value);
+                      },
+                    ),
                   ),
-                  child: Text(email.isEmpty ? oursText(context, 'غير متاح', 'Not available') : email),
-                ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  height: 52,
-                  child: FilledButton.icon(
-                    onPressed: saving ? null : saveProfile,
-                    icon: saving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: navy,
-                            ),
-                          )
-                        : const Icon(Icons.save_outlined),
-                    label: Text(oursText(context, 'حفظ التغييرات', 'Save changes')),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.delete_outline_rounded,
+                    title: oursText(context, 'تأكيد الحذف', 'Confirm before deleting'),
+                    subtitle: oursText(context, 'اطلب تأكيدًا قبل حذف العناصر', 'Ask before deleting items'),
+                    trailing: Switch(
+                      value: confirmBeforeDelete,
+                      activeColor: gold,
+                      onChanged: (value) async {
+                        setState(() => confirmBeforeDelete = value);
+                        await savePreference('ours_confirm_delete', value);
+                      },
+                    ),
                   ),
+                ]),
+
+                sectionTitle(
+                  oursText(context, 'الأمان والخصوصية', 'Security & privacy'),
+                  oursText(context, 'حسابك ومساحتكما الخاصة', 'Your account and private space'),
+                  Icons.shield_outlined,
                 ),
-                const SizedBox(height: 30),
-                Text(
-                  oursText(context, 'الإعدادات والخصوصية', 'Settings & privacy'),
-                  style: TextStyle(color: gold, fontSize: 18),
-                ),
-                const SizedBox(height: 10),
-                SwitchListTile(
-                  value: quietMode,
-                  activeColor: gold,
-                  secondary: const Icon(Icons.notifications_off_outlined, color: gold),
-                  title: Text(oursText(context, 'الوضع الهادئ', 'Quiet mode')),
-                  subtitle: Text(oursText(context, 'كتم التنبيهات التي تصل أثناء استخدام التطبيق', 'Mute notifications while using the app'),
-                      style: TextStyle(color: lavender)),
-                  onChanged: (value) {
-                    setState(() => quietMode = value);
-                    savePreference('ours_quiet_mode', value);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.language_rounded, color: gold),
-                  title: Text(oursText(context, 'لغة التطبيق', 'App language')),
-                  subtitle: Text(languageCode == 'ar' ? 'العربية' : 'English'),
-                  trailing: DropdownButton<String>(
-                    value: languageCode,
-                    underline: const SizedBox.shrink(),
-                    items: const [
-                      DropdownMenuItem(value: 'ar', child: Text('العربية')),
-                      DropdownMenuItem(value: 'en', child: Text('English')),
-                    ],
-                    onChanged: (value) async {
-                      if (value == null) return;
-                      setState(() => languageCode = value);
-                      await OursAppSettings.setLanguage(value);
-                    },
+                settingsCard(children: [
+                  settingsRow(
+                    icon: Icons.password_rounded,
+                    title: oursText(context, 'تغيير كلمة المرور', 'Change password'),
+                    subtitle: oursText(context, 'استخدم كلمة مرور قوية وخاصة', 'Keep your account protected'),
+                    onTap: changePassword,
                   ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.lock_outline_rounded,
+                    title: oursText(context, 'مساحتك الخاصة', 'Your private space'),
+                    subtitle: oursText(context, 'محتوى OURS مخصص لك ولشريكك فقط', 'Your OURS content is only for you and your partner'),
+                  ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.people_alt_outlined,
+                    title: oursText(context, 'حد الأعضاء', 'Member limit'),
+                    subtitle: oursText(context, 'حسابان فقط في كل مساحة', 'Exactly two accounts per space'),
+                    trailing: const Text('2 / 2', style: TextStyle(color: gold, fontWeight: FontWeight.w700)),
+                  ),
+                ]),
+
+                sectionTitle(
+                  oursText(context, 'حول التطبيق', 'About the app'),
+                  oursText(context, 'معلومات عن تجربتك مع OURS', 'Your OURS experience'),
+                  Icons.info_outline_rounded,
                 ),
-                SwitchListTile(
-                  value: confirmBeforeDelete,
-                  activeColor: gold,
-                  secondary: const Icon(Icons.delete_outline, color: gold),
-                  title: Text(oursText(context, 'تأكيد الحذف', 'Confirm before deleting')),
-                  subtitle: Text(oursText(context, 'الاحتفاظ بتأكيد قبل حذف العناصر', 'Ask before deleting items'),
-                      style: TextStyle(color: lavender)),
-                  onChanged: (value) {
-                    setState(() => confirmBeforeDelete = value);
-                    savePreference('ours_confirm_delete', value);
-                  },
-                ),
-                settingsTile(
-                  icon: Icons.password_rounded,
-                  title: oursText(context, 'تغيير كلمة المرور', 'Change password'),
-                  subtitle: oursText(context, 'حدّث كلمة مرور حسابك', 'Update your account password'),
-                  onTap: changePassword,
-                ),
-                settingsTile(
-                  icon: Icons.lock_outline,
-                  title: oursText(context, 'مساحتك الخاصة', 'Your private space'),
-                  subtitle: oursText(context, 'المحادثة والملفات مخصصة لأعضاء مساحتك فقط', 'Your private content is only visible to your connected partner'),
-                ),
-                settingsTile(
-                  icon: Icons.people_outline,
-                  title: oursText(context, 'عدد الأعضاء', 'Members'),
-                  subtitle: oursText(context, 'كل مساحة في OURS مخصصة لشخصين فقط', 'Every OURS space is designed for two people'),
-                ),
-                settingsTile(
-                  icon: Icons.info_outline,
-                  title: oursText(context, 'حول OURS', 'About OURS'),
-                  subtitle: 'YOUR PRIVATE UNIVERSE · الإصدار 1.0.0',
-                ),
-                const SizedBox(height: 16),
+                settingsCard(children: [
+                  settingsRow(
+                    icon: Icons.all_inclusive_rounded,
+                    title: 'OURS',
+                    subtitle: 'YOUR PRIVATE UNIVERSE',
+                    trailing: const Text('1.0.0', style: TextStyle(color: lavender, fontSize: 12)),
+                  ),
+                ]),
+
+                const SizedBox(height: 24),
                 OutlinedButton.icon(
                   onPressed: signOut,
-                  icon: const Icon(Icons.logout),
-                  label: Text(oursText(context, 'تسجيل الخروج', 'Log out')),
+                  icon: const Icon(Icons.logout_rounded),
+                  label: Text(oursText(context, 'تسجيل الخروج من الحساب', 'Sign out of account')),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: gold,
-                    side: const BorderSide(color: gold),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    foregroundColor: Colors.redAccent,
+                    side: BorderSide(color: Colors.redAccent.withOpacity(0.55)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text('MADE FOR TWO  ·  OURS',
+                    style: TextStyle(color: lavender.withOpacity(0.65), fontSize: 10, letterSpacing: 2)),
                 ),
               ],
             ),
