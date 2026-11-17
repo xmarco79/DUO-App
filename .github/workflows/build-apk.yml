@@ -5,6 +5,9 @@ on:
     branches:
       - feature/full-ours-worlds
       - feature/ours-two-person-expansion
+  pull_request:
+    branches:
+      - feature/full-ours-worlds
   workflow_dispatch:
 
 jobs:
