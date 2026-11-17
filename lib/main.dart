@@ -2404,8 +2404,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'الملف الشخصي والإعدادات',
+        title: Text(
+          oursText(context, 'الملف الشخصي والإعدادات', 'Profile & settings'),
           style: TextStyle(color: gold, fontSize: 18),
         ),
         backgroundColor: navy,
@@ -2440,11 +2440,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text('اضغط لتغيير الصورة', style: TextStyle(color: lavender, fontSize: 12)),
+                Text(oursText(context, 'اضغط لتغيير الصورة', 'Tap to change photo'), style: const TextStyle(color: lavender, fontSize: 12)),
                 const SizedBox(height: 14),
                 Center(
                   child: Text(
-                    username.isEmpty ? 'حساب OURS' : '@$username',
+                    username.isEmpty ? oursText(context, 'حساب OURS', 'OURS account') : '@$username',
                     style: const TextStyle(
                       color: lavender,
                       letterSpacing: 1,
@@ -2452,8 +2452,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                const Text(
-                  'معلومات الحساب',
+                Text(
+                  oursText(context, 'معلومات الحساب', 'Account information'),
                   style: TextStyle(color: gold, fontSize: 18),
                 ),
                 const SizedBox(height: 12),
@@ -2461,8 +2461,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   controller: displayNameController,
                   maxLength: 30,
                   decoration: const InputDecoration(
-                    labelText: 'الاسم الظاهر',
-                    hintText: 'كيف تريد أن يظهر اسمك؟',
+                    labelText: oursText(context, 'الاسم الظاهر', 'Display name'),
+                    hintText: oursText(context, 'كيف تريد أن يظهر اسمك؟', 'How should your name appear?'),
                     prefixIcon: Icon(Icons.badge_outlined),
                     border: OutlineInputBorder(),
                   ),
@@ -2474,8 +2474,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   minLines: 2,
                   maxLines: 4,
                   decoration: const InputDecoration(
-                    labelText: 'نبذة عنك',
-                    hintText: 'اكتب نبذة قصيرة تظهر في ملفك الشخصي',
+                    labelText: oursText(context, 'نبذة عنك', 'About you'),
+                    hintText: oursText(context, 'اكتب نبذة قصيرة تظهر في ملفك الشخصي', 'Write a short profile bio'),
                     prefixIcon: Icon(Icons.notes_rounded),
                     border: OutlineInputBorder(),
                   ),
@@ -2483,7 +2483,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 const SizedBox(height: 8),
                 InputDecorator(
                   decoration: const InputDecoration(
-                    labelText: 'اسم المستخدم',
+                    labelText: oursText(context, 'اسم المستخدم', 'Username'),
                     prefixIcon: Icon(Icons.alternate_email),
                     border: OutlineInputBorder(),
                   ),
@@ -2492,11 +2492,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 const SizedBox(height: 14),
                 InputDecorator(
                   decoration: const InputDecoration(
-                    labelText: 'البريد المرتبط بالحساب',
+                    labelText: oursText(context, 'البريد المرتبط بالحساب', 'Account email'),
                     prefixIcon: Icon(Icons.email_outlined),
                     border: OutlineInputBorder(),
                   ),
-                  child: Text(email.isEmpty ? 'غير متاح' : email),
+                  child: Text(email.isEmpty ? oursText(context, 'غير متاح', 'Not available') : email),
                 ),
                 const SizedBox(height: 18),
                 SizedBox(
@@ -2513,12 +2513,12 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                             ),
                           )
                         : const Icon(Icons.save_outlined),
-                    label: const Text('حفظ التغييرات'),
+                    label: Text(oursText(context, 'حفظ التغييرات', 'Save changes')),
                   ),
                 ),
                 const SizedBox(height: 30),
-                const Text(
-                  'الإعدادات والخصوصية',
+                Text(
+                  oursText(context, 'الإعدادات والخصوصية', 'Settings & privacy'),
                   style: TextStyle(color: gold, fontSize: 18),
                 ),
                 const SizedBox(height: 10),
@@ -2526,8 +2526,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   value: quietMode,
                   activeColor: gold,
                   secondary: const Icon(Icons.notifications_off_outlined, color: gold),
-                  title: const Text('الوضع الهادئ'),
-                  subtitle: const Text('كتم التنبيهات التي تصل أثناء استخدام التطبيق',
+                  title: Text(oursText(context, 'الوضع الهادئ', 'Quiet mode')),
+                  subtitle: Text(oursText(context, 'كتم التنبيهات التي تصل أثناء استخدام التطبيق', 'Mute notifications while using the app'),
                       style: TextStyle(color: lavender)),
                   onChanged: (value) {
                     setState(() => quietMode = value);
@@ -2536,7 +2536,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.language_rounded, color: gold),
-                  title: const Text('لغة التطبيق'),
+                  title: Text(oursText(context, 'لغة التطبيق', 'App language')),
                   subtitle: Text(languageCode == 'ar' ? 'العربية' : 'English'),
                   trailing: DropdownButton<String>(
                     value: languageCode,
@@ -2556,8 +2556,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   value: confirmBeforeDelete,
                   activeColor: gold,
                   secondary: const Icon(Icons.delete_outline, color: gold),
-                  title: const Text('تأكيد الحذف'),
-                  subtitle: const Text('الاحتفاظ بتأكيد قبل حذف العناصر',
+                  title: Text(oursText(context, 'تأكيد الحذف', 'Confirm before deleting')),
+                  subtitle: Text(oursText(context, 'الاحتفاظ بتأكيد قبل حذف العناصر', 'Ask before deleting items'),
                       style: TextStyle(color: lavender)),
                   onChanged: (value) {
                     setState(() => confirmBeforeDelete = value);
@@ -2566,30 +2566,30 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 ),
                 settingsTile(
                   icon: Icons.password_rounded,
-                  title: 'تغيير كلمة المرور',
-                  subtitle: 'حدّث كلمة مرور حسابك',
+                  title: oursText(context, 'تغيير كلمة المرور', 'Change password'),
+                  subtitle: oursText(context, 'حدّث كلمة مرور حسابك', 'Update your account password'),
                   onTap: changePassword,
                 ),
                 settingsTile(
                   icon: Icons.lock_outline,
-                  title: 'مساحتك الخاصة',
-                  subtitle: 'المحادثة والملفات مخصصة لأعضاء مساحتك فقط',
+                  title: oursText(context, 'مساحتك الخاصة', 'Your private space'),
+                  subtitle: oursText(context, 'المحادثة والملفات مخصصة لأعضاء مساحتك فقط', 'Your private content is only visible to your connected partner'),
                 ),
                 settingsTile(
                   icon: Icons.people_outline,
-                  title: 'عدد الأعضاء',
-                  subtitle: 'كل مساحة في OURS مخصصة لشخصين فقط',
+                  title: oursText(context, 'عدد الأعضاء', 'Members'),
+                  subtitle: oursText(context, 'كل مساحة في OURS مخصصة لشخصين فقط', 'Every OURS space is designed for two people'),
                 ),
                 settingsTile(
                   icon: Icons.info_outline,
-                  title: 'حول OURS',
+                  title: oursText(context, 'حول OURS', 'About OURS'),
                   subtitle: 'YOUR PRIVATE UNIVERSE · الإصدار 1.0.0',
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: signOut,
                   icon: const Icon(Icons.logout),
-                  label: const Text('تسجيل الخروج'),
+                  label: Text(oursText(context, 'تسجيل الخروج', 'Log out')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: gold,
                     side: const BorderSide(color: gold),
