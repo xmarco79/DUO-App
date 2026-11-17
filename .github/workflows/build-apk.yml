@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Draw valid OURS icon asset
+        run: dart run tool/generate_ours_icon.dart
+
       - name: Generate OURS launcher icons
         run: dart run flutter_launcher_icons
 
