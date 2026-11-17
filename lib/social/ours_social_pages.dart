@@ -84,7 +84,7 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
         selectedIndex: index,
         onDestinationSelected: (value) => setState(() => index = value),
         destinations: [
-          NavigationDestination(icon: const Icon(Icons.forum_outlined), selectedIcon: const Icon(Icons.forum), label: _oursText(context, 'تواصل', 'Connect')),
+          NavigationDestination(icon: const Icon(Icons.forum_outlined), selectedIcon: const Icon(Icons.forum), label: _oursText(context, 'مساحتنا', 'Our Space')),
           NavigationDestination(icon: const Icon(Icons.public_outlined), label: _oursText(context, 'العالم', 'Universe')),
           NavigationDestination(icon: const Icon(Icons.sports_esports_outlined), label: _oursText(context, 'اللعب', 'Play')),
           NavigationDestination(icon: const Icon(Icons.auto_awesome_outlined), label: _oursText(context, 'الذكريات', 'Memories')),
