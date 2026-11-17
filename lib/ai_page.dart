@@ -89,8 +89,8 @@ class _OursAiPageState extends State<OursAiPage> {
 
       if (response.status != 200) {
         final error = data['error']?.toString() ?? 'AI_PROVIDER_ERROR';
-        if (error == 'AI_SETUP_REQUIRED') {
-          throw Exception('خدمة الذكاء الاصطناعي تحتاج إلى إضافة مفتاح التشغيل في إعدادات الخادم.');
+        if (error == 'GEMINI_SETUP_REQUIRED') {
+          throw Exception('مساعد OURS يحتاج إلى إعداد مفتاح Gemini المجاني على الخادم بواسطة ولي الأمر.');
         }
         if (error == 'AI_LIMIT_REACHED') {
           throw Exception('وصلنا إلى حد الاستخدام الحالي. حاول لاحقًا.');
@@ -189,7 +189,7 @@ class _OursAiPageState extends State<OursAiPage> {
             const Padding(
               padding: EdgeInsets.fromLTRB(18, 4, 18, 8),
               child: Text(
-                'تُرسل رسائلك إلى خدمة الذكاء الاصطناعي للرد. ولا تُرسل محادثات المساحة إلا عند اختيار مهمة تستخدم سياقها.',
+                'تُرسل رسائلك إلى Google Gemini للرد. ولا تُرسل محادثات المساحة إلا عند اختيار مهمة تستخدم سياقها. قد تستخدم Google بيانات الفئة المجانية لتحسين خدماتها؛ تجنب إرسال معلومات خاصة جدًا.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: _aiLavender, fontSize: 11, height: 1.4),
               ),
