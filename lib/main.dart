@@ -106,7 +106,7 @@ class OursApp extends StatelessWidget {
   }
 }
 
-// First-launch welcome screen. It is shown once before authentication.
+// The entry gate remains mounted so auth changes always route to the right screen.
 class OursEntryGate extends StatefulWidget {
   const OursEntryGate({super.key});
   @override
@@ -114,28 +114,30 @@ class OursEntryGate extends StatefulWidget {
 }
 
 class _OursEntryGateState extends State<OursEntryGate> {
-  bool? _hasSeenWelcome;
-  @override
-  void initState() { super.initState(); _loadWelcomeState(); }
-
-  Future<void> _loadWelcomeState() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) setState(() => _hasSeenWelcome = prefs.getBool('ours_welcome_seen') ?? false);
-  }
-
-  Future<void> _finishWelcome() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('ours_welcome_seen', true);
-    if (mounted) setState(() => _hasSeenWelcome = true);
-  }
+  bool showLogin = false;
+  bool creatingAccount = false;
 
   @override
   Widget build(BuildContext context) {
-    if (_hasSeenWelcome == null) {
-      return const Scaffold(backgroundColor: navy, body: Center(child: CircularProgressIndicator(color: gold)));
-    }
-    if (_hasSeenWelcome!) return const OursAuthGate();
-    return WelcomePage(onLogin: _finishWelcome, onRegister: _finishWelcome);
+    final auth = Supabase.instance.client.auth;
+    return StreamBuilder<AuthState>(
+      stream: auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        final session = snapshot.data?.session ?? auth.currentSession;
+        if (session != null) {
+          return OursSocialHomePage(
+            onProfileTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
+            ),
+          );
+        }
+        if (showLogin) return LoginPage(initialCreatingAccount: creatingAccount);
+        return WelcomePage(
+          onLogin: () => setState(() { showLogin = true; creatingAccount = false; }),
+          onRegister: () => setState(() { showLogin = true; creatingAccount = true; }),
+        );
+      },
+    );
   }
 }
 
