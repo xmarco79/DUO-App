@@ -10,6 +10,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ai_page.dart';
 import 'settings_page.dart';
 
+import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'worlds/world_hub_page.dart';
+
 // ==================== COLORS ====================
 
 const navy = Color(0xFF10101C);
@@ -50,7 +58,127 @@ class OursApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const LoginPage(),
+      home: const OursEntryGate(),
+    );
+  }
+}
+
+// ==================== FIRST LAUNCH WELCOME ====================\n\n// First-launch welcome screen. It is shown once before authentication.
+class OursEntryGate extends StatefulWidget {
+  const OursEntryGate({super.key});
+  @override
+  State<OursEntryGate> createState() => _OursEntryGateState();
+}
+
+class _OursEntryGateState extends State<OursEntryGate> {
+  bool? _hasSeenWelcome;
+  @override
+  void initState() { super.initState(); _loadWelcomeState(); }
+
+  Future<void> _loadWelcomeState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) setState(() => _hasSeenWelcome = prefs.getBool('ours_welcome_seen') ?? false);
+  }
+
+  Future<void> _finishWelcome() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('ours_welcome_seen', true);
+    if (mounted) setState(() => _hasSeenWelcome = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasSeenWelcome == null) {
+      return const Scaffold(backgroundColor: navy, body: Center(child: CircularProgressIndicator(color: gold)));
+    }
+    if (_hasSeenWelcome!) return const OursAuthGate();
+    return WelcomePage(onLogin: _finishWelcome, onRegister: _finishWelcome);
+  }
+}
+
+class WelcomePage extends StatelessWidget {
+  final VoidCallback onLogin;
+  final VoidCallback onRegister;
+  const WelcomePage({super.key, required this.onLogin, required this.onRegister});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(28, 36, 28, 28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 184, height: 184,
+                  decoration: BoxDecoration(color: purple.withValues(alpha: .55), shape: BoxShape.circle,
+                    border: Border.all(color: lavender.withValues(alpha: .25))),
+                  child: const Icon(Icons.all_inclusive_rounded, color: gold, size: 112),
+                ),
+                const SizedBox(height: 30),
+                const Text('OURS', style: TextStyle(color: gold, fontSize: 44, letterSpacing: 12, fontWeight: FontWeight.w300)),
+                const SizedBox(height: 8),
+                const Text('YOUR PRIVATE UNIVERSE', style: TextStyle(color: lavender, letterSpacing: 3, fontSize: 11)),
+                const SizedBox(height: 30),
+                const Text('عالمك الخاص، بطريقتك', textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 12),
+                const Text('تواصل مع الأشخاص المهمين لك، وشارك لحظاتك ومحادثاتك في تجربة خاصة تجمعكم.',
+                  textAlign: TextAlign.center, style: TextStyle(color: lavender, height: 1.8, fontSize: 15)),
+                const SizedBox(height: 38),
+                SizedBox(width: double.infinity, height: 54,
+                  child: FilledButton(onPressed: () {
+                    onRegister();
+                    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage(initialCreatingAccount: true)));
+                  }, child: const Text('إنشاء حساب'))),
+                const SizedBox(height: 12),
+                SizedBox(width: double.infinity, height: 54,
+                  child: OutlinedButton(onPressed: () {
+                    onLogin();
+                    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
+                  }, style: OutlinedButton.styleFrom(foregroundColor: lavender, side: const BorderSide(color: lavender)),
+                    child: const Text('تسجيل الدخول'))),
+                const SizedBox(height: 28),
+                const Text('خصوصيتك أولويتنا', style: TextStyle(color: gold, fontSize: 12, letterSpacing: 1.2)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Keep the root page synchronized with Supabase's persisted session.
+// This avoids relying on one-time startup checks or manual navigation after auth.
+class OursAuthGate extends StatelessWidget {
+  const OursAuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = Supabase.instance.client.auth;
+    return StreamBuilder<AuthState>(
+      stream: auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        final session = snapshot.data?.session ?? auth.currentSession;
+        if (session != null) {
+          return OursSocialHomePage(
+            onProfileTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
+            ),
+          );
+        }
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const Scaffold(
+            backgroundColor: navy,
+            body: Center(child: CircularProgressIndicator(color: gold)),
+          );
+        }
+        return Supabase.instance.client.auth.currentSession != null ? const HomePage() : const LoginPage();
+      },
     );
   }
 }
@@ -70,7 +198,7 @@ class _LoginPageState extends State<LoginPage> {
   final confirmPassword = TextEditingController();
 
   bool loading = false;
-  bool creatingAccount = false;
+  late bool creatingAccount = widget.initialCreatingAccount;
 
   SupabaseClient get db => Supabase.instance.client;
 
@@ -373,8 +501,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// ==================== HOME PAGE ====================
-
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -383,13 +509,46 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  bool loading = false;
+  int selectedWorldIndex = 0;
+  bool loading = true;
   String? inviteCode;
   String? spaceId;
 
   final codeController = TextEditingController();
 
   SupabaseClient get db => Supabase.instance.client;
+
+  @override
+  void initState() {
+    super.initState();
+    loadExistingSpace();
+  }
+
+  Future<void> loadExistingSpace() async {
+    try {
+      final userId = db.auth.currentUser?.id;
+      if (userId == null) {
+        if (mounted) setState(() => loading = false);
+        return;
+      }
+
+      final membership = await db
+          .from('duo_members')
+          .select('space_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (!mounted) return;
+      setState(() {
+        spaceId = membership?['space_id']?.toString();
+        loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => loading = false);
+      message('تعذر استرجاع مساحتك: $e');
+    }
+  }
 
   void message(String value) {
     if (!mounted) return;
@@ -400,24 +559,57 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> createSpace() async {
+    if (loading) return;
     setState(() => loading = true);
-
     try {
-      final createdSpace = await db.rpc('create_duo_space');
-      final code = await db.rpc('create_duo_invite');
+      final userId = db.auth.currentUser?.id;
+      if (userId == null) throw Exception('سجّل الدخول أولًا');
 
-      if (!mounted) return;
-
-      setState(() {
-        spaceId = createdSpace.toString();
-        inviteCode = code.toString();
-      });
-    } catch (e) {
-      message('تعذر إنشاء المساحة: $e');
-    } finally {
-      if (mounted) {
-        setState(() => loading = false);
+      // Recover an existing membership before attempting to create a new space.
+      final existing = await db.from('duo_members').select('space_id')
+          .eq('user_id', userId).maybeSingle();
+      if (existing != null) {
+        final existingId = existing['space_id'].toString();
+        if (mounted) setState(() => spaceId = existingId);
+        try {
+          final code = await db.rpc('create_duo_invite');
+          if (mounted) setState(() => inviteCode = code.toString());
+        } catch (inviteError) {
+          message('مساحتك موجودة بالفعل، لكن تعذر إصدار رمز دعوة جديد: $inviteError');
+        }
+        return;
       }
+
+      final createdSpace = await db.rpc('create_duo_space');
+      final newSpaceId = createdSpace.toString();
+      if (mounted) setState(() => spaceId = newSpaceId);
+
+      // Invite creation is a separate operation; its failure must not hide
+      // the successfully-created space or cause a duplicate space attempt.
+      try {
+        final code = await db.rpc('create_duo_invite');
+        if (mounted) setState(() => inviteCode = code.toString());
+      } catch (inviteError) {
+        message('تم إنشاء المساحة بنجاح، لكن تعذر إنشاء رمز الدعوة: $inviteError');
+      }
+    } catch (e) {
+      // If the create request raced with an earlier successful request,
+      // recover the membership and show the actual backend error otherwise.
+      try {
+        final userId = db.auth.currentUser?.id;
+        if (userId != null) {
+          final existing = await db.from('duo_members').select('space_id')
+              .eq('user_id', userId).maybeSingle();
+          if (existing != null && mounted) {
+            setState(() => spaceId = existing['space_id'].toString());
+            message('تم العثور على مساحتك السابقة واستعادتها.');
+            return;
+          }
+        }
+      } catch (_) {}
+      message('تعذر إنشاء المساحة: ${e.toString().replaceFirst('Exception: ', '')}');
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
   }
 
@@ -550,18 +742,36 @@ class _HomePageState extends State<HomePage> {
         ),
         centerTitle: true,
         backgroundColor: navy,
-        actions: [
+        actions: previewMode ? const [] : [
           IconButton(
-            tooltip: 'الإعدادات',
-            icon: const Icon(Icons.settings_outlined, color: gold),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsPage()),
-            ),
+            tooltip: 'الملف الشخصي والإعدادات',
+            icon: const Icon(Icons.person_outline),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SettingsPage(),
+                ),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  backgroundColor: purple,
+                  icon: const Icon(Icons.logout_rounded, color: gold),
+                  title: const Text('تسجيل الخروج'),
+                  content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+                    FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('تسجيل الخروج')),
+                  ],
+                ),
+              );
+              if (confirmed != true) return;
               try {
                 await db.auth.signOut();
 
@@ -580,14 +790,14 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: SafeArea(
+      body: selectedWorldIndex == 0 ? SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
                 const Icon(
-                  Icons.nights_stay,
+                  Icons.all_inclusive_rounded,
                   color: gold,
                   size: 65,
                 ),
@@ -602,19 +812,58 @@ class _HomePageState extends State<HomePage> {
                   style: TextStyle(color: lavender),
                 ),
                 const SizedBox(height: 45),
-                actionCard(
-                  icon: Icons.add_circle_outline,
-                  title: 'إنشاء مساحة جديدة',
-                  subtitle: 'أنشئ عالمك الخاص وأرسل رمز الدعوة',
-                  onTap: loading ? null : createSpace,
-                ),
-                const SizedBox(height: 18),
-                actionCard(
-                  icon: Icons.vpn_key_outlined,
-                  title: 'الانضمام إلى مساحة',
-                  subtitle: 'أدخل رمز الدعوة الذي وصلك',
-                  onTap: loading ? null : showJoinDialog,
-                ),
+                if (previewMode) ...[
+                  Card(
+                    color: purple,
+                    child: const Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          Icon(Icons.visibility_outlined, color: gold),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'وضع معاينة — يمكنك استكشاف الواجهة، لكن إنشاء المساحات والمحادثات يتطلب تسجيل الدخول.',
+                              style: TextStyle(color: lavender),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                ],
+                if (spaceId == null) ...[
+                  actionCard(
+                    icon: Icons.add_circle_outline,
+                    title: 'إنشاء مساحة جديدة',
+                    subtitle: 'أنشئ عالمك الخاص وأرسل رمز الدعوة',
+                    onTap: loading ? null : previewMode
+                        ? () => message('هذه نسخة معاينة؛ إنشاء مساحة يتطلب حسابًا.')
+                        : createSpace,
+                  ),
+                  const SizedBox(height: 18),
+                  actionCard(
+                    icon: Icons.vpn_key_outlined,
+                    title: 'الانضمام إلى مساحة',
+                    subtitle: 'أدخل رمز الدعوة الذي وصلك',
+                    onTap: loading ? null : previewMode
+                        ? () => message('هذه نسخة معاينة؛ الانضمام يتطلب حسابًا.')
+                        : showJoinDialog,
+                  ),
+                ] else ...[
+                  const Card(
+                    color: purple,
+                    child: ListTile(
+                      leading: Icon(Icons.verified_user_outlined, color: gold, size: 30),
+                      title: Text('مساحتك جاهزة'),
+                      subtitle: Text(
+                        'لديك مساحة خاصة بالفعل. يمكنك فتح محادثتك من الزر أدناه.',
+                        style: TextStyle(color: lavender),
+                      ),
+                    ),
+                  ),
+                ],
                 if (loading) ...[
                   const SizedBox(height: 20),
                   const CircularProgressIndicator(color: gold),
@@ -652,28 +901,33 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  actionCard(
-                    icon: Icons.auto_awesome,
-                    title: 'OURS AI',
-                    subtitle: 'مساعد ذكي للمحادثة وتلخيص الذكريات واقتراح الأفكار',
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => OursAiPage(spaceId: spaceId!),
-                      ),
-                    ),
-                  ),
                 ],
               ],
             ),
           ),
         ),
+      ) : OursWorldHubPage(
+        key: ValueKey('ours-world-$selectedWorldIndex'),
+        spaceId: spaceId,
+        worldIndex: selectedWorldIndex,
+      ),
+      bottomNavigationBar: NavigationBar(
+        backgroundColor: purple,
+        selectedIndex: selectedWorldIndex,
+        onDestinationSelected: (index) => setState(() => selectedWorldIndex = index),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.forum_outlined), label: 'Connect'),
+          NavigationDestination(icon: Icon(Icons.public_outlined), label: 'Universe'),
+          NavigationDestination(icon: Icon(Icons.sports_esports_outlined), label: 'Play'),
+          NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), label: 'Memories'),
+          NavigationDestination(icon: Icon(Icons.favorite_border), label: 'Together'),
+        ],
       ),
     );
   }
 }
 
+ 
 // ==================== CHAT PAGE ====================
 
 class ChatPage extends StatefulWidget {
