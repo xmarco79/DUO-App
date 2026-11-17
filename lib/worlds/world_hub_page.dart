@@ -592,12 +592,10 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: _lavender.withOpacity(.2)),
                         ),
-                        child: const Row(children: [
-                          Icon(Icons.visibility_outlined, color: _gold),
-                          SizedBox(width: 10),
-                          Expanded(child: Text(
-                            'وضع المعاينة: يمكنك استكشاف الميزات، لكن الحفظ يتطلب حسابًا ومساحة مشتركة.',
-                            style: TextStyle(color: _lavender, height: 1.5))),
+                        child: Row(children: [
+                          const Icon(Icons.visibility_outlined, color: _gold),
+                          const SizedBox(width: 10),
+                          Expanded(child: Text(_worldText(context, 'وضع المعاينة: يمكنك استكشاف الميزات، لكن الحفظ يتطلب حسابًا ومساحة مشتركة.', 'Preview mode: explore features, but saving requires an account and a shared world.'), style: const TextStyle(color: _lavender, height: 1.5))),
                         ]),
                       ),
                     const SizedBox(height: 18),
@@ -648,7 +646,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                       Card(color: _purple, child: ListTile(
                         leading: const Icon(Icons.error_outline, color: _gold),
                         title: Text(error!),
-                        trailing: TextButton(onPressed: loadItems, child: const Text('إعادة'))))
+                        trailing: TextButton(onPressed: loadItems, child: Text(_worldText(context, 'إعادة', 'Retry')))))
                     else if (items.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(22),
