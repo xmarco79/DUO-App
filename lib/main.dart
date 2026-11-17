@@ -466,14 +466,14 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     oursText(context, 'اسم المستخدم: أحرف إنجليزية وأرقام و _ فقط', 'Username: English letters, numbers and _ only'),
                     style: TextStyle(
                       color: lavender,
                       fontSize: 12,
                     ),
                   ),
-                  const Text(
+                  Text(
                     oursText(context, 'كلمة المرور: 8 أحرف على الأقل', 'Password: at least 8 characters'),
                     style: TextStyle(
                       color: lavender,
