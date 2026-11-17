@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ai_page.dart';
+import 'settings_page.dart';
 
 // ==================== COLORS ====================
 
@@ -547,6 +549,14 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: navy,
         actions: [
           IconButton(
+            tooltip: 'الإعدادات',
+            icon: const Icon(Icons.settings_outlined, color: gold),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsPage()),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               try {
@@ -850,6 +860,62 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  Future<Uint8List> _createAiImage({
+    required String action,
+    String? prompt,
+    Uint8List? source,
+    String mimeType = 'image/jpeg',
+  }) async {
+    final response = await db.functions.invoke(
+      'ours-sticker-ai',
+      body: {
+        'space_id': widget.spaceId,
+        'action': action,
+        if (prompt != null) 'prompt': prompt,
+        if (source != null) 'image_base64': base64Encode(source),
+        if (source != null) 'mime_type': mimeType,
+      },
+    );
+    final data = response.data is Map
+        ? Map<String, dynamic>.from(response.data)
+        : <String, dynamic>{};
+    if (response.status != 200) {
+      final error = data['error']?.toString() ?? '';
+      if (error == 'AI_SETUP_REQUIRED') {
+        throw Exception('ميزة الصور تحتاج إلى تفعيل مفتاح الذكاء الاصطناعي في الخادم.');
+      }
+      if (error == 'AI_LIMIT_REACHED') {
+        throw Exception('وصلنا إلى حد الاستخدام. حاول لاحقًا.');
+      }
+      throw Exception('تعذر إنشاء الصورة بالذكاء الاصطناعي.');
+    }
+    final encoded = data['image_base64']?.toString() ?? '';
+    if (encoded.isEmpty) throw Exception('لم تصل الصورة الناتجة.');
+    return base64Decode(encoded);
+  }
+
+  Future<void> _saveStickerPng(Uint8List bytes) async {
+    final id = DateTime.now().microsecondsSinceEpoch.toString();
+    final path = '${widget.spaceId}/$id.png';
+    await db.storage.from('ours-stickers').uploadBinary(
+      path,
+      bytes,
+      fileOptions: const FileOptions(contentType: 'image/png', upsert: false),
+    );
+    final row = await db.from('duo_stickers').insert({
+      'space_id': widget.spaceId,
+      'created_by': currentUserId,
+      'sticker_type': 'image',
+      'content': '',
+      'storage_path': path,
+    }).select().single();
+    if (!mounted) return;
+    final sticker = Map<String, dynamic>.from(row);
+    setState(() => stickerShelf.insert(0, sticker));
+    await _sendSticker(sticker);
+    showMessage('تم إنشاء الملصق وإرساله ✨');
+  }
+
   Future<void> createImageSticker() async {
     try {
       final image = await imagePicker.pickImage(
@@ -860,41 +926,67 @@ class _ChatPageState extends State<ChatPage> {
       );
       if (image == null) return;
       final bytes = await image.readAsBytes();
-      final extension = image.name.toLowerCase().split('.').last;
-      final safeExtension = ['png', 'jpg', 'jpeg', 'webp'].contains(extension)
-          ? extension
-          : 'jpg';
-      final contentType = safeExtension == 'png'
-          ? 'image/png'
-          : safeExtension == 'webp'
-              ? 'image/webp'
-              : 'image/jpeg';
-      final id = const Uuid().v4();
-      final path = '${widget.spaceId}/$id.$safeExtension';
-
-      await db.storage.from('ours-stickers').uploadBinary(
-        path,
-        bytes,
-        fileOptions: FileOptions(
-          contentType: contentType,
-          upsert: false,
-        ),
+      if (bytes.length > 4 * 1024 * 1024) {
+        throw Exception('حجم الصورة كبير. اختر صورة أقل من 4 ميجابايت.');
+      }
+      final mime = image.mimeType ??
+          (image.name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
+      if (!['image/png', 'image/jpeg', 'image/webp'].contains(mime)) {
+        throw Exception('صيغة الصورة غير مدعومة.');
+      }
+      final result = await _createAiImage(
+        action: 'remove_background',
+        source: bytes,
+        mimeType: mime,
       );
-
-      final row = await db.from('duo_stickers').insert({
-        'space_id': widget.spaceId,
-        'created_by': currentUserId,
-        'sticker_type': 'image',
-        'content': '',
-        'storage_path': path,
-      }).select().single();
-
-      if (!mounted) return;
-      final sticker = Map<String, dynamic>.from(row);
-      setState(() => stickerShelf.insert(0, sticker));
-      await _sendSticker(sticker);
+      await _saveStickerPng(result);
     } catch (e) {
-      showMessage('تعذر إنشاء ملصق من الصورة: $e');
+      showMessage('تعذر إزالة الخلفية: ${e.toString().replaceFirst('Exception: ', '')}');
+    }
+  }
+
+  Future<void> createAiSticker() async {
+    final controller = TextEditingController();
+    final prompt = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: purple,
+        title: const Text('إنشاء ملصق بالذكاء الاصطناعي'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 500,
+          minLines: 2,
+          maxLines: 4,
+          textDirection: TextDirection.rtl,
+          decoration: const InputDecoration(
+            hintText: 'صف الملصق الذي تتخيله...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('إنشاء'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (prompt == null || prompt.trim().isEmpty) return;
+    try {
+      showMessage('يجري تصميم ملصقك... قد يستغرق بعض الوقت');
+      final result = await _createAiImage(
+        action: 'generate',
+        prompt: prompt.trim(),
+      );
+      await _saveStickerPng(result);
+    } catch (e) {
+      showMessage('تعذر إنشاء الملصق: ${e.toString().replaceFirst('Exception: ', '')}');
     }
   }
 
@@ -1028,7 +1120,15 @@ class _ChatPageState extends State<ChatPage> {
                       icon: const Icon(Icons.text_fields, color: gold),
                     ),
                     IconButton(
-                      tooltip: 'إنشاء ملصق من صورة',
+                      tooltip: 'إنشاء ملصق بالذكاء الاصطناعي',
+                      onPressed: () {
+                        Navigator.pop(sheetContext);
+                        createAiSticker();
+                      },
+                      icon: const Icon(Icons.auto_awesome, color: gold),
+                    ),
+                    IconButton(
+                      tooltip: 'صورة مع إزالة الخلفية تلقائيًا',
                       onPressed: () {
                         Navigator.pop(sheetContext);
                         createImageSticker();
