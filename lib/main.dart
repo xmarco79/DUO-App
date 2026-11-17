@@ -228,6 +228,9 @@ class OursAuthGate extends StatelessWidget {
         final session = snapshot.data?.session ?? auth.currentSession;
         if (session != null) {
           return OursSocialHomePage(
+            onChatTap: (spaceId) => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => ChatPage(spaceId: spaceId)),
+            ),
             onProfileTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
             ),
