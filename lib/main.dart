@@ -28,10 +28,29 @@ const gold = Color(0xFFD9BC86);
 // Preview builds open the home screen without requiring an account.
 const bool previewMode = bool.fromEnvironment('OURS_PREVIEW_MODE', defaultValue: false);
 
+// ==================== APP PREFERENCES ====================
+
+class OursAppSettings {
+  static final ValueNotifier<Locale> locale = ValueNotifier(const Locale('ar'));
+
+  static Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    locale.value = Locale(prefs.getString('ours_language') ?? 'ar');
+  }
+
+  static Future<void> setLanguage(String languageCode) async {
+    final normalized = languageCode == 'en' ? 'en' : 'ar';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ours_language', normalized);
+    locale.value = Locale(normalized);
+  }
+}
+
 // ==================== MAIN ====================
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await OursAppSettings.load();
 
   await Supabase.initialize(
     url: 'https://sthlcrgwpzqhxtpevqwg.supabase.co',
@@ -50,20 +69,29 @@ class OursApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'OURS',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: navy,
-        colorScheme: const ColorScheme.dark(
-          primary: gold,
-          secondary: lavender,
-          surface: purple,
+    return ValueListenableBuilder<Locale>(
+      valueListenable: OursAppSettings.locale,
+      builder: (context, locale, _) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'OURS',
+        locale: locale,
+        supportedLocales: const [Locale('ar'), Locale('en')],
+        builder: (context, child) => Directionality(
+          textDirection: locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+          child: child ?? const SizedBox.shrink(),
         ),
-        useMaterial3: true,
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: navy,
+          colorScheme: const ColorScheme.dark(
+            primary: gold,
+            secondary: lavender,
+            surface: purple,
+          ),
+          useMaterial3: true,
+        ),
+        home: previewMode ? const HomePage() : const OursEntryGate(),
       ),
-      home: previewMode ? const HomePage() : const OursEntryGate(),
     );
   }
 }
@@ -561,23 +589,27 @@ class _HomePageState extends State<HomePage> {
 
     try {
       final createdSpace = await db.rpc('create_duo_space');
+      final createdId = createdSpace?.toString() ?? '';
+      if (createdId.isEmpty) throw Exception('لم يرجع الخادم معرّف المساحة');
       if (!mounted) return;
-      setState(() => spaceId = createdSpace.toString());
+      setState(() => spaceId = createdId);
 
-      final code = await db.rpc('create_duo_invite');
-
-      if (!mounted) return;
-
-      setState(() {
-        spaceId = createdSpace.toString();
-        inviteCode = code.toString();
-      });
+      // Space creation and invite generation are separate operations.
+      // Preserve the created space if invite generation fails.
+      try {
+        final code = await db.rpc('create_duo_invite');
+        if (!mounted) return;
+        setState(() => inviteCode = code.toString());
+        message('تم إنشاء المساحة بنجاح');
+      } catch (inviteError) {
+        if (!mounted) return;
+        message('تم إنشاء المساحة، لكن تعذر إنشاء رمز الدعوة. يمكنك إعادة المحاولة لاحقًا. ($inviteError)');
+      }
     } catch (e) {
+      if (!mounted) return;
       message('تعذر إنشاء المساحة: $e');
     } finally {
-      if (mounted) {
-        setState(() => loading = false);
-      }
+      if (mounted) setState(() => loading = false);
     }
   }
 
@@ -2092,11 +2124,13 @@ class ProfileSettingsPage extends StatefulWidget {
 
 class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   final displayNameController = TextEditingController();
+  final bioController = TextEditingController();
   SupabaseClient get db => Supabase.instance.client;
 
   String username = '';
   String email = '';
   String? avatarUrl;
+  String languageCode = 'ar';
   bool uploadingAvatar = false;
   bool loading = true;
   bool saving = false;
@@ -2118,6 +2152,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       quietMode = prefs.getBool('ours_quiet_mode') ?? false;
       showOnlineStatus = prefs.getBool('ours_show_online') ?? true;
       confirmBeforeDelete = prefs.getBool('ours_confirm_delete') ?? true;
+      languageCode = prefs.getString('ours_language') ?? 'ar';
     });
   }
 
@@ -2134,7 +2169,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       email = user.email ?? '';
       final profile = await db
           .from('duo_profiles')
-          .select('username, display_name, avatar_path')
+          .select('username, display_name, avatar_path, bio')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -2144,6 +2179,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       avatarUrl = avatarPath == null ? null : db.storage.from('ours-avatars').getPublicUrl(avatarPath);
       displayNameController.text =
           profile?['display_name']?.toString() ?? '';
+      bioController.text = profile?['bio']?.toString() ?? '';
       setState(() => loading = false);
     } catch (e) {
       if (!mounted) return;
@@ -2202,7 +2238,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       );
       await db.from('duo_profiles').update({'avatar_path': path}).eq('user_id', user.id);
       if (!mounted) return;
-      setState(() => avatarUrl = db.storage.from('ours-avatars').getPublicUrl(path));
+      setState(() => avatarUrl = db.storage.from('ours-avatars').getPublicUrl(path) + '?v=' + DateTime.now().millisecondsSinceEpoch.toString());
       showMessage('تم تحديث الصورة الشخصية');
     } catch (e) {
       showMessage('تعذر تحديث الصورة: $e');
@@ -2226,13 +2262,21 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
     setState(() => saving = true);
     try {
+      final bio = bioController.text.trim();
+      if (bio.length > 160) {
+        showMessage('النبذة يجب ألا تتجاوز 160 حرفًا');
+        return;
+      }
       await db
           .from('duo_profiles')
-          .update({'display_name': value.isEmpty ? null : value})
+          .update({
+            'display_name': value.isEmpty ? null : value,
+            'bio': bio,
+          })
           .eq('user_id', userId);
 
       if (!mounted) return;
-      showMessage('تم حفظ الاسم الظاهر');
+      showMessage('تم حفظ الملف الشخصي');
     } catch (e) {
       showMessage('تعذر حفظ التغييرات: $e');
     } finally {
@@ -2268,10 +2312,53 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     }
   }
 
+  Future<void> changePassword() async {
+    final controller = TextEditingController();
+    final password = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: purple,
+        title: const Text('تغيير كلمة المرور'),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'كلمة المرور الجديدة',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (password == null) return;
+    if (password.length < 8) {
+      showMessage('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+      return;
+    }
+    try {
+      await db.auth.updateUser(UserAttributes(password: password));
+      showMessage('تم تحديث كلمة المرور');
+    } catch (e) {
+      showMessage('تعذر تغيير كلمة المرور: $e');
+    }
+  }
+
   Widget settingsTile({
     required IconData icon,
     required String title,
     required String subtitle,
+    VoidCallback? onTap,
   }) {
     return Card(
       color: purple,
@@ -2282,6 +2369,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           subtitle,
           style: const TextStyle(color: lavender),
         ),
+        onTap: onTap,
       ),
     );
   }
@@ -2289,6 +2377,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   @override
   void dispose() {
     displayNameController.dispose();
+    bioController.dispose();
     super.dispose();
   }
 
@@ -2359,6 +2448,19 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                     border: OutlineInputBorder(),
                   ),
                 ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: bioController,
+                  maxLength: 160,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'نبذة عنك',
+                    hintText: 'اكتب نبذة قصيرة تظهر في ملفك الشخصي',
+                    prefixIcon: Icon(Icons.notes_rounded),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 InputDecorator(
                   decoration: const InputDecoration(
@@ -2406,24 +2508,30 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   activeColor: gold,
                   secondary: const Icon(Icons.notifications_off_outlined, color: gold),
                   title: const Text('الوضع الهادئ'),
-                  subtitle: const Text('إيقاف التنبيهات داخل التطبيق عند تفعيلها مستقبلًا',
+                  subtitle: const Text('كتم التنبيهات التي تصل أثناء استخدام التطبيق',
                       style: TextStyle(color: lavender)),
                   onChanged: (value) {
                     setState(() => quietMode = value);
                     savePreference('ours_quiet_mode', value);
                   },
                 ),
-                SwitchListTile(
-                  value: showOnlineStatus,
-                  activeColor: gold,
-                  secondary: const Icon(Icons.visibility_outlined, color: gold),
-                  title: const Text('إظهار حالة النشاط'),
-                  subtitle: const Text('تفضيل محلي؛ لا يفعّل حالة اتصال عامة حاليًا',
-                      style: TextStyle(color: lavender)),
-                  onChanged: (value) {
-                    setState(() => showOnlineStatus = value);
-                    savePreference('ours_show_online', value);
-                  },
+                ListTile(
+                  leading: const Icon(Icons.language_rounded, color: gold),
+                  title: const Text('لغة التطبيق'),
+                  subtitle: Text(languageCode == 'ar' ? 'العربية' : 'English'),
+                  trailing: DropdownButton<String>(
+                    value: languageCode,
+                    underline: const SizedBox.shrink(),
+                    items: const [
+                      DropdownMenuItem(value: 'ar', child: Text('العربية')),
+                      DropdownMenuItem(value: 'en', child: Text('English')),
+                    ],
+                    onChanged: (value) async {
+                      if (value == null) return;
+                      setState(() => languageCode = value);
+                      await OursAppSettings.setLanguage(value);
+                    },
+                  ),
                 ),
                 SwitchListTile(
                   value: confirmBeforeDelete,
@@ -2436,6 +2544,12 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                     setState(() => confirmBeforeDelete = value);
                     savePreference('ours_confirm_delete', value);
                   },
+                ),
+                settingsTile(
+                  icon: Icons.password_rounded,
+                  title: 'تغيير كلمة المرور',
+                  subtitle: 'حدّث كلمة مرور حسابك',
+                  onTap: changePassword,
                 ),
                 settingsTile(
                   icon: Icons.lock_outline,
