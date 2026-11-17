@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -22,10 +23,12 @@ class OursWorldHubPage extends StatefulWidget {
     super.key,
     required this.spaceId,
     required this.worldIndex,
+    this.onSpaceChanged,
   });
 
   final String? spaceId;
   final int worldIndex;
+  final ValueChanged<String>? onSpaceChanged;
 
   @override
   State<OursWorldHubPage> createState() => _OursWorldHubPageState();
@@ -364,6 +367,89 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
   void _snack(String text) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> _invitePartnerToWorld() async {
+    try {
+      final code = (await db.rpc('create_duo_invite')).toString();
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: _purple,
+          title: Text(_worldText(context, 'دعوة شريكك إلى العالم', 'Invite your partner to this world')),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(_worldText(context, 'أرسل هذا الرمز لشريكك لينضم إلى عالمكما. المحادثة الخاصة تبقى مستقلة.', 'Share this code so your partner can join your shared world. Your private chat remains separate.')),
+            const SizedBox(height: 14),
+            SelectableText(code, style: const TextStyle(color: _gold, fontSize: 28, letterSpacing: 5, fontWeight: FontWeight.bold)),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(_worldText(context, 'إغلاق', 'Close'))),
+            FilledButton.icon(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: code));
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+                _snack(_worldText(context, 'تم نسخ رمز الدعوة', 'Invite code copied'));
+              },
+              icon: const Icon(Icons.copy_rounded),
+              label: Text(_worldText(context, 'نسخ الرمز', 'Copy code')),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      _snack(_worldText(context, 'تعذر إنشاء رمز الدعوة: $e', 'Could not create invite code: $e'));
+    }
+  }
+
+  Future<void> _createSharedWorld() async {
+    try {
+      final result = await db.rpc('create_duo_space');
+      final id = result?.toString() ?? '';
+      if (id.isEmpty) throw Exception('No world ID returned');
+      widget.onSpaceChanged?.call(id);
+      if (!mounted) return;
+      _snack(_worldText(context, 'تم إنشاء عالمكما المشترك', 'Your shared world has been created'));
+      await _invitePartnerToWorld();
+    } catch (e) {
+      _snack(_worldText(context, 'تعذر إنشاء العالم: $e', 'Could not create world: $e'));
+    }
+  }
+
+  Future<void> _joinSharedWorld() async {
+    final codeController = TextEditingController();
+    final code = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _purple,
+        title: Text(_worldText(context, 'الانضمام إلى عالم', 'Join a world')),
+        content: TextField(
+          controller: codeController,
+          maxLength: 8,
+          textCapitalization: TextCapitalization.characters,
+          decoration: InputDecoration(labelText: _worldText(context, 'رمز الدعوة', 'Invite code')),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(_worldText(context, 'إلغاء', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, codeController.text.trim()), child: Text(_worldText(context, 'انضمام', 'Join'))),
+        ],
+      ),
+    );
+    codeController.dispose();
+    if (code == null) return;
+    if (code.length != 8) {
+      _snack(_worldText(context, 'أدخل رمزًا مكوّنًا من 8 خانات', 'Enter an 8-character invite code'));
+      return;
+    }
+    try {
+      final result = await db.rpc('redeem_duo_invite', params: {'p_code': code});
+      final id = result?.toString() ?? '';
+      if (id.isEmpty) throw Exception('No world ID returned');
+      widget.onSpaceChanged?.call(id);
+      if (mounted) _snack(_worldText(context, 'تم الانضمام إلى العالم المشترك', 'You joined the shared world'));
+    } catch (e) {
+      _snack(_worldText(context, 'تعذر الانضمام إلى العالم: $e', 'Could not join world: $e'));
+    }
   }
 
   Future<void> _showEditor(String kind) async {
