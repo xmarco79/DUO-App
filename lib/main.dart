@@ -24,11 +24,16 @@ const navy = Color(0xFF10101C);
 const purple = Color(0xFF29213D);
 const lavender = Color(0xFFB9A2D5);
 const gold = Color(0xFFD9BC86);
+const bool previewMode = false;
+final ValueNotifier<ThemeMode> oursThemeMode = ValueNotifier(ThemeMode.dark);
 
 // ==================== MAIN ====================
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final preferences = await SharedPreferences.getInstance();
+  oursThemeMode.value = preferences.getBool('ours_dark_theme') == false ? ThemeMode.light : ThemeMode.dark;
 
   await Supabase.initialize(
     url: 'https://sthlcrgwpzqhxtpevqwg.supabase.co',
@@ -45,20 +50,26 @@ class OursApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'OURS',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: navy,
-        colorScheme: const ColorScheme.dark(
-          primary: gold,
-          secondary: lavender,
-          surface: purple,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: oursThemeMode,
+      builder: (context, mode, _) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'OURS',
+        themeMode: mode,
+        theme: ThemeData(
+          brightness: Brightness.light,
+          scaffoldBackgroundColor: const Color(0xFFF6F2FA),
+          colorScheme: ColorScheme.fromSeed(seedColor: gold, brightness: Brightness.light),
+          useMaterial3: true,
         ),
-        useMaterial3: true,
+        darkTheme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: navy,
+          colorScheme: const ColorScheme.dark(primary: gold, secondary: lavender, surface: purple),
+          useMaterial3: true,
+        ),
+        home: const OursEntryGate(),
       ),
-      home: const OursEntryGate(),
     );
   }
 }
