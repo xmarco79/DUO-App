@@ -9,6 +9,7 @@ import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ai_page.dart';
 import 'settings_page.dart';
+import 'app_preferences.dart';
 
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
@@ -25,7 +26,6 @@ const purple = Color(0xFF29213D);
 const lavender = Color(0xFFB9A2D5);
 const gold = Color(0xFFD9BC86);
 const bool previewMode = false;
-final ValueNotifier<ThemeMode> oursThemeMode = ValueNotifier(ThemeMode.dark);
 
 // ==================== MAIN ====================
 
@@ -102,7 +102,7 @@ class _OursEntryGateState extends State<OursEntryGate> {
     if (_hasSeenWelcome == null) {
       return const Scaffold(backgroundColor: navy, body: Center(child: CircularProgressIndicator(color: gold)));
     }
-    if (_hasSeenWelcome!) return const OursAuthGate();
+    if (_hasSeenWelcome!) return Supabase.instance.client.auth.currentSession != null ? const HomePage() : const LoginPage();
     return WelcomePage(onLogin: _finishWelcome, onRegister: _finishWelcome);
   }
 }
@@ -175,11 +175,12 @@ class OursAuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         final session = snapshot.data?.session ?? auth.currentSession;
         if (session != null) {
-          return OursSocialHomePage(
+          return const HomePage();
+        /* return OursSocialHomePage(
             onProfileTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
             ),
-          );
+          ); */
         }
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
