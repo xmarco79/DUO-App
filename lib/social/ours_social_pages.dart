@@ -42,10 +42,10 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
         indicatorColor: _lavender.withValues(alpha: .18),
         selectedIndex: index,
         onDestinationSelected: (value) => setState(() => index = value),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'المحادثات'),
-          NavigationDestination(icon: Icon(Icons.search), label: 'البحث'),
-          NavigationDestination(icon: Icon(Icons.person_add_alt_1_outlined), label: 'الطلبات'),
+        destinations: [
+          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: _oursText(context, 'المحادثات', 'Chats')),
+          NavigationDestination(icon: Icon(Icons.search), label: _oursText(context, 'البحث', 'Search')),
+          NavigationDestination(icon: Icon(Icons.person_add_alt_1_outlined), label: _oursText(context, 'الطلبات', 'Requests')),
         ],
       ),
     );
@@ -91,9 +91,9 @@ class _OursPeopleSearchPageState extends State<OursPeopleSearchPage> {
         'requester_id': db.auth.currentUser!.id,
         'addressee_id': userId,
       });
-      _message('تم إرسال طلب الإضافة');
+      _message(_oursText(context, 'تم إرسال طلب الإضافة', 'Friend request sent'));
     } on PostgrestException catch (e) {
-      _message(e.code == '23505' ? 'سبق إرسال طلب لهذا المستخدم' : 'تعذر إرسال الطلب: ${e.message}');
+      _message(e.code == '23505' ? _oursText(context, 'سبق إرسال طلب لهذا المستخدم', 'A request was already sent to this user') : 'تعذر إرسال الطلب: ${e.message}');
     } catch (e) {
       _message('تعذر إرسال الطلب: $e');
     }
@@ -112,7 +112,7 @@ class _OursPeopleSearchPageState extends State<OursPeopleSearchPage> {
           textInputAction: TextInputAction.search,
           onSubmitted: (_) => search(),
           decoration: InputDecoration(
-            hintText: 'ابحث باسم المستخدم',
+            hintText: _oursText(context, 'ابحث باسم المستخدم', 'Search by username'),
             prefixIcon: const Icon(Icons.search),
             suffixIcon: IconButton(onPressed: search, icon: const Icon(Icons.arrow_forward)),
             filled: true, fillColor: _purple,
@@ -123,9 +123,9 @@ class _OursPeopleSearchPageState extends State<OursPeopleSearchPage> {
       if (loading) const LinearProgressIndicator(color: _gold),
       Expanded(
         child: searched == null
-            ? const Center(child: Text('ابحث عن الأشخاص باستخدام اسم المستخدم', style: TextStyle(color: _lavender)))
+            ? Center(child: Text(_oursText(context, 'ابحث عن الأشخاص باستخدام اسم المستخدم (3 أحرف على الأقل)', 'Search people by username (at least 3 characters)'), style: const TextStyle(color: _lavender)))
             : results.isEmpty && !loading
-                ? const Center(child: Text('لا توجد نتائج مطابقة', style: TextStyle(color: _lavender)))
+                ? Center(child: Text(_oursText(context, 'لا توجد نتائج مطابقة', 'No matching users'), style: const TextStyle(color: _lavender)))
                 : ListView.builder(
                     itemCount: results.length,
                     itemBuilder: (context, i) {
@@ -144,7 +144,7 @@ class _OursPeopleSearchPageState extends State<OursPeopleSearchPage> {
                           title: Text(name.isEmpty ? '@${row['username']}' : name),
                           subtitle: Text('@${row['username']}', style: const TextStyle(color: _lavender)),
                           trailing: IconButton(
-                            tooltip: 'إضافة',
+                            tooltip: _oursText(context, 'إضافة', 'Add'),
                             onPressed: () => sendRequest(row['user_id'].toString()),
                             icon: const Icon(Icons.person_add_alt_1, color: _gold),
                           ),
@@ -190,7 +190,7 @@ class _OursFriendRequestsPageState extends State<OursFriendRequestsPage> {
       setState(() { requests = list; loading = false; });
     } catch (e) {
       if (mounted) setState(() => loading = false);
-      if (mounted) _message('تعذر تحميل الطلبات: $e');
+      if (mounted) _message(_oursText(context, 'تعذر تحميل الطلبات: $e', 'Could not load requests: $e'));
     }
   }
 
@@ -202,7 +202,7 @@ class _OursFriendRequestsPageState extends State<OursFriendRequestsPage> {
         'p_request_id': id,
         'p_accept': accept,
       });
-      _message(accept ? 'تم قبول الطلب وفتح المحادثة' : 'تم رفض الطلب');
+      _message(accept ? _oursText(context, 'تم قبول الطلب وفتح المحادثة', 'Request accepted. Chat is ready') : _oursText(context, 'تم رفض الطلب', 'Request declined'));
       await load();
     } catch (e) { _message('تعذر معالجة الطلب: $e'); }
   }
@@ -210,7 +210,7 @@ class _OursFriendRequestsPageState extends State<OursFriendRequestsPage> {
   @override
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator(color: _gold));
-    if (requests.isEmpty) return const Center(child: Text('لا توجد طلبات إضافة حاليًا', style: TextStyle(color: _lavender)));
+    if (requests.isEmpty) return const Center(child: Text(_oursText(context, 'لا توجد طلبات إضافة حاليًا', 'No pending requests'), style: TextStyle(color: _lavender)));
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: requests.length,
@@ -230,9 +230,9 @@ class _OursFriendRequestsPageState extends State<OursFriendRequestsPage> {
               subtitle: Text('@$username', style: const TextStyle(color: _lavender)),
             ),
             Row(children: [
-              Expanded(child: OutlinedButton(onPressed: () => respond(row['id'].toString(), false), child: const Text('رفض'))),
+              Expanded(child: OutlinedButton(onPressed: () => respond(row['id'].toString(), false), child: Text(_oursText(context, 'رفض', 'Decline')))),
               const SizedBox(width: 10),
-              Expanded(child: FilledButton(onPressed: () => respond(row['id'].toString(), true), child: const Text('قبول وبدء المحادثة'))),
+              Expanded(child: FilledButton(onPressed: () => respond(row['id'].toString(), true), child: Text(_oursText(context, 'قبول وبدء المحادثة', 'Accept and chat')))),
             ]),
           ]),
         ));
@@ -276,7 +276,7 @@ class _OursConversationsPageState extends State<OursConversationsPage> {
             .order('created_at', ascending: false).limit(1).maybeSingle();
         rows.add({
           'id': id, 'profile': profile,
-          'preview': last == null ? 'ابدأ المحادثة الآن' : (last['message_type'] == 'text' ? last['body'] : 'مرفق'),
+          'preview': last == null ? _oursText(context, 'ابدأ المحادثة الآن', 'Start chatting') : (last['message_type'] == 'text' ? last['body'] : _oursText(context, 'مرفق', 'Attachment')),
           'last_message_at': last?['created_at'],
         });
       }
@@ -298,9 +298,9 @@ class _OursConversationsPageState extends State<OursConversationsPage> {
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: const [
         Icon(Icons.forum_outlined, color: _gold, size: 58),
         SizedBox(height: 18),
-        Text('لا توجد محادثات بعد', style: TextStyle(fontSize: 21)),
+        Text(_oursText(context, 'لا توجد محادثات بعد', 'No conversations yet'), style: TextStyle(fontSize: 21)),
         SizedBox(height: 8),
-        Text('ابحث عن شخص وأرسل له طلب إضافة. بعد قبول الطلب ستظهر محادثتكما هنا.', textAlign: TextAlign.center, style: TextStyle(color: _lavender, height: 1.6)),
+        Text(_oursText(context, 'ابحث عن شريكك باسم المستخدم وأرسل طلب إضافة. بعد قبول الطلب ستظهر محادثتكما هنا.', 'Find your partner by username and send a request. Your chat will appear here after they accept.'), textAlign: TextAlign.center, style: TextStyle(color: _lavender, height: 1.6)),
       ]),
     ));
     return RefreshIndicator(
