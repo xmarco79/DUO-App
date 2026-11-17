@@ -2135,7 +2135,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   bool loading = true;
   bool saving = false;
   bool quietMode = false;
-  bool showOnlineStatus = true;
   bool confirmBeforeDelete = true;
 
   @override
