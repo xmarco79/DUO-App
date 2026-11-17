@@ -47,7 +47,7 @@ jobs:
           )
 
           def add_mirror(block_name, source):
-              match = re.search(r"\\b" + re.escape(block_name) + r"\\s*\\{", source)
+              match = re.search(r"\b" + re.escape(block_name) + r"\s*\{", source)
               if not match:
                   return source, False
               start = match.end()
@@ -62,11 +62,11 @@ jobs:
               block = source[match.start():i]
               if "maven-central.storage-download.googleapis.com" in block:
                   return source, False
-              repos = re.search(r"repositories\\s*\\{", block)
+              repos = re.search(r"repositories\s*\{", block)
               if not repos:
                   return source, False
               insert_at = match.start() + repos.end()
-              return source[:insert_at] + "\\n        " + mirror + source[insert_at:], True
+              return source[:insert_at] + "\n        " + mirror + source[insert_at:], True
 
           changed = False
           for block_name in ("pluginManagement", "dependencyResolutionManagement"):
