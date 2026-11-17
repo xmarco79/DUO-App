@@ -147,7 +147,6 @@ class _OursEntryGateState extends State<OursEntryGate> {
         final session = snapshot.data?.session ?? auth.currentSession;
         if (session != null) {
           return const OursLockedPreviewPage();
-          // The full social home remains unchanged on the stable branch.
         }
         if (showLogin) return LoginPage(initialCreatingAccount: creatingAccount);
         return WelcomePage(
@@ -1791,3 +1790,1003 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 const Icon(Icons.perm_media_outlined, color: gold),
                 if (unreadIncomingCount > 0)
+                  Positioned(
+                    top: -5,
+                    right: -6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                      child: Text('$unreadIncomingCount', style: const TextStyle(fontSize: 9, color: Colors.white)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: gold),
+                  )
+                : messages.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'بداية عالمكما الخاص',
+                          style: TextStyle(
+                            color: lavender,
+                            fontSize: 18,
+                          ),
+                        ),
+                      )
+                    : displayedMessages.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'لا توجد رسائل تطابق البحث',
+                              style: TextStyle(color: lavender),
+                            ),
+                          )
+                        : ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: displayedMessages.length,
+                        itemBuilder: (context, index) {
+                          final item = displayedMessages[index];
+                          final isMe =
+                              item['sender_id'] == currentUserId;
+
+                          return Align(
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                maxWidth: 280,
+                              ),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isMe
+                                    ? purple
+                                    : const Color(0xFF211D30),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: gold.withOpacity(0.25),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (!isMe)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 6),
+                                      child: Text(
+                                        participantNames[item['sender_id']?.toString()] ?? 'الشريك',
+                                        style: const TextStyle(
+                                          color: gold,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  if (item['reply_to'] != null)
+                                    Container(
+                                      width: double.infinity,
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                                      decoration: BoxDecoration(                                        color: navy.withOpacity(0.65),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: const Border(left: BorderSide(color: gold, width: 3)),
+                                      ),
+                                      child: Text(
+                                        'رد على: ${_messagePreview(messages.firstWhere(
+                                          (message) => message['id']?.toString() == item['reply_to']?.toString(),
+                                          orElse: () => <String, dynamic>{'deleted_at': true},
+                                        ))}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(color: lavender, fontSize: 11),
+                                      ),
+                                    ),
+                                  if (item['deleted_at'] != null)
+                                    const Text('تم حذف الرسالة', style: TextStyle(color: lavender, fontStyle: FontStyle.italic))
+                                  else if (item['message_type'] == 'file')
+                                    InkWell(
+                                      onTap: () => openSharedFile(item['body']?.toString() ?? ''),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                        const Icon(Icons.insert_drive_file_outlined, color: gold, size: 30),
+                                        const SizedBox(width: 10),
+                                        Flexible(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                          Text((item['body']?.toString() ?? '').split('/').last.replaceFirst(RegExp(r'^\d+_'), ''), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                          const SizedBox(height: 3),
+                                          const Text('اضغط لفتح الملف', style: TextStyle(color: lavender, fontSize: 11)),
+                                        ])),
+                                      ]),
+                                    )
+                                  else if (item['message_type'] == 'audio')
+                                    AudioMessageBubble(
+                                      audioPath: item['body']?.toString() ?? '',
+                                      isMine: isMe,
+                                    )
+                                  else if (item['message_type'] == 'image')
+                                    FutureBuilder<String>(
+                                      future: signedImageUrl(
+                                        item['body']?.toString() ?? '',
+                                      ),
+                                      builder: (context, snapshot) {
+                                        if (snapshot.hasError) {
+                                          return const Text(
+                                            'تعذر تحميل الصورة',
+                                            style: TextStyle(color: lavender),
+                                          );
+                                        }
+                                        if (!snapshot.hasData) {
+                                          return const SizedBox(
+                                            width: 190,
+                                            height: 150,
+                                            child: Center(
+                                              child: CircularProgressIndicator(
+                                                color: gold,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        return GestureDetector(
+                                          onTap: () => showImagePreview(snapshot.data!),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Image.network(
+                                              snapshot.data!,
+                                              width: 220,
+                                              fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                const SizedBox(
+                                              width: 190,
+                                              height: 100,
+                                              child: Center(
+                                                child: Text(
+                                                  'تعذر عرض الصورة',
+                                                  style: TextStyle(color: lavender),
+                                                ),
+                                              ),
+                                            ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    )
+                                  else
+                                    Text(
+                                      item['body']?.toString() ?? '',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  if (item['deleted_at'] == null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: OursMessageReactions(
+                                        messageId: item['id'].toString(),
+                                        spaceId: widget.spaceId,
+                                      ),
+                                    ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        _formatMessageTime(item['created_at']),
+                                        style: const TextStyle(color: lavender, fontSize: 10),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      if (item['deleted_at'] == null)
+                                        InkWell(
+                                          onTap: () => _replyToMessage(item),
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(4),
+                                            child: Icon(Icons.reply_rounded, color: lavender, size: 17),
+                                          ),
+                                        ),
+                                      if (isMe && item['deleted_at'] == null)
+                                        InkWell(
+                                          onTap: () => _deleteMessage(item),
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(4),
+                                            child: Icon(Icons.delete_outline, color: Colors.redAccent, size: 17),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
+            decoration: BoxDecoration(
+              color: purple,
+              border: Border(
+                top: BorderSide(
+                  color: gold.withOpacity(0.2),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                if (recordingAudio) ...[
+                  IconButton(
+                    tooltip: 'إلغاء التسجيل',
+                    onPressed: sending ? null : cancelAudioRecording,
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'جارٍ تسجيل الرسالة الصوتية...',
+                      style: const TextStyle(color: gold, fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'إيقاف وإرسال التسجيل',
+                    onPressed: sending ? null : stopAndSendAudio,
+                    icon: sending
+                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: gold, strokeWidth: 2))
+                        : const Icon(Icons.send_rounded, color: gold),
+                  ),
+                ] else ...[
+                IconButton(
+                  tooltip: 'إرسال ملف',
+                  onPressed: uploadingFile || uploadingImage || sending ? null : sendFile,
+                  icon: uploadingFile ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: gold, strokeWidth: 2)) : const Icon(Icons.attach_file, color: gold),
+                ),
+                IconButton(
+                  tooltip: 'إرسال صورة',
+                  onPressed: uploadingImage || uploadingFile || sending ? null : sendImage,
+                  icon: uploadingImage
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: gold,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.image_outlined, color: gold),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: messageController,
+                    minLines: 1,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => sendMessage(),
+                    decoration: InputDecoration(
+                      hintText: replyingTo == null
+                          ? 'اكتب رسالتك...'
+                          : 'الرد على: ${_messagePreview(replyingTo!)}',
+                      filled: true,
+                      fillColor: navy,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton(
+                  onPressed: sending ? null : sendMessage,
+                  icon: sending
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: gold,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.send_rounded,
+                          color: gold,
+                        ),
+                ),
+                if (replyingTo != null)
+                  IconButton(
+                    tooltip: 'إلغاء الرد',
+                    onPressed: () => setState(() => replyingTo = null),
+                    icon: const Icon(Icons.close, color: lavender),
+                  ),
+                IconButton(
+                  tooltip: 'تسجيل رسالة صوتية',
+                  onPressed: sending || uploadingFile || uploadingImage ? null : startAudioRecording,
+                  icon: const Icon(Icons.mic_none_rounded, color: gold),
+                ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// ==================== SHARED MEDIA ====================
+
+class SharedMediaPage extends StatelessWidget {
+  final List<Map<String, dynamic>> messages;
+
+  const SharedMediaPage({super.key, required this.messages});
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = messages
+        .where((item) => item['deleted_at'] == null &&
+            {'image', 'file', 'audio'}.contains(item['message_type']))
+        .toList()
+      ..sort((a, b) => DateTime.parse(b['created_at'].toString())
+          .compareTo(DateTime.parse(a['created_at'].toString())));
+
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('الوسائط والملفات', style: TextStyle(color: gold)),
+          backgroundColor: navy,
+          bottom: const TabBar(
+            labelColor: gold,
+            unselectedLabelColor: lavender,
+            indicatorColor: gold,
+            tabs: [
+              Tab(icon: Icon(Icons.image_outlined), text: 'الصور'),
+              Tab(icon: Icon(Icons.insert_drive_file_outlined), text: 'الملفات'),
+              Tab(icon: Icon(Icons.mic_none), text: 'الصوت'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _MediaList(items: visible.where((m) => m['message_type'] == 'image').toList()),
+            _MediaList(items: visible.where((m) => m['message_type'] == 'file').toList()),
+            _MediaList(items: visible.where((m) => m['message_type'] == 'audio').toList()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MediaList extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+
+  const _MediaList({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const Center(child: Text('لا توجد عناصر مشتركة بعد', style: TextStyle(color: lavender)));
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(14),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const Divider(color: purple),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final type = item['message_type'];
+        final path = item['body']?.toString() ?? '';
+        final created = DateTime.tryParse(item['created_at']?.toString() ?? '');
+        final label = type == 'image' ? 'صورة مشتركة' : type == 'audio' ? 'رسالة صوتية' : path.split('/').last;
+        return ListTile(
+          leading: Icon(
+            type == 'image' ? Icons.image_outlined : type == 'audio' ? Icons.audio_file_outlined : Icons.insert_drive_file_outlined,
+            color: gold,
+          ),
+          title: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text(
+            created == null ? '' : DateFormat('yyyy/MM/dd • HH:mm').format(created.toLocal()),
+            style: const TextStyle(color: lavender, fontSize: 11),
+          ),
+          trailing: const Icon(Icons.open_in_new, color: lavender),
+          onTap: () async {
+            try {
+              final url = await Supabase.instance.client.storage.from('duo-private').createSignedUrl(path, 900);
+              final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+              if (!opened && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح العنصر')));
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر فتح العنصر: $e')));
+              }
+            }
+          },
+        );
+      },
+    );
+  }
+}
+
+
+// ==================== PROFILE & SETTINGS ====================
+
+class ProfileSettingsPage extends StatefulWidget {
+  const ProfileSettingsPage({super.key});
+
+  @override
+  State<ProfileSettingsPage> createState() => _ProfileSettingsPageState();
+}
+
+class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
+  final displayNameController = TextEditingController();
+  final bioController = TextEditingController();
+  SupabaseClient get db => Supabase.instance.client;
+
+  String username = '';
+  String email = '';
+  String? avatarUrl;
+  String languageCode = 'ar';
+  bool uploadingAvatar = false;
+  bool loading = true;
+  bool saving = false;
+  bool quietMode = false;
+  bool confirmBeforeDelete = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadPreferences();
+    loadProfile();
+  }
+
+  Future<void> loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      quietMode = prefs.getBool('ours_quiet_mode') ?? false;
+      confirmBeforeDelete = prefs.getBool('ours_confirm_delete') ?? true;
+      languageCode = prefs.getString('ours_language') ?? 'ar';
+    });
+  }
+
+  Future<void> savePreference(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final user = db.auth.currentUser;
+      if (user == null) throw Exception(oursText(context, 'انتهت جلسة تسجيل الدخول', 'Your session has expired'));
+
+      email = user.email ?? '';
+      final profile = await db
+          .from('duo_profiles')
+          .select('username, display_name, avatar_path, bio')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      if (!mounted) return;
+      username = profile?['username']?.toString() ?? '';
+      final avatarPath = profile?['avatar_path']?.toString();
+      avatarUrl = avatarPath == null ? null : db.storage.from('ours-avatars').getPublicUrl(avatarPath);
+      displayNameController.text =
+          profile?['display_name']?.toString() ?? '';
+      bioController.text = profile?['bio']?.toString() ?? '';
+      setState(() => loading = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => loading = false);
+      showMessage(oursText(context, 'تعذر تحميل الملف الشخصي: $e', 'Could not load profile: $e'));
+    }
+  }
+
+  void showMessage(String value) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(value)),
+    );
+  }
+
+  Future<void> chooseAvatar() async {
+    if (uploadingAvatar) return;
+    try {
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        backgroundColor: purple,
+        builder: (sheetContext) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined, color: gold),
+              title: Text(oursText(context, 'اختيار من المعرض', 'Choose from gallery')),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined, color: gold),
+              title: Text(oursText(context, 'التقاط صورة بالكاميرا', 'Take a photo')),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+          ]),
+        ),
+      );
+      if (source == null) return;
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 86,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
+      if (picked == null) return;
+      final user = db.auth.currentUser;
+      if (user == null) throw Exception(oursText(context, 'انتهت جلسة تسجيل الدخول', 'Your session has expired'));
+      setState(() => uploadingAvatar = true);
+      final extension = picked.name.split('.').last.toLowerCase();
+      final safeExtension = ['jpg', 'jpeg', 'png', 'webp'].contains(extension) ? extension : 'jpg';
+      final oldProfile = await db.from('duo_profiles').select('avatar_path').eq('user_id', user.id).maybeSingle();
+      final oldPath = oldProfile?['avatar_path']?.toString();
+      final path = '${user.id}/avatar_${DateTime.now().microsecondsSinceEpoch}.$safeExtension';
+      final bytes = await picked.readAsBytes();
+      if (bytes.length > 5 * 1024 * 1024) throw Exception(oursText(context, 'حجم الصورة يتجاوز 5 ميجابايت', 'Image exceeds 5 MB'));
+      await db.storage.from('ours-avatars').uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(upsert: false, contentType: safeExtension == 'png' ? 'image/png' : safeExtension == 'webp' ? 'image/webp' : 'image/jpeg'),
+      );
+      try {
+        await db.from('duo_profiles').update({'avatar_path': path}).eq('user_id', user.id);
+      } catch (_) {
+        await db.storage.from('ours-avatars').remove([path]);
+        rethrow;
+      }
+      if (oldPath != null && oldPath != path) {
+        try { await db.storage.from('ours-avatars').remove([oldPath]); } catch (_) {}
+      }
+      if (!mounted) return;
+      setState(() => avatarUrl = db.storage.from('ours-avatars').getPublicUrl(path) + '?v=' + DateTime.now().millisecondsSinceEpoch.toString());
+      showMessage(oursText(context, 'تم تحديث الصورة الشخصية', 'Profile photo updated'));
+    } catch (e) {
+      showMessage(oursText(context, 'تعذر تحديث الصورة: $e', 'Could not update photo: $e'));
+    } finally {
+      if (mounted) setState(() => uploadingAvatar = false);
+    }
+  }
+
+  Future<void> saveProfile() async {
+    final value = displayNameController.text.trim();
+    if (value.length > 30) {
+      showMessage(oursText(context, 'الاسم الظاهر يجب ألا يتجاوز 30 حرفًا', 'Display name must be 30 characters or less'));
+      return;
+    }
+
+    final userId = db.auth.currentUser?.id;
+    if (userId == null) {
+      showMessage(oursText(context, 'انتهت جلسة تسجيل الدخول', 'Your session has expired'));
+      return;
+    }
+
+    setState(() => saving = true);
+    try {
+      final bio = bioController.text.trim();
+      if (bio.length > 160) {
+        showMessage(oursText(context, 'النبذة يجب ألا تتجاوز 160 حرفًا', 'Bio must be 160 characters or less'));
+        return;
+      }
+      await db
+          .from('duo_profiles')
+          .update({
+            'display_name': value.isEmpty ? null : value,
+            'bio': bio,
+          })
+          .eq('user_id', userId);
+
+      if (!mounted) return;
+      showMessage(oursText(context, 'تم حفظ الملف الشخصي', 'Profile saved'));
+    } catch (e) {
+      showMessage(oursText(context, 'تعذر حفظ التغييرات: $e', 'Could not save changes: $e'));
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  Future<void> signOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: purple,
+        icon: const Icon(Icons.logout_rounded, color: gold),
+        title: Text(oursText(context, 'تسجيل الخروج', 'Log out')),
+        content: Text(oursText(context, 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟', 'Are you sure you want to log out?')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(oursText(context, 'إلغاء', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(oursText(context, 'تسجيل الخروج', 'Log out'))),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await OursPushService.unregisterCurrentToken();
+                await db.auth.signOut();
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } catch (e) {
+      showMessage('تعذر تسجيل الخروج: $e');
+    }
+  }
+
+  Future<void> changePassword() async {
+    final controller = TextEditingController();
+    final password = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: purple,
+        title: Text(oursText(context, 'تغيير كلمة المرور', 'Change password')),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: oursText(context, 'كلمة المرور الجديدة', 'New password'),
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(oursText(context, 'إلغاء', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: Text(oursText(context, 'حفظ', 'Save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (password == null) return;
+    if (password.length < 8) {
+      showMessage(oursText(context, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'Password must be at least 8 characters'));
+      return;
+    }
+    try {
+      await db.auth.updateUser(UserAttributes(password: password));
+      showMessage(oursText(context, 'تم تحديث كلمة المرور', 'Password updated'));
+    } catch (e) {
+      showMessage(oursText(context, 'تعذر تغيير كلمة المرور: $e', 'Could not change password: $e'));
+    }
+  }
+
+  Widget settingsTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+  }) {
+    return Card(
+      color: purple,
+      child: ListTile(
+        leading: Icon(icon, color: gold),        title: Text(title),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(color: lavender),
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    displayNameController.dispose();
+    bioController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          oursText(context, 'الملف الشخصي والإعدادات', 'Profile & settings'),
+          style: TextStyle(color: gold, fontSize: 18),
+        ),
+        backgroundColor: navy,
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator(color: gold))
+          : ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: uploadingAvatar ? null : chooseAvatar,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 48,
+                        backgroundColor: purple,
+                        backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
+                        child: avatarUrl == null ? const Icon(Icons.person_rounded, color: gold, size: 48) : null,
+                      ),
+                      Positioned(
+                        bottom: 0, right: 0,
+                        child: CircleAvatar(
+                          radius: 16, backgroundColor: gold,
+                          child: uploadingAvatar
+                              ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: navy))
+                              : const Icon(Icons.camera_alt_outlined, color: navy, size: 17),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(oursText(context, 'اضغط لتغيير الصورة', 'Tap to change photo'), style: const TextStyle(color: lavender, fontSize: 12)),
+                const SizedBox(height: 14),
+                Center(
+                  child: Text(
+                    username.isEmpty ? oursText(context, 'حساب OURS', 'OURS account') : '@$username',
+                    style: const TextStyle(
+                      color: lavender,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  oursText(context, 'معلومات الحساب', 'Account information'),
+                  style: TextStyle(color: gold, fontSize: 18),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: displayNameController,
+                  maxLength: 30,
+                  decoration: InputDecoration(
+                    labelText: oursText(context, 'الاسم الظاهر', 'Display name'),
+                    hintText: oursText(context, 'كيف تريد أن يظهر اسمك؟', 'How should your name appear?'),
+                    prefixIcon: Icon(Icons.badge_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: bioController,
+                  maxLength: 160,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: oursText(context, 'نبذة عنك', 'About you'),
+                    hintText: oursText(context, 'اكتب نبذة قصيرة تظهر في ملفك الشخصي', 'Write a short profile bio'),
+                    prefixIcon: Icon(Icons.notes_rounded),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: oursText(context, 'اسم المستخدم', 'Username'),
+                    prefixIcon: Icon(Icons.alternate_email),
+                    border: OutlineInputBorder(),
+                  ),
+                  child: Text(username.isEmpty ? '—' : username),
+                ),
+                const SizedBox(height: 14),
+                InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: oursText(context, 'البريد المرتبط بالحساب', 'Account email'),
+                    prefixIcon: Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  child: Text(email.isEmpty ? oursText(context, 'غير متاح', 'Not available') : email),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  height: 52,
+                  child: FilledButton.icon(
+                    onPressed: saving ? null : saveProfile,
+                    icon: saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: navy,
+                            ),
+                          )
+                        : const Icon(Icons.save_outlined),
+                    label: Text(oursText(context, 'حفظ التغييرات', 'Save changes')),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                Text(
+                  oursText(context, 'الإعدادات والخصوصية', 'Settings & privacy'),
+                  style: TextStyle(color: gold, fontSize: 18),
+                ),
+                const SizedBox(height: 10),
+                SwitchListTile(
+                  value: quietMode,
+                  activeColor: gold,
+                  secondary: const Icon(Icons.notifications_off_outlined, color: gold),
+                  title: Text(oursText(context, 'الوضع الهادئ', 'Quiet mode')),
+                  subtitle: Text(oursText(context, 'كتم التنبيهات التي تصل أثناء استخدام التطبيق', 'Mute notifications while using the app'),
+                      style: TextStyle(color: lavender)),
+                  onChanged: (value) {
+                    setState(() => quietMode = value);
+                    savePreference('ours_quiet_mode', value);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.language_rounded, color: gold),
+                  title: Text(oursText(context, 'لغة التطبيق', 'App language')),
+                  subtitle: Text(languageCode == 'ar' ? 'العربية' : 'English'),
+                  trailing: DropdownButton<String>(
+                    value: languageCode,
+                    underline: const SizedBox.shrink(),
+                    items: const [
+                      DropdownMenuItem(value: 'ar', child: Text('العربية')),
+                      DropdownMenuItem(value: 'en', child: Text('English')),
+                    ],
+                    onChanged: (value) async {
+                      if (value == null) return;
+                      setState(() => languageCode = value);
+                      await OursAppSettings.setLanguage(value);
+                    },
+                  ),
+                ),
+                SwitchListTile(
+                  value: confirmBeforeDelete,
+                  activeColor: gold,
+                  secondary: const Icon(Icons.delete_outline, color: gold),
+                  title: Text(oursText(context, 'تأكيد الحذف', 'Confirm before deleting')),
+                  subtitle: Text(oursText(context, 'الاحتفاظ بتأكيد قبل حذف العناصر', 'Ask before deleting items'),
+                      style: TextStyle(color: lavender)),
+                  onChanged: (value) {
+                    setState(() => confirmBeforeDelete = value);
+                    savePreference('ours_confirm_delete', value);
+                  },
+                ),
+                settingsTile(
+                  icon: Icons.password_rounded,
+                  title: oursText(context, 'تغيير كلمة المرور', 'Change password'),
+                  subtitle: oursText(context, 'حدّث كلمة مرور حسابك', 'Update your account password'),
+                  onTap: changePassword,
+                ),
+                settingsTile(
+                  icon: Icons.lock_outline,
+                  title: oursText(context, 'مساحتك الخاصة', 'Your private space'),
+                  subtitle: oursText(context, 'المحادثة والملفات مخصصة لأعضاء مساحتك فقط', 'Your private content is only visible to your connected partner'),
+                ),
+                settingsTile(
+                  icon: Icons.people_outline,
+                  title: oursText(context, 'عدد الأعضاء', 'Members'),
+                  subtitle: oursText(context, 'كل مساحة في OURS مخصصة لشخصين فقط', 'Every OURS space is designed for two people'),
+                ),
+                settingsTile(
+                  icon: Icons.info_outline,
+                  title: oursText(context, 'حول OURS', 'About OURS'),                  subtitle: 'YOUR PRIVATE UNIVERSE · الإصدار 1.0.0',
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: signOut,
+                  icon: const Icon(Icons.logout),
+                  label: Text(oursText(context, 'تسجيل الخروج', 'Log out')),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: gold,
+                    side: const BorderSide(color: gold),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class AudioMessageBubble extends StatefulWidget {
+  final String audioPath;
+  final bool isMine;
+
+  const AudioMessageBubble({
+    super.key,
+    required this.audioPath,
+    required this.isMine,
+  });
+
+  @override
+  State<AudioMessageBubble> createState() => _AudioMessageBubbleState();
+}
+
+class _AudioMessageBubbleState extends State<AudioMessageBubble> {
+  final AudioPlayer player = AudioPlayer();
+  bool loadingUrl = false;
+
+  Future<void> togglePlayback() async {
+    if (player.state == PlayerState.playing) {
+      await player.pause();
+      return;
+    }
+
+    setState(() => loadingUrl = true);
+    try {
+      // Generate a fresh signed URL each time so long-open chats do not
+      // attempt playback with an expired 15-minute URL.
+      final url = await Supabase.instance.client.storage
+          .from('duo-private')
+          .createSignedUrl(widget.audioPath, 900);
+      await player.play(UrlSource(url));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر تشغيل الرسالة الصوتية')),
+        );
+      }
+      debugPrint('Audio playback failed: $e');
+    } finally {
+      if (mounted) setState(() => loadingUrl = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    player.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<PlayerState>(
+      stream: player.onPlayerStateChanged,
+      initialData: player.state,
+      builder: (context, snapshot) {
+        final playing = snapshot.data == PlayerState.playing;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              onPressed: loadingUrl ? null : togglePlayback,
+              icon: loadingUrl
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: gold,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Icon(
+                      playing
+                          ? Icons.pause_circle_filled
+                          : Icons.play_circle_fill,
+                      color: gold,
+                      size: 34,
+                    ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              loadingUrl
+                  ? 'جارٍ التحميل...'
+                  : playing
+                      ? 'تشغيل الرسالة...'
+                      : 'رسالة صوتية',
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
