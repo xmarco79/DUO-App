@@ -35,9 +35,12 @@ jobs:
       - name: Build APK
         run: flutter build apk --release -v
 
+      - name: Name OURS APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/OURS.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: OURS-Android
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/OURS.apk
           
