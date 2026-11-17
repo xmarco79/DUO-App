@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const AndroidNotificationChannel _channel = AndroidNotificationChannel(
   'ours_messages',
@@ -123,6 +124,9 @@ class OursPushService {
 
   static Future<void> _showForegroundNotification(
       RemoteMessage message) async {
+    final preferences = await SharedPreferences.getInstance();
+    if (preferences.getBool('ours_quiet_mode') ?? false) return;
+
     final notification = message.notification;
     if (notification == null) return;
 
