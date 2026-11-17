@@ -43,14 +43,16 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
     }
   }
 
+  void _updateSpace(String id) { if (mounted) setState(() => spaceId = id); }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
       const OursConnectHubPage(),
-      OursWorldHubPage(key: ValueKey('universe-$spaceId'), spaceId: spaceId, worldIndex: 1),
-      OursWorldHubPage(key: ValueKey('play-$spaceId'), spaceId: spaceId, worldIndex: 2),
-      OursWorldHubPage(key: ValueKey('memories-$spaceId'), spaceId: spaceId, worldIndex: 3),
-      OursWorldHubPage(key: ValueKey('together-$spaceId'), spaceId: spaceId, worldIndex: 4),
+      OursWorldHubPage(key: ValueKey('universe-$spaceId'), spaceId: spaceId, worldIndex: 1, onSpaceChanged: _updateSpace),
+      OursWorldHubPage(key: ValueKey('play-$spaceId'), spaceId: spaceId, worldIndex: 2, onSpaceChanged: _updateSpace),
+      OursWorldHubPage(key: ValueKey('memories-$spaceId'), spaceId: spaceId, worldIndex: 3, onSpaceChanged: _updateSpace),
+      OursWorldHubPage(key: ValueKey('together-$spaceId'), spaceId: spaceId, worldIndex: 4, onSpaceChanged: _updateSpace),
     ];
     return Scaffold(
       appBar: AppBar(
