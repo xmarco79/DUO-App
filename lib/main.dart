@@ -1,4 +1,5 @@
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'notifications/ours_push_service.dart';
@@ -116,6 +117,26 @@ class OursEntryGate extends StatefulWidget {
 class _OursEntryGateState extends State<OursEntryGate> {
   bool showLogin = false;
   bool creatingAccount = false;
+  StreamSubscription<AuthState>? authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
+      if (state.event == AuthChangeEvent.signedOut && mounted) {
+        setState(() {
+          showLogin = false;
+          creatingAccount = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    authSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
