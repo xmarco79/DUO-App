@@ -31,11 +31,6 @@ class _OursAiPageState extends State<OursAiPage> {
     });
   }
 
-  void _notify(String text) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-  }
-
   Future<List<Map<String, String>>> _loadRecentContext() async {
     final rows = await _db
         .from('duo_messages')
@@ -189,6 +184,14 @@ class _OursAiPageState extends State<OursAiPage> {
                       'استخرج من السياق المرفق اقتراحات لعناوين وتصنيفات ذكريات، ولا تحفظ أو تغيّر أي شيء.',
                       'memories'),
                 ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(18, 4, 18, 8),
+              child: Text(
+                'تُرسل رسائلك إلى خدمة الذكاء الاصطناعي للرد. ولا تُرسل محادثات المساحة إلا عند اختيار مهمة تستخدم سياقها.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _aiLavender, fontSize: 11, height: 1.4),
               ),
             ),
             const Divider(color: Color(0x3329293D)),
