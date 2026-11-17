@@ -174,16 +174,10 @@ class WelcomePage extends StatelessWidget {
                   textAlign: TextAlign.center, style: const TextStyle(color: lavender, height: 1.8, fontSize: 15)),
                 const SizedBox(height: 38),
                 SizedBox(width: double.infinity, height: 54,
-                  child: FilledButton(onPressed: () {
-                    onRegister();
-                    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage(initialCreatingAccount: true)));
-                  }, child: Text(oursText(context, 'إنشاء حساب', 'Create account')))),
+                  child: FilledButton(onPressed: onRegister, child: Text(oursText(context, 'إنشاء حساب', 'Create account')))),
                 const SizedBox(height: 12),
                 SizedBox(width: double.infinity, height: 54,
-                  child: OutlinedButton(onPressed: () {
-                    onLogin();
-                    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
-                  }, style: OutlinedButton.styleFrom(foregroundColor: lavender, side: const BorderSide(color: lavender)),
+                  child: OutlinedButton(onPressed: onLogin, style: OutlinedButton.styleFrom(foregroundColor: lavender, side: const BorderSide(color: lavender)),
                     child: Text(oursText(context, 'تسجيل الدخول', 'Log in')))),
                 const SizedBox(height: 28),
                 Text(oursText(context, 'عالم خاص لشخصين فقط', 'A private world for two only'), style: const TextStyle(color: gold, fontSize: 12, letterSpacing: 1.2)),
