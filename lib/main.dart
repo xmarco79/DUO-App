@@ -33,7 +33,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final preferences = await SharedPreferences.getInstance();
-  oursThemeMode.value = preferences.getBool('ours_dark_theme') == false ? ThemeMode.light : ThemeMode.dark;
+  AppPreferences.themeMode.value = preferences.getBool('ours_dark_theme') == false ? ThemeMode.light : ThemeMode.dark;
 
   await Supabase.initialize(
     url: 'https://sthlcrgwpzqhxtpevqwg.supabase.co',
@@ -51,7 +51,7 @@ class OursApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
-      valueListenable: oursThemeMode,
+      valueListenable: AppPreferences.themeMode,
       builder: (context, mode, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'OURS',
