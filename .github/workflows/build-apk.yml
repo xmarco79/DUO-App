@@ -81,16 +81,22 @@ jobs:
               manifest.write_text(manifest_text)
           PY
 
-      - name: Add microphone permission
+      - name: Add camera and microphone permissions
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           manifest = Path('android/app/src/main/AndroidManifest.xml')
           content = manifest.read_text()
-          permission = '    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n'
-          if 'android.permission.RECORD_AUDIO' not in content:
-              content = content.replace('    <application', permission + '    <application', 1)
+          permissions = [
+              '    <uses-permission android:name="android.permission.RECORD_AUDIO" />',
+              '    <uses-permission android:name="android.permission.CAMERA" />',
+              '    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />',
+          ]
+          for permission in permissions:
+              name = permission.split('"')[1]
+              if name not in content:
+                  content = content.replace('    <application', permission + '\\n    <application', 1)
           manifest.write_text(content)
           PY
 
