@@ -976,6 +976,16 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> openStickerPicker() async {
+    const builtInStickers = [
+      {'sticker_type': 'text', 'content': '❤️'},
+      {'sticker_type': 'text', 'content': '😂'},
+      {'sticker_type': 'text', 'content': '🥹'},
+      {'sticker_type': 'text', 'content': '✨'},
+      {'sticker_type': 'text', 'content': 'اشتقت لك'},
+      {'sticker_type': 'text', 'content': 'يا حلوك'},
+      {'sticker_type': 'text', 'content': 'تصبح على خير'},
+      {'sticker_type': 'text', 'content': 'أنت رهيب'},
+    ];
     await loadStickerShelf();
     if (!mounted) return;
     showModalBottomSheet(
@@ -1043,9 +1053,11 @@ class _ChatPageState extends State<ChatPage> {
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
                           ),
-                          itemCount: stickerShelf.length,
+                          itemCount: builtInStickers.length + stickerShelf.length,
                           itemBuilder: (context, index) {
-                            final sticker = stickerShelf[index];
+                            final sticker = index < builtInStickers.length
+                                ? builtInStickers[index]
+                                : stickerShelf[index - builtInStickers.length];
                             final isText = sticker['sticker_type'] == 'text';
                             return InkWell(
                               borderRadius: BorderRadius.circular(16),
