@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 const _albumGold = Color(0xFFD9BC86);
 const _albumPurple = Color(0xFF29213D);
 const _albumLavender = Color(0xFFB9A2D5);
+String _albumText(BuildContext context, String ar, String en) => Localizations.localeOf(context).languageCode == 'ar' ? ar : en;
 
 class OursAlbumsPage extends StatefulWidget {
   final String spaceId;
@@ -51,14 +52,14 @@ class _OursAlbumsPageState extends State<OursAlbumsPage> {
     final description = TextEditingController();
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       backgroundColor: _albumPurple,
-      title: const Text('ألبوم جديد'),
+      title: Text(_albumText(context, 'ألبوم جديد', 'New album')),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: title, maxLength: 100, decoration: const InputDecoration(labelText: 'اسم الألبوم')),
-        TextField(controller: description, maxLines: 2, decoration: const InputDecoration(labelText: 'وصف اختياري')),
+        TextField(controller: title, maxLength: 100, decoration: const InputDecoration(labelText: _albumText(context, 'اسم الألبوم', 'Album name'))),
+        TextField(controller: description, maxLines: 2, decoration: const InputDecoration(labelText: _albumText(context, 'وصف اختياري', 'Optional description'))),
       ]),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('إنشاء')),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(_albumText(context, 'إلغاء', 'Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(_albumText(context, 'إنشاء', 'Create'))),
       ],
     ));
     if (ok != true || title.text.trim().isEmpty) { title.dispose(); description.dispose(); return; }
@@ -72,7 +73,7 @@ class _OursAlbumsPageState extends State<OursAlbumsPage> {
       });
       await loadAlbums();
     } catch (e) {
-      _message('تعذر إنشاء الألبوم: $e');
+      _message(_albumText(context, 'تعذر إنشاء الألبوم: $e', 'Could not create album: $e'));
     } finally {
       title.dispose(); description.dispose();
       if (mounted) setState(() => busy = false);
@@ -126,7 +127,7 @@ class _OursAlbumsPageState extends State<OursAlbumsPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('ألبومات OURS')),
+    appBar: AppBar(title: Text(_albumText(context, 'ألبومات OURS', 'OURS albums'))),
     floatingActionButton: FloatingActionButton.extended(
       onPressed: busy ? null : createAlbum,
       backgroundColor: _albumGold,
