@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/full-ours-worlds
+      - preview/locked-after-login
   workflow_dispatch:
 
 jobs:
