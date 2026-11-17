@@ -394,7 +394,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     style: const TextStyle(fontSize: 20, color: _gold))),
               ]),
               const SizedBox(height: 8),
-              if (isArabic) Text(feature.$2, style: const TextStyle(color: _lavender)),
+              if (Localizations.localeOf(context).languageCode == 'ar') Text(feature.$2, style: const TextStyle(color: _lavender)),
               const SizedBox(height: 18),
               TextField(controller: title, maxLength: 140,
                 decoration: const InputDecoration(
