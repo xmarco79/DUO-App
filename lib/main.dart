@@ -147,6 +147,10 @@ class _OursEntryGateState extends State<OursEntryGate> {
         final session = snapshot.data?.session ?? auth.currentSession;
         if (session != null) {
           return const OursLockedPreviewPage();
+            onProfileTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
+            ),
+          );
         }
         if (showLogin) return LoginPage(initialCreatingAccount: creatingAccount);
         return WelcomePage(
@@ -288,7 +292,8 @@ class WelcomePage extends StatelessWidget {
                 SizedBox(width: double.infinity, height: 54,
                   child: FilledButton(onPressed: onRegister, child: Text(oursText(context, 'إنشاء حساب', 'Create account')))),
                 const SizedBox(height: 12),
-                SizedBox(width: double.infinity, height: 54,                  child: OutlinedButton(onPressed: onLogin, style: OutlinedButton.styleFrom(foregroundColor: lavender, side: const BorderSide(color: lavender)),
+                SizedBox(width: double.infinity, height: 54,
+                  child: OutlinedButton(onPressed: onLogin, style: OutlinedButton.styleFrom(foregroundColor: lavender, side: const BorderSide(color: lavender)),
                     child: Text(oursText(context, 'تسجيل الدخول', 'Log in')))),
                 const SizedBox(height: 28),
                 Text(oursText(context, 'عالم خاص لشخصين فقط', 'A private world for two only'), style: const TextStyle(color: gold, fontSize: 12, letterSpacing: 1.2)),
@@ -487,7 +492,8 @@ class _LoginPageState extends State<LoginPage> {
         e.toString().replaceFirst('Exception: ', ''),
       );
     } finally {
-      if (mounted) {        setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
       }
     }
   }
@@ -686,7 +692,8 @@ class _HomePageState extends State<HomePage> {
         spaceId = membership?['space_id']?.toString();
         loading = false;
       });
-    } catch (e) {      if (!mounted) return;
+    } catch (e) {
+      if (!mounted) return;
       setState(() => loading = false);
       message('تعذر استرجاع مساحتك: $e');
     }
@@ -885,7 +892,8 @@ class _HomePageState extends State<HomePage> {
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(oursText(context, 'إلغاء', 'Cancel'))),
                     FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(oursText(context, 'تسجيل الخروج', 'Log out'))),
-                  ],                ),
+                  ],
+                ),
               );
               if (confirmed != true) return;
               try {
@@ -1084,7 +1092,8 @@ class _ChatPageState extends State<ChatPage> {
   int unreadIncomingCount = 0;
   String searchQuery = '';
 
-  RealtimeChannel? channel;  RealtimeChannel? presenceChannel;
+  RealtimeChannel? channel;
+  RealtimeChannel? presenceChannel;
   bool partnerOnline = false;
 
   String get currentUserId => db.auth.currentUser!.id;
@@ -1283,7 +1292,8 @@ class _ChatPageState extends State<ChatPage> {
           callback: (payload) {
             final updated = Map<String, dynamic>.from(payload.newRecord);
             if (!mounted) return;
-            setState(() {              final index = messages.indexWhere((item) => item['id'] == updated['id']);
+            setState(() {
+              final index = messages.indexWhere((item) => item['id'] == updated['id']);
               if (index >= 0) messages[index] = updated;
             });
           },
@@ -1482,7 +1492,8 @@ class _ChatPageState extends State<ChatPage> {
       }
     });
 
-    return future;  }
+    return future;
+  }
 
 
   Future<void> startAudioRecording() async {
@@ -1681,7 +1692,8 @@ class _ChatPageState extends State<ChatPage> {
           onChanged: (value) {
             if (mounted) setState(() => searchQuery = value.trim());
           },
-        ),        actions: [
+        ),
+        actions: [
           TextButton(
             onPressed: () {
               if (mounted) setState(() => searchQuery = '');
@@ -1880,7 +1892,8 @@ class _ChatPageState extends State<ChatPage> {
                                       width: double.infinity,
                                       margin: const EdgeInsets.only(bottom: 8),
                                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                                      decoration: BoxDecoration(                                        color: navy.withOpacity(0.65),
+                                      decoration: BoxDecoration(
+                                        color: navy.withOpacity(0.65),
                                         borderRadius: BorderRadius.circular(8),
                                         border: const Border(left: BorderSide(color: gold, width: 3)),
                                       ),
@@ -2079,7 +2092,8 @@ class _ChatPageState extends State<ChatPage> {
                       fillColor: navy,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,                      ),
+                        borderSide: BorderSide.none,
+                      ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 18,
                         vertical: 12,
@@ -2279,6 +2293,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           .select('username, display_name, avatar_path, bio')
           .eq('user_id', user.id)
           .maybeSingle();
+
       if (!mounted) return;
       username = profile?['username']?.toString() ?? '';
       final avatarPath = profile?['avatar_path']?.toString();
@@ -2477,7 +2492,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     return Card(
       color: purple,
       child: ListTile(
-        leading: Icon(icon, color: gold),        title: Text(title),
+        leading: Icon(icon, color: gold),
+        title: Text(title),
         subtitle: Text(
           subtitle,
           style: const TextStyle(color: lavender),
@@ -2676,7 +2692,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 ),
                 settingsTile(
                   icon: Icons.info_outline,
-                  title: oursText(context, 'حول OURS', 'About OURS'),                  subtitle: 'YOUR PRIVATE UNIVERSE · الإصدار 1.0.0',
+                  title: oursText(context, 'حول OURS', 'About OURS'),
+                  subtitle: 'YOUR PRIVATE UNIVERSE · الإصدار 1.0.0',
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
