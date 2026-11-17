@@ -901,13 +901,14 @@ class _HomePageState extends State<HomePage> {
       ) : OursWorldHubPage(
         key: ValueKey('ours-world-$selectedWorldIndex'),
         spaceId: spaceId,
-        worldIndex: selectedWorldIndex,
+        worldIndex: selectedWorldIndex - 1,
       ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: purple,
         selectedIndex: selectedWorldIndex,
         onDestinationSelected: (index) => setState(() => selectedWorldIndex = index),
         destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'المنزل'),
           NavigationDestination(icon: Icon(Icons.forum_outlined), label: 'Connect'),
           NavigationDestination(icon: Icon(Icons.public_outlined), label: 'Universe'),
           NavigationDestination(icon: Icon(Icons.sports_esports_outlined), label: 'Play'),
