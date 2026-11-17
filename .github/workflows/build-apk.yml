@@ -94,36 +94,50 @@ jobs:
           manifest.write_text(content)
           PY
 
-      - name: Apply OURS Android branding
+      - name: Generate refined OURS Android icon
         shell: bash
         run: |
-          sed -i 's/android:label="[^"]*"/android:label="OURS"/; s#android:icon="@mipmap/ic_launcher"#android:icon="@mipmap/ic_launcher"#' android/app/src/main/AndroidManifest.xml
           python3 -m pip install --quiet Pillow
           python3 - <<'PY'
           from pathlib import Path
-          from PIL import Image, ImageFile
+          from PIL import Image, ImageDraw
+          import math
 
-          # The committed source icon contains a damaged/truncated PNG stream.
-          # Pillow can still recover its decodable pixels for Android mipmaps.
-          ImageFile.LOAD_TRUNCATED_IMAGES = True
-          with Image.open("assets/ours_icon.png") as original:
-              original.load()
-              source = original.convert("RGBA")
-          if source.width == 0 or source.height == 0:
-              raise SystemExit("The OURS source icon has no recoverable image data")
-          sizes = {
-              "mdpi": 48,
-              "hdpi": 72,
-              "xhdpi": 96,
-              "xxhdpi": 144,
-              "xxxhdpi": 192,
-          }
-          for density, size in sizes.items():
+          size = 1024
+          image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+          pixels = image.load()
+          for y in range(size):
+              t = y / (size - 1)
+              top = (19, 18, 34)
+              bottom = (47, 35, 62)
+              color = tuple(round(top[i] * (1-t) + bottom[i] * t) for i in range(3))
+              for x in range(size):
+                  pixels[x, y] = (*color, 255)
+
+          mask = Image.new("L", (size, size), 0)
+          ImageDraw.Draw(mask).rounded_rectangle((0, 0, size-1, size-1), radius=230, fill=255)
+          image.putalpha(mask)
+          draw = ImageDraw.Draw(image)
+
+          # Fine orbital frame and a restrained central infinity mark.
+          draw.ellipse((110, 110, 914, 914), outline=(217, 188, 134, 34), width=5)
+          points = []
+          for step in range(1600):
+              t = 2 * math.pi * step / 1599
+              x = 512 + 250 * math.cos(t)
+              y = 510 + 145 * math.sin(2 * t)
+              points.append((round(x), round(y)))
+          draw.line(points, fill=(226, 204, 158, 255), width=43, joint="curve")
+          draw.ellipse((730, 250, 778, 298), fill=(226, 204, 158, 255))
+          draw.ellipse((257, 704, 285, 732), fill=(185, 162, 213, 230))
+
+          sizes = {"mdpi":48, "hdpi":72, "xhdpi":96, "xxhdpi":144, "xxxhdpi":192}
+          for density, pixels in sizes.items():
               target = Path(f"android/app/src/main/res/mipmap-{density}/ic_launcher.png")
               target.parent.mkdir(parents=True, exist_ok=True)
-              icon = source.resize((size, size), Image.Resampling.LANCZOS)
-              icon.save(target, format="PNG", optimize=False)
-              print(f"Generated valid RGBA launcher icon: {target} ({size}px)")
+              image.resize((pixels, pixels), Image.Resampling.LANCZOS).save(target, format="PNG", optimize=True)
+          image.save("build/ours_icon_preview.png", format="PNG", optimize=True)
+          print("Generated a fresh OURS launcher icon in all Android densities.")
           PY
           rm -f android/app/src/main/res/drawable/ours_icon.xml
 
