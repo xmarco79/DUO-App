@@ -149,13 +149,6 @@ class _OursEntryGateState extends State<OursEntryGate> {
           return const OursLockedPreviewPage();
           // The full social home remains unchanged on the stable branch.
         }
-        if (false) {
-          return OursSocialHomePage(
-            onProfileTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
-            ),
-          );
-        }
         if (showLogin) return LoginPage(initialCreatingAccount: creatingAccount);
         return WelcomePage(
           onLogin: () => setState(() { showLogin = true; creatingAccount = false; }),
@@ -1798,94 +1791,3 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 const Icon(Icons.perm_media_outlined, color: gold),
                 if (unreadIncomingCount > 0)
-                  Positioned(
-                    top: -5,
-                    right: -6,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
-                      child: Text('$unreadIncomingCount', style: const TextStyle(fontSize: 9, color: Colors.white)),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: gold),
-                  )
-                : messages.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'بداية عالمكما الخاص',
-                          style: TextStyle(
-                            color: lavender,
-                            fontSize: 18,
-                          ),
-                        ),
-                      )
-                    : displayedMessages.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'لا توجد رسائل تطابق البحث',
-                              style: TextStyle(color: lavender),
-                            ),
-                          )
-                        : ListView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: displayedMessages.length,
-                        itemBuilder: (context, index) {
-                          final item = displayedMessages[index];
-                          final isMe =
-                              item['sender_id'] == currentUserId;
-
-                          return Align(
-                            alignment: isMe
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              constraints: const BoxConstraints(
-                                maxWidth: 280,
-                              ),
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isMe
-                                    ? purple
-                                    : const Color(0xFF211D30),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: gold.withOpacity(0.25),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (!isMe)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 6),
-                                      child: Text(
-                                        participantNames[item['sender_id']?.toString()] ?? 'الشريك',
-                                        style: const TextStyle(
-                                          color: gold,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  if (item['reply_to'] != null)
-                                    Container(
-                                      width: double.infinity,
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                                      decoration: BoxDecoration(
