@@ -434,7 +434,7 @@ class _LoginPageState extends State<LoginPage> {
                 TextField(
                   controller: username,
                   autocorrect: false,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: oursText(context, 'اسم المستخدم', 'Username'),
                     hintText: 'مثال: ours_user',
                     prefixIcon: Icon(Icons.person_outline),
@@ -445,7 +445,7 @@ class _LoginPageState extends State<LoginPage> {
                 TextField(
                   controller: password,
                   obscureText: true,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: oursText(context, 'كلمة المرور', 'Password'),
                     prefixIcon: Icon(Icons.lock_outline),
                     border: OutlineInputBorder(),
@@ -456,7 +456,7 @@ class _LoginPageState extends State<LoginPage> {
                   TextField(
                     controller: confirmPassword,
                     obscureText: true,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: oursText(context, 'تأكيد كلمة المرور', 'Confirm password'),
                       prefixIcon: Icon(Icons.lock_reset),
                       border: OutlineInputBorder(),
@@ -678,7 +678,7 @@ class _HomePageState extends State<HomePage> {
           controller: codeController,
           maxLength: 8,
           textCapitalization: TextCapitalization.characters,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'رمز الدعوة',
           ),
         ),
@@ -1572,7 +1572,7 @@ class _ChatPageState extends State<ChatPage> {
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'اكتب كلمة أو جزءًا من رسالة',
             prefixIcon: Icon(Icons.search),
           ),
@@ -2342,7 +2342,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           controller: controller,
           obscureText: true,
           autofocus: true,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'كلمة المرور الجديدة',
             border: OutlineInputBorder(),
           ),
@@ -2460,7 +2460,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 TextField(
                   controller: displayNameController,
                   maxLength: 30,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: oursText(context, 'الاسم الظاهر', 'Display name'),
                     hintText: oursText(context, 'كيف تريد أن يظهر اسمك؟', 'How should your name appear?'),
                     prefixIcon: Icon(Icons.badge_outlined),
@@ -2473,7 +2473,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   maxLength: 160,
                   minLines: 2,
                   maxLines: 4,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: oursText(context, 'نبذة عنك', 'About you'),
                     hintText: oursText(context, 'اكتب نبذة قصيرة تظهر في ملفك الشخصي', 'Write a short profile bio'),
                     prefixIcon: Icon(Icons.notes_rounded),
@@ -2482,7 +2482,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 ),
                 const SizedBox(height: 8),
                 InputDecorator(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: oursText(context, 'اسم المستخدم', 'Username'),
                     prefixIcon: Icon(Icons.alternate_email),
                     border: OutlineInputBorder(),
@@ -2491,7 +2491,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 ),
                 const SizedBox(height: 14),
                 InputDecorator(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: oursText(context, 'البريد المرتبط بالحساب', 'Account email'),
                     prefixIcon: Icon(Icons.email_outlined),
                     border: OutlineInputBorder(),
