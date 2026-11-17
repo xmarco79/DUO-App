@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ours_direct_chat_page.dart';
+import '../worlds/world_hub_page.dart';
+import '../notifications/ours_notifications.dart';
 
 String _oursText(BuildContext context, String ar, String en) =>
     Localizations.localeOf(context).languageCode == 'ar' ? ar : en;
@@ -13,19 +15,44 @@ const _gold = Color(0xFFD9BC86);
 class OursSocialHomePage extends StatefulWidget {
   final VoidCallback onProfileTap;
   const OursSocialHomePage({super.key, required this.onProfileTap});
-
   @override
   State<OursSocialHomePage> createState() => _OursSocialHomePageState();
 }
 
 class _OursSocialHomePageState extends State<OursSocialHomePage> {
   int index = 0;
+  String? spaceId;
+  bool loadingSpace = true;
+  final db = Supabase.instance.client;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSpace();
+  }
+
+  Future<void> _loadSpace() async {
+    try {
+      final uid = db.auth.currentUser?.id;
+      if (uid == null) return;
+      final row = await db.from('duo_members').select('space_id')
+          .eq('user_id', uid).maybeSingle();
+      if (mounted) setState(() => spaceId = row?['space_id']?.toString());
+    } catch (e) {
+      debugPrint('OURS world membership lookup failed: $e');
+    } finally {
+      if (mounted) setState(() => loadingSpace = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const OursConversationsPage(),
-      const OursPeopleSearchPage(),
-      const OursFriendRequestsPage(),
+      const OursConnectHubPage(),
+      OursWorldHubPage(key: ValueKey('universe-$spaceId'), spaceId: spaceId, worldIndex: 1),
+      OursWorldHubPage(key: ValueKey('play-$spaceId'), spaceId: spaceId, worldIndex: 2),
+      OursWorldHubPage(key: ValueKey('memories-$spaceId'), spaceId: spaceId, worldIndex: 3),
+      OursWorldHubPage(key: ValueKey('together-$spaceId'), spaceId: spaceId, worldIndex: 4),
     ];
     return Scaffold(
       appBar: AppBar(
@@ -33,7 +60,9 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
         title: const Text('OURS', style: TextStyle(color: _gold, letterSpacing: 5)),
         centerTitle: true,
         actions: [
-          IconButton(onPressed: widget.onProfileTap, icon: const Icon(Icons.person_outline, color: _lavender)),
+          OursNotificationBell(spaceId: spaceId),
+          IconButton(onPressed: widget.onProfileTap,
+            icon: const Icon(Icons.person_outline, color: _lavender)),
         ],
       ),
       body: IndexedStack(index: index, children: pages),
@@ -43,11 +72,43 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
         selectedIndex: index,
         onDestinationSelected: (value) => setState(() => index = value),
         destinations: [
-          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: _oursText(context, 'المحادثات', 'Chats')),
-          NavigationDestination(icon: Icon(Icons.search), label: _oursText(context, 'البحث', 'Search')),
-          NavigationDestination(icon: Icon(Icons.person_add_alt_1_outlined), label: _oursText(context, 'الطلبات', 'Requests')),
+          NavigationDestination(icon: const Icon(Icons.forum_outlined), selectedIcon: const Icon(Icons.forum), label: _oursText(context, 'تواصل', 'Connect')),
+          NavigationDestination(icon: const Icon(Icons.public_outlined), label: _oursText(context, 'العالم', 'Universe')),
+          NavigationDestination(icon: const Icon(Icons.sports_esports_outlined), label: _oursText(context, 'اللعب', 'Play')),
+          NavigationDestination(icon: const Icon(Icons.auto_awesome_outlined), label: _oursText(context, 'الذكريات', 'Memories')),
+          NavigationDestination(icon: const Icon(Icons.favorite_border), label: _oursText(context, 'معًا', 'Together')),
         ],
       ),
+    );
+  }
+}
+
+class OursConnectHubPage extends StatelessWidget {
+  const OursConnectHubPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 3,
+      child: Column(children: [
+        Material(
+          color: _navy,
+          child: TabBar(
+            labelColor: _gold,
+            unselectedLabelColor: _lavender,
+            indicatorColor: _gold,
+            tabs: [
+              Tab(text: _oursText(context, 'المحادثات', 'Chats')),
+              Tab(text: _oursText(context, 'ابحث عن شريك', 'Find partner')),
+              Tab(text: _oursText(context, 'الطلبات', 'Requests')),
+            ],
+          ),
+        ),
+        const Expanded(child: TabBarView(children: [
+          OursConversationsPage(),
+          OursPeopleSearchPage(),
+          OursFriendRequestsPage(),
+        ])),
+      ]),
     );
   }
 }
