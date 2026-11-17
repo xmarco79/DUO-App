@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 const _oursGold = Color(0xFFD9BC86);
 const _oursPurple = Color(0xFF29213D);
 const _oursLavender = Color(0xFFB9A2D5);
+String _notificationText(BuildContext context, String ar, String en) => Localizations.localeOf(context).languageCode == 'ar' ? ar : en;
 
 class OursNotificationBell extends StatefulWidget {
   final String? spaceId;
@@ -82,7 +83,7 @@ class _OursNotificationBellState extends State<OursNotificationBell> {
   Widget build(BuildContext context) {
     if (widget.spaceId == null) return const SizedBox.shrink();
     return IconButton(
-      tooltip: 'الإشعارات',
+      tooltip: _notificationText(context, 'الإشعارات', 'Notifications'),
       onPressed: () async {
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => OursNotificationsPage(spaceId: widget.spaceId!),
@@ -204,10 +205,10 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
     final pending = notifications.where((n) => n['read_at'] == null).length;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('الإشعارات'),
+        title: Text(_notificationText(context, 'الإشعارات', 'Notifications')),
         actions: [
           if (pending > 0)
-            TextButton(onPressed: _markAllRead, child: const Text('قراءة الكل')),
+            TextButton(onPressed: _markAllRead, child: Text(_notificationText(context, 'قراءة الكل', 'Mark all as read'))),
         ],
       ),
       body: loading
