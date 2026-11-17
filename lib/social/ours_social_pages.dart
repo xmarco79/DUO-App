@@ -278,6 +278,8 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
     if (widget.loading || loadingPartner) {
       return const Center(child: CircularProgressIndicator(color: _gold));
     }
+    final hasPartner = partnerUserId != null;
+    final connected = partnerInSpace;
     if (widget.spaceId == null) {
       final partnerAvatarPath = partner?['avatar_path']?.toString();
       final partnerAvatarUrl = partnerAvatarPath == null ? null : db.storage.from('ours-avatars').getPublicUrl(partnerAvatarPath);
@@ -337,9 +339,6 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
     final avatarUrl = avatarPath == null ? null : db.storage.from('ours-avatars').getPublicUrl(avatarPath);
     final displayName = partner?['display_name']?.toString().trim() ?? '';
     final username = partner?['username']?.toString() ?? '';
-    final hasPartner = partnerUserId != null;
-    final connected = partnerInSpace;
-
     return RefreshIndicator(
       color: _gold,
       onRefresh: loadPartner,
