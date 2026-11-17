@@ -261,7 +261,7 @@ class _OursFriendRequestsPageState extends State<OursFriendRequestsPage> {
         'p_request_id': id,
         'p_accept': accept,
       });
-      _message(accept ? _oursText(context, _oursText(context, 'تم قبول الطلب وفتح المحادثة', 'Request accepted. Chat is ready'), 'Request accepted. Chat is ready') : _oursText(context, _oursText(context, 'تم رفض الطلب', 'Request declined'), 'Request declined'));
+      _message(accept ? _oursText(context, 'تم قبول الطلب وفتح المحادثة', 'Request accepted. Chat is ready') : _oursText(context, 'تم رفض الطلب', 'Request declined'));
       await load();
     } catch (e) { _message(_oursText(context, 'تعذر معالجة الطلب: $e', 'Could not process request: $e')); }
   }
@@ -269,7 +269,7 @@ class _OursFriendRequestsPageState extends State<OursFriendRequestsPage> {
   @override
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator(color: _gold));
-    if (requests.isEmpty) return const Center(child: Text(_oursText(context, _oursText(context, 'لا توجد طلبات إضافة حاليًا', 'No pending requests'), 'No pending requests'), style: TextStyle(color: _lavender)));
+    if (requests.isEmpty) return Center(child: Text(_oursText(context, 'لا توجد طلبات إضافة حاليًا', 'No pending requests'), style: const TextStyle(color: _lavender)));
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: requests.length,
@@ -354,12 +354,12 @@ class _OursConversationsPageState extends State<OursConversationsPage> {
     if (loading) return const Center(child: CircularProgressIndicator(color: _gold));
     if (conversations.isEmpty) return Center(child: Padding(
       padding: const EdgeInsets.all(28),
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: const [
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.forum_outlined, color: _gold, size: 58),
         SizedBox(height: 18),
-        Text(_oursText(context, _oursText(context, 'لا توجد محادثات بعد', 'No conversations yet'), 'No conversations yet'), style: TextStyle(fontSize: 21)),
+        Text(_oursText(context, 'لا توجد محادثات بعد', 'No conversations yet'), style: const TextStyle(fontSize: 21)),
         SizedBox(height: 8),
-        Text(_oursText(context, 'ابحث عن شريكك باسم المستخدم وأرسل طلب إضافة. بعد قبول الطلب ستظهر محادثتكما هنا.', 'Find your partner by username and send a request. Your chat will appear here after they accept.'), textAlign: TextAlign.center, style: TextStyle(color: _lavender, height: 1.6)),
+        Text(_oursText(context, 'ابحث عن شريكك باسم المستخدم وأرسل طلب إضافة. بعد قبول الطلب ستظهر محادثتكما هنا.', 'Find your partner by username and send a request. Your chat will appear here after they accept.'), textAlign: TextAlign.center, style: const TextStyle(color: _lavender, height: 1.6)),
       ]),
     ));
     return RefreshIndicator(
