@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'ours_direct_chat_page.dart';
+
+String _oursText(BuildContext context, String ar, String en) =>
+    Localizations.localeOf(context).languageCode == 'ar' ? ar : en;
 
 const _navy = Color(0xFF10101C);
 const _purple = Color(0xFF29213D);
@@ -63,17 +67,13 @@ class _OursPeopleSearchPageState extends State<OursPeopleSearchPage> {
 
   Future<void> search() async {
     final query = controller.text.trim().replaceFirst(RegExp(r'^@'), '').toLowerCase();
-    if (query.length < 2) {
+    if (query.length < 3) {
       setState(() { results = []; searched = query; });
       return;
     }
     setState(() { loading = true; searched = query; });
     try {
-      final rows = await db.from('duo_profiles')
-          .select('user_id, username, display_name, avatar_path')
-          .ilike('username', '%$query%')
-          .neq('user_id', db.auth.currentUser!.id)
-          .limit(30);
+      final rows = await db.rpc('search_ours_people', params: {'p_query': query});
       if (!mounted) return;
       setState(() => results = List<Map<String, dynamic>>.from(rows));
     } catch (e) {
@@ -326,113 +326,6 @@ class _OursConversationsPageState extends State<OursConversationsPage> {
           );
         },
       ),
-    );
-  }
-}
-
-class OursDirectChatPage extends StatefulWidget {
-  final String conversationId;
-  final String partnerName;
-  const OursDirectChatPage({super.key, required this.conversationId, required this.partnerName});
-  @override
-  State<OursDirectChatPage> createState() => _OursDirectChatPageState();
-}
-
-class _OursDirectChatPageState extends State<OursDirectChatPage> {
-  final db = Supabase.instance.client;
-  final controller = TextEditingController();
-  final scroll = ScrollController();
-  List<Map<String, dynamic>> messages = [];
-  RealtimeChannel? channel;
-  bool loading = true, sending = false;
-
-  @override
-  void initState() { super.initState(); load(); listen(); }
-
-  Future<void> load() async {
-    try {
-      final rows = await db.from('duo_direct_messages').select()
-          .eq('conversation_id', widget.conversationId).order('created_at');
-      if (mounted) setState(() { messages = List<Map<String, dynamic>>.from(rows); loading = false; });
-      _toBottom();
-    } catch (e) {
-      if (mounted) setState(() => loading = false);
-      if (mounted) _message('تعذر تحميل الرسائل: $e');
-    }
-  }
-
-  void listen() {
-    channel = db.channel('ours-direct-${widget.conversationId}')
-      .onPostgresChanges(event: PostgresChangeEvent.insert, schema: 'public', table: 'duo_direct_messages',
-        filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'conversation_id', value: widget.conversationId),
-        callback: (payload) {
-          final row = Map<String, dynamic>.from(payload.newRecord);
-          if (!mounted || messages.any((m) => m['id'] == row['id'])) return;
-          setState(() => messages.add(row));
-          _toBottom();
-        }).subscribe();
-  }
-
-  void _toBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (scroll.hasClients) scroll.animateTo(scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 220), curve: Curves.easeOut);
-    });
-  }
-
-  void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
-
-  Future<void> send() async {
-    final text = controller.text.trim();
-    if (text.isEmpty || sending) return;
-    setState(() => sending = true);
-    try {
-      await db.from('duo_direct_messages').insert({
-        'conversation_id': widget.conversationId,
-        'sender_id': db.auth.currentUser!.id,
-        'body': text,
-        'message_type': 'text',
-      });
-      controller.clear();
-    } catch (e) { _message('تعذر إرسال الرسالة: $e'); }
-    finally { if (mounted) setState(() => sending = false); }
-  }
-
-  @override
-  void dispose() {
-    controller.dispose(); scroll.dispose();
-    if (channel != null) db.removeChannel(channel!);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final uid = db.auth.currentUser!.id;
-    return Scaffold(
-      appBar: AppBar(backgroundColor: _navy, title: Text(widget.partnerName, style: const TextStyle(fontSize: 17))),
-      body: Column(children: [
-        Expanded(child: loading ? const Center(child: CircularProgressIndicator(color: _gold)) : ListView.builder(
-          controller: scroll, padding: const EdgeInsets.all(14), itemCount: messages.length,
-          itemBuilder: (context, i) {
-            final row = messages[i]; final mine = row['sender_id'] == uid;
-            return Align(alignment: mine ? Alignment.centerRight : Alignment.centerLeft, child: Container(
-              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .78),
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(color: mine ? _purple : const Color(0xFF211B30), borderRadius: BorderRadius.circular(16)),
-              child: Text(row['body'].toString(), style: const TextStyle(height: 1.4)),
-            ));
-          },
-        )),
-        SafeArea(top: false, child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-          child: Row(children: [
-            Expanded(child: TextField(controller: controller, minLines: 1, maxLines: 5, textInputAction: TextInputAction.send, onSubmitted: (_) => send(),
-              decoration: InputDecoration(hintText: 'اكتب رسالة...', filled: true, fillColor: _purple, border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)))),
-            const SizedBox(width: 8),
-            IconButton.filled(onPressed: sending ? null : send, icon: sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send), color: _navy, style: IconButton.styleFrom(backgroundColor: _gold)),
-          ]),
-        )),
-      ]),
     );
   }
 }
