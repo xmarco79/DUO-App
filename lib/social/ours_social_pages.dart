@@ -22,7 +22,6 @@ class OursSocialHomePage extends StatefulWidget {
 class _OursSocialHomePageState extends State<OursSocialHomePage> {
   int index = 0;
   String? spaceId;
-  bool loadingSpace = true;
   final db = Supabase.instance.client;
 
   @override
@@ -41,7 +40,6 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
     } catch (e) {
       debugPrint('OURS world membership lookup failed: $e');
     } finally {
-      if (mounted) setState(() => loadingSpace = false);
     }
   }
 
