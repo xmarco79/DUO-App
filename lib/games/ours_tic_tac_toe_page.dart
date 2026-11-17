@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 const _tttGold = Color(0xFFD9BC86);
 const _tttPurple = Color(0xFF29213D);
 const _tttLavender = Color(0xFFB9A2D5);
+String _tttText(BuildContext context, String ar, String en) => Localizations.localeOf(context).languageCode == 'ar' ? ar : en;
 
 class OursTicTacToePage extends StatefulWidget {
   final String spaceId;
@@ -56,7 +57,7 @@ class _OursTicTacToePageState extends State<OursTicTacToePage> {
         'turn_number': 0,
       }).select().single();
       if (mounted) setState(() => game = Map<String,dynamic>.from(row));
-    } catch (e) { _message('تعذر بدء اللعبة: $e'); }
+    } catch (e) { _message(_tttText(context, 'تعذر بدء اللعبة: $e', 'Could not start game: $e')); }
     finally { if (mounted) setState(() => busy = false); }
   }
 
@@ -88,11 +89,11 @@ class _OursTicTacToePageState extends State<OursTicTacToePage> {
     final myTurn = current != null && current['current_turn_user_id'] == userId && !completed;
     final winnerId = current?['winner_user_id']?.toString();
     final winnerMark = (current?['state'] as Map?)?['winner_mark']?.toString();
-    final message = current == null ? 'ابدأ مباراة جديدة بينكما'
-      : completed ? (winnerId == null ? 'تعادل! مباراة جميلة' : winnerId == userId ? 'فزت بالجولة!' : 'فاز الطرف الآخر بالجولة')
-      : myTurn ? 'دورك الآن' : 'بانتظار حركة الطرف الآخر';
+    final message = current == null ? _tttText(context, 'ابدأ مباراة جديدة بينكما', 'Start a new match together')
+      : completed ? (winnerId == null ? _tttText(context, 'تعادل! مباراة جميلة', 'A draw! Nice match') : winnerId == userId ? _tttText(context, 'فزت بالجولة!', 'You won the round!') : _tttText(context, 'فاز الطرف الآخر بالجولة', 'Your partner won the round'))
+      : myTurn ? _tttText(context, 'دورك الآن', 'Your turn') : _tttText(context, 'بانتظار حركة الطرف الآخر', 'Waiting for your partner');
     return Scaffold(
-      appBar: AppBar(title: const Text('XO · لعبة لشخصين')),
+      appBar: AppBar(title: Text(_tttText(context, 'XO · لعبة لشخصين', 'XO · Two-player game'))),
       body: loading ? const Center(child: CircularProgressIndicator(color: _tttGold))
         : SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(
           children: [
@@ -102,7 +103,7 @@ class _OursTicTacToePageState extends State<OursTicTacToePage> {
             Text(message, style: const TextStyle(fontSize: 19, color: _tttLavender), textAlign: TextAlign.center),
             if (current != null) ...[
               const SizedBox(height: 8),
-              Text('أنت تلعب ${current['created_by'] == userId ? 'X' : 'O'}', style: const TextStyle(color: _tttGold)),
+              Text(_tttText(context, 'أنت تلعب ${current['created_by'] == userId ? 'X' : 'O'}', 'You are ${current['created_by'] == userId ? 'X' : 'O'}'), style: const TextStyle(color: _tttGold)),
               const SizedBox(height: 24),
               AspectRatio(aspectRatio: 1, child: GridView.builder(
                 physics: const NeverScrollableScrollPhysics(), itemCount: 9,
@@ -123,13 +124,13 @@ class _OursTicTacToePageState extends State<OursTicTacToePage> {
                 ),
               )),
               const SizedBox(height: 12),
-              Text('الحركات: ${current['turn_number'] ?? 0} / 9', style: const TextStyle(color: _tttLavender)),
-              if (winnerMark != null) Text('الفائز: $winnerMark', style: const TextStyle(color: _tttGold, fontSize: 18)),
+              Text(_tttText(context, 'الحركات: ${current['turn_number'] ?? 0} / 9', 'Moves: ${current['turn_number'] ?? 0} / 9'), style: const TextStyle(color: _tttLavender)),
+              if (winnerMark != null) Text(_tttText(context, 'الفائز: $winnerMark', 'Winner: $winnerMark'), style: const TextStyle(color: _tttGold, fontSize: 18)),
             ],
             const SizedBox(height: 28),
             SizedBox(width: double.infinity, child: FilledButton.icon(
               onPressed: busy ? null : newGame, icon: const Icon(Icons.refresh),
-              label: Text(current == null ? 'ابدأ اللعب' : 'مباراة جديدة'),
+              label: Text(current == null ? _tttText(context, 'ابدأ اللعب', 'Start game') : _tttText(context, 'مباراة جديدة', 'New game')),
             )),
           ],
         )),
