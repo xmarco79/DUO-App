@@ -137,37 +137,49 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
     if (oldWidget.spaceId != widget.spaceId) {
       partner = null;
       partnerUserId = null;
+      partnerInSpace = false;
       loadPartner();
     }
   }
 
+  bool partnerInSpace = false;
+
   Future<void> loadPartner() async {
-    final space = widget.spaceId;
-    if (space == null) {
-      if (mounted) setState(() { partner = null; partnerUserId = null; loadingPartner = false; });
-      return;
-    }
     setState(() { loadingPartner = true; loadError = null; });
     try {
-      final members = await db.from('duo_members')
-          .select('user_id, role')
-          .eq('space_id', space);
-      if (members.length > 2) {
-        throw Exception(_oursText(context, 'تم رصد عدد أعضاء غير متوقع. تم إيقاف عرض المساحة لحماية خصوصيتكما.', 'Unexpected member count detected. The space is hidden to protect your privacy.'));
+      // OURS has one fixed pair. Resolve the partner account independently
+      // from space membership so it is visible immediately after login.
+      const pairIds = {
+        'b771a6d1-3180-4f50-b81c-66924665151a': '01d9c50a-98fe-4998-ae79-c48fd5ac3fd3', // naif -> zoi
+        '01d9c50a-98fe-4998-ae79-c48fd5ac3fd3': 'b771a6d1-3180-4f50-b81c-66924665151a', // zoi -> naif
+      };
+      final otherUserId = pairIds[uid];
+      if (otherUserId == null) {
+        throw Exception(_oursText(context, 'هذا الحساب ليس ضمن حسابَي OURS المعتمدين.', 'This account is not one of the two OURS accounts.'));
       }
-      final other = members.where((m) => m['user_id'].toString() != uid).toList();
-      Map<String, dynamic>? profile;
-      final otherUserId = other.isEmpty ? null : other.first['user_id'].toString();
-      if (otherUserId != null) {
-        profile = await db.from('duo_profiles')
-            .select('username, display_name, avatar_path, bio')
-            .eq('user_id', otherUserId)
-            .maybeSingle();
+
+      final profile = await db.from('duo_profiles')
+          .select('username, display_name, avatar_path, bio')
+          .eq('user_id', otherUserId)
+          .maybeSingle();
+
+      var connected = false;
+      final space = widget.spaceId;
+      if (space != null) {
+        final members = await db.from('duo_members')
+            .select('user_id')
+            .eq('space_id', space);
+        if (members.length > 2) {
+          throw Exception(_oursText(context, 'تم رصد عدد أعضاء غير متوقع. تم إيقاف عرض المساحة لحماية خصوصيتكما.', 'Unexpected member count detected. The space is hidden to protect your privacy.'));
+        }
+        connected = members.any((m) => m['user_id'].toString() == otherUserId);
       }
+
       if (!mounted) return;
       setState(() {
         partner = profile;
-        partnerUserId = otherUserId;
+        partnerUserId = profile == null ? null : otherUserId;
+        partnerInSpace = connected;
         loadingPartner = false;
       });
     } catch (e) {
@@ -267,10 +279,35 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
       return const Center(child: CircularProgressIndicator(color: _gold));
     }
     if (widget.spaceId == null) {
+      final partnerAvatarPath = partner?['avatar_path']?.toString();
+      final partnerAvatarUrl = partnerAvatarPath == null ? null : db.storage.from('ours-avatars').getPublicUrl(partnerAvatarPath);
+      final partnerDisplayName = partner?['display_name']?.toString().trim() ?? '';
+      final partnerUsername = partner?['username']?.toString() ?? '';
       return Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(26),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (hasPartner) Card(
+              color: _purple,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(children: [
+                  CircleAvatar(radius: 30, backgroundColor: _navy,
+                    backgroundImage: partnerAvatarUrl == null ? null : NetworkImage(partnerAvatarUrl),
+                    child: partnerAvatarUrl == null ? const Icon(Icons.person_outline, color: _gold, size: 28) : null),
+                  const SizedBox(width: 14),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(partnerDisplayName.isNotEmpty ? partnerDisplayName : '@$partnerUsername',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                    Text('@$partnerUsername', style: const TextStyle(color: _lavender)),
+                    const SizedBox(height: 4),
+                    Text(_oursText(context, 'حساب شريكك موجود في OURS', 'Your partner is already on OURS'),
+                      style: const TextStyle(color: _gold, fontSize: 12)),
+                  ])),
+                  const Icon(Icons.verified_user_outlined, color: _gold),
+                ]),
+              ),
+            ),
             const Icon(Icons.all_inclusive_rounded, color: _gold, size: 72),
             const SizedBox(height: 18),
             Text(_oursText(context, 'عالمكما يبدأ من هنا', 'Your world starts here'),
@@ -301,6 +338,7 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
     final displayName = partner?['display_name']?.toString().trim() ?? '';
     final username = partner?['username']?.toString() ?? '';
     final hasPartner = partnerUserId != null;
+    final connected = partnerInSpace;
 
     return RefreshIndicator(
       color: _gold,
@@ -355,7 +393,7 @@ class _OursConnectHubPageState extends State<OursConnectHubPage> {
               subtitle: Text(loadError!, style: const TextStyle(color: _lavender)),
               trailing: IconButton(onPressed: loadPartner, icon: const Icon(Icons.refresh, color: _gold)),
             )),
-          if (hasPartner)
+          if (connected)
             SizedBox(width: double.infinity, child: FilledButton.icon(
               onPressed: () => widget.onChatTap(widget.spaceId!),
               icon: const Icon(Icons.chat_bubble_outline),
