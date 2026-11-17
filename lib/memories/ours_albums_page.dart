@@ -54,8 +54,8 @@ class _OursAlbumsPageState extends State<OursAlbumsPage> {
       backgroundColor: _albumPurple,
       title: Text(_albumText(context, 'ألبوم جديد', 'New album')),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: title, maxLength: 100, decoration: const InputDecoration(labelText: _albumText(context, 'اسم الألبوم', 'Album name'))),
-        TextField(controller: description, maxLines: 2, decoration: const InputDecoration(labelText: _albumText(context, 'وصف اختياري', 'Optional description'))),
+        TextField(controller: title, maxLength: 100, decoration: InputDecoration(labelText: _albumText(context, 'اسم الألبوم', 'Album name'))),
+        TextField(controller: description, maxLines: 2, decoration: InputDecoration(labelText: _albumText(context, 'وصف اختياري', 'Optional description'))),
       ]),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(_albumText(context, 'إلغاء', 'Cancel'))),
