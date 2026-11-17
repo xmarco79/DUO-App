@@ -686,7 +686,7 @@ class _HomePageState extends State<HomePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text(oursText(context, 'إلغاء', 'Cancel')),
+            child: Text(oursText(context, 'إلغاء', 'Cancel')),
           ),
           FilledButton(
             onPressed: loading
@@ -775,11 +775,11 @@ class _HomePageState extends State<HomePage> {
                 builder: (dialogContext) => AlertDialog(
                   backgroundColor: purple,
                   icon: const Icon(Icons.logout_rounded, color: gold),
-                  title: const Text(oursText(context, 'تسجيل الخروج', 'Log out')),
-                  content: const Text(oursText(context, 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟', 'Are you sure you want to log out?')),
+                  title: Text(oursText(context, 'تسجيل الخروج', 'Log out')),
+                  content: Text(oursText(context, 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟', 'Are you sure you want to log out?')),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text(oursText(context, 'إلغاء', 'Cancel'))),
-                    FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text(oursText(context, 'تسجيل الخروج', 'Log out'))),
+                    TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(oursText(context, 'إلغاء', 'Cancel'))),
+                    FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(oursText(context, 'تسجيل الخروج', 'Log out'))),
                   ],
                 ),
               );
@@ -1221,7 +1221,7 @@ class _ChatPageState extends State<ChatPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text(oursText(context, 'إلغاء', 'Cancel')),
+            child: Text(oursText(context, 'إلغاء', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
@@ -2310,11 +2310,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: purple,
         icon: const Icon(Icons.logout_rounded, color: gold),
-        title: const Text(oursText(context, 'تسجيل الخروج', 'Log out')),
-        content: const Text(oursText(context, 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟', 'Are you sure you want to log out?')),
+        title: Text(oursText(context, 'تسجيل الخروج', 'Log out')),
+        content: Text(oursText(context, 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟', 'Are you sure you want to log out?')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text(oursText(context, 'إلغاء', 'Cancel'))),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text(oursText(context, 'تسجيل الخروج', 'Log out'))),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(oursText(context, 'إلغاء', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(oursText(context, 'تسجيل الخروج', 'Log out'))),
         ],
       ),
     );
@@ -2351,7 +2351,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text(oursText(context, 'إلغاء', 'Cancel')),
+            child: Text(oursText(context, 'إلغاء', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, controller.text),
@@ -2590,7 +2590,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 OutlinedButton.icon(
                   onPressed: signOut,
                   icon: const Icon(Icons.logout),
-                  label: Text(oursText(context, oursText(context, 'تسجيل الخروج', 'Log out'), 'Log out')),
+                  label: Text(oursText(context, 'تسجيل الخروج', 'Log out')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: gold,
                     side: const BorderSide(color: gold),
