@@ -182,17 +182,15 @@ jobs:
           image.putalpha(mask)
           draw = ImageDraw.Draw(image)
 
-          # Fine orbital frame and a restrained central infinity mark.
-          draw.ellipse((110, 110, 914, 914), outline=(217, 188, 134, 34), width=5)
-          points = []
-          for step in range(1600):
-              t = 2 * math.pi * step / 1599
-              x = 512 + 250 * math.cos(t)
-              y = 510 + 145 * math.sin(2 * t)
-              points.append((round(x), round(y)))
-          draw.line(points, fill=(226, 204, 158, 255), width=43, joint="curve")
-          draw.ellipse((730, 250, 778, 298), fill=(226, 204, 158, 255))
-          draw.ellipse((257, 704, 285, 732), fill=(185, 162, 213, 230))
+          # Minimal OURS monogram: two linked rings with a central star.
+          draw.ellipse((104, 104, 920, 920), outline=(217, 188, 134, 42), width=5)
+          draw.ellipse((230, 300, 650, 720), outline=(226, 204, 158, 255), width=52)
+          draw.ellipse((374, 300, 794, 720), outline=(185, 162, 213, 255), width=52)
+          # Small gold diamond at the point where the two rings meet.
+          star = [(512, 444), (548, 512), (512, 580), (476, 512)]
+          draw.polygon(star, fill=(239, 216, 169, 255))
+          draw.ellipse((760, 220, 806, 266), fill=(239, 216, 169, 255))
+          draw.ellipse((220, 748, 250, 778), fill=(185, 162, 213, 235))
 
           sizes = {"mdpi":48, "hdpi":72, "xhdpi":96, "xxhdpi":144, "xxxhdpi":192}
           for density, pixels in sizes.items():
@@ -201,9 +199,24 @@ jobs:
               image.resize((pixels, pixels), Image.Resampling.LANCZOS).save(target, format="PNG", optimize=True)
           Path("build").mkdir(parents=True, exist_ok=True)
           image.save("build/ours_icon_preview.png", format="PNG", optimize=True)
-          print("Generated a fresh OURS launcher icon in all Android densities.")
+          print("Generated the linked-ring OURS launcher icon in all Android densities.")
           PY
           rm -f android/app/src/main/res/drawable/ours_icon.xml
+
+      - name: Set Android app display name
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          content = manifest.read_text()
+          updated, count = re.subn(r'android:label="[^"]*"', 'android:label="OURS"', content, count=1)
+          if count != 1:
+              raise SystemExit("Could not set Android application label")
+          manifest.write_text(updated)
+          print("Android launcher label set to OURS.")
+          PY
 
       - name: Set Android compile SDK
         shell: bash
