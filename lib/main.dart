@@ -206,7 +206,6 @@ class OursEntryGate extends StatefulWidget {
 
 class _OursEntryGateState extends State<OursEntryGate> {
   bool showLogin = false;
-  bool creatingAccount = false;
   StreamSubscription<AuthState>? authSubscription;
 
   @override
@@ -216,7 +215,6 @@ class _OursEntryGateState extends State<OursEntryGate> {
       if (state.event == AuthChangeEvent.signedOut && mounted) {
         setState(() {
           showLogin = false;
-          creatingAccount = false;
         });
       }
     });
@@ -245,9 +243,9 @@ class _OursEntryGateState extends State<OursEntryGate> {
             ),
           );
         }
-        if (showLogin) return LoginPage(initialCreatingAccount: creatingAccount);
+        if (showLogin) return const LoginPage();
         return WelcomePage(
-          onLogin: () => setState(() { showLogin = true; creatingAccount = false; }),
+          onLogin: () => setState(() { showLogin = true; }),
         );
       },
     );
@@ -339,8 +337,7 @@ class OursAuthGate extends StatelessWidget {
 // ==================== LOGIN PAGE ====================
 
 class LoginPage extends StatefulWidget {
-  final bool initialCreatingAccount;
-  const LoginPage({super.key, this.initialCreatingAccount = false});
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -349,10 +346,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final username = TextEditingController();
   final password = TextEditingController();
-  final confirmPassword = TextEditingController();
 
   bool loading = false;
-  late bool creatingAccount = widget.initialCreatingAccount;
 
   SupabaseClient get db => Supabase.instance.client;
 
@@ -413,94 +408,11 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> register() async {
-    final user = username.text.trim().toLowerCase();
-    final pass = password.text;
-    final confirm = confirmPassword.text;
-
-    if (!RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(user)) {
-      showMessage(oursText(
-        context,
-        'اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا، ويحتوي على أحرف إنجليزية أو أرقام أو _ فقط',
-        'Username must be 3–20 characters using English letters, numbers, or _ only',
-      ));
-      return;
-    }
-
-    if (pass.length < 8) {
-      showMessage(oursText(context, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'Password must be at least 8 characters'));
-      return;
-    }
-
-    if (pass != confirm) {
-      showMessage(oursText(context, 'كلمتا المرور غير متطابقتين', 'Passwords do not match'));
-      return;
-    }
-
-    setState(() => loading = true);
-
-    try {
-      final response = await db.functions.invoke(
-        'duo-username-register',
-        body: {
-          'username': user,
-          'password': pass,
-        },
-      );
-
-      final data = response.data is Map
-          ? Map<String, dynamic>.from(response.data)
-          : <String, dynamic>{};
-
-      if (response.status < 200 || response.status >= 300) {
-        throw Exception(data['error'] ?? oursText(context, 'تعذر إنشاء الحساب', 'Could not create account'));
-      }
-
-      final loginResponse = await db.functions.invoke(
-        'duo-username-login',
-        body: {
-          'username': user,
-          'password': pass,
-        },
-      );
-
-      final loginData = loginResponse.data is Map
-          ? Map<String, dynamic>.from(loginResponse.data)
-          : <String, dynamic>{};
-
-      if (loginResponse.status != 200) {
-        throw Exception(
-          loginData['error'] ?? oursText(context, 'تم إنشاء الحساب، تعذر تسجيل الدخول', 'Account created, but login failed'),
-        );
-      }
-
-      final refreshToken = loginData['refresh_token'];
-
-      if (refreshToken == null) {
-        throw Exception(oursText(context, 'لم يتم استلام بيانات الجلسة', 'Session data was not received'));
-      }
-
-      await db.auth.setSession(refreshToken);
-
-      if (!mounted) return;
-
-      // OursAuthGate observes the authenticated session and opens HomePage.
-    } catch (e) {
-      showMessage(
-        e.toString().replaceFirst('Exception: ', ''),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => loading = false);
-      }
-    }
-  }
 
   @override
   void dispose() {
     username.dispose();
     password.dispose();
-    confirmPassword.dispose();
     super.dispose();
   }
 
@@ -538,7 +450,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 50),
                 Text(
-                  creatingAccount ? oursText(context, 'أنشئ حسابك', 'Create your account') : oursText(context, 'مرحبًا بعودتك', 'Welcome back'),
+                  oursText(context, 'مرحبًا بعودتك', 'Welcome back'),
                   style: const TextStyle(fontSize: 24),
                 ),
                 const SizedBox(height: 25),
@@ -547,7 +459,7 @@ class _LoginPageState extends State<LoginPage> {
                   autocorrect: false,
                   decoration: InputDecoration(
                     labelText: oursText(context, 'اسم المستخدم', 'Username'),
-                    hintText: 'e.g. ours_user',
+                    hintText: 'naif / zoi',
                     prefixIcon: Icon(Icons.person_outline),
                     border: OutlineInputBorder(),
                   ),
@@ -562,51 +474,18 @@ class _LoginPageState extends State<LoginPage> {
                     border: OutlineInputBorder(),
                   ),
                 ),
-                if (creatingAccount) ...[
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: confirmPassword,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: oursText(context, 'تأكيد كلمة المرور', 'Confirm password'),
-                      prefixIcon: Icon(Icons.lock_reset),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    oursText(context, 'اسم المستخدم: أحرف إنجليزية وأرقام و _ فقط', 'Username: English letters, numbers and _ only'),
-                    style: TextStyle(
-                      color: lavender,
-                      fontSize: 12,
-                    ),
-                  ),
-                  Text(
-                    oursText(context, 'كلمة المرور: 8 أحرف على الأقل', 'Password: at least 8 characters'),
-                    style: TextStyle(
-                      color: lavender,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 25),
                 SizedBox(
                   width: double.infinity,
                   height: 54,
                   child: FilledButton(
-                    onPressed: loading
-                        ? null
-                        : creatingAccount
-                            ? register
-                            : login,
+                    onPressed: loading ? null : login,
                     child: loading
                         ? const CircularProgressIndicator(
                             color: navy,
                           )
                         : Text(
-                            creatingAccount
-                                ? oursText(context, 'إنشاء الحساب', 'Create account')
-                                : oursText(context, 'تسجيل الدخول', 'Log in'),
+                            oursText(context, 'تسجيل الدخول', 'Log in'),
                           ),
                   ),
                 ),
