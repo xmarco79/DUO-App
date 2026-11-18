@@ -46,42 +46,547 @@ class _SpaceView extends StatelessWidget{
 Widget _tile(BuildContext c,IconData i,String title,String sub,VoidCallback tap)=>Card(color:_p,child:ListTile(leading:Icon(i,color:_g),title:Text(title),subtitle:Text(sub,style:const TextStyle(color:_l)),trailing:const Icon(Icons.chevron_right,color:_l),onTap:tap));
 
 class _StudioView extends StatefulWidget{final String spaceId;const _StudioView({required this.spaceId});@override State<_StudioView> createState()=>_StudioState();}
-class _StudioState extends State<_StudioView>{
- final db=Supabase.instance.client;String scope='personal';List<Map<String,dynamic>> rows=[];bool loading=true;Color color=_l;List<Offset> points=[];RealtimeChannel? channel;
- @override void initState(){super.initState();_load();channel=db.channel('ours-studio-live-'+widget.spaceId).onPostgresChanges(event:PostgresChangeEvent.all,schema:'public',table:'ours_canvas_strokes',filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'space_id',value:widget.spaceId),callback:(_)=>_load())..subscribe();}
- Future<void> _load()async{try{var q=db.from('ours_canvas_strokes').select().eq('space_id',widget.spaceId);q=scope=='personal'?q.eq('owner_id',db.auth.currentUser!.id):q.eq('scope','shared');final r=await q.order('created_at');if(mounted)setState(() { rows=List<Map<String,dynamic>>.from(r); loading=false; });}catch(_){if(mounted)setState(()=>loading=false);}}
- Future<void> _save()async{if(points.length<2)return;try{await db.from('ours_canvas_strokes').insert({'space_id':widget.spaceId,'owner_id':scope=='personal'?db.auth.currentUser!.id:null,'scope':scope,'points':points.map((p)=>{'x':p.dx,'y':p.dy}).toList(),'color':color.value,'stroke_width':4});points=[];_load();}catch(e){_msg(e.toString());}}
- void _msg(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
- @override void dispose(){if(channel!=null)db.removeChannel(channel!);super.dispose();}
- @override Widget build(BuildContext c)=>Column(children:[
-  Padding(padding:const EdgeInsets.all(12),child:SegmentedButton<String>(segments:[ButtonSegment(value:'personal',label:Text(_t(c,'مرسمي','My studio'))),ButtonSegment(value:'shared',label:Text(_t(c,'مرسمنا المشترك','Shared studio')))],selected:{scope},onSelectionChanged:(v)=>setState(() { scope=v.first; loading=true; _load(); }))),
-  Row(mainAxisAlignment:MainAxisAlignment.center,children:[for(final x in [_l,_g,Colors.white,Colors.redAccent,Colors.lightBlueAccent])IconButton(onPressed:()=>setState(()=>color=x),icon:Icon(Icons.circle,color:x))]),
-  Expanded(child:Padding(padding:const EdgeInsets.all(10),child:Container(decoration:BoxDecoration(color:const Color(0xFF171522),borderRadius:BorderRadius.circular(18)),child:loading?const Center(child:CircularProgressIndicator()):GestureDetector(onPanStart:(d)=>setState(()=>points=[d.localPosition]),onPanUpdate:(d)=>setState(()=>points.add(d.localPosition)),onPanEnd:(_)=>_save(),child:CustomPaint(painter:_CanvasPainter(rows,points,color),child:const SizedBox.expand()))))),
-  Padding(padding:const EdgeInsets.all(8),child:Text(_t(c,'المرسم الشخصي خاص بك، والمشترك ظاهر للحسابين.','Personal canvas is private; shared canvas is visible to both.'),style:const TextStyle(color:_l,fontSize:11)))
- ]);
+class _StudioState extends State<_StudioView> {
+  final db = Supabase.instance.client;
+  String scope = 'personal';
+  List<Map<String, dynamic>> rows = [];
+  bool loading = true;
+  Color color = _l;
+  double strokeWidth = 4;
+  List<Offset> points = [];
+  Size canvasSize = Size.zero;
+  RealtimeChannel? channel;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    channel = db
+        .channel('ours-studio-live-${widget.spaceId}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'ours_canvas_strokes',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'space_id',
+            value: widget.spaceId,
+          ),
+          callback: (_) => _load(),
+        )
+      ..subscribe();
+  }
+
+  Future<void> _load() async {
+    try {
+      var query = db
+          .from('ours_canvas_strokes')
+          .select()
+          .eq('space_id', widget.spaceId);
+      query = scope == 'personal'
+          ? query.eq('owner_id', db.auth.currentUser!.id)
+          : query.eq('scope', 'shared');
+      final result = await query.order('created_at');
+      if (mounted) {
+        setState(() {
+          rows = List<Map<String, dynamic>>.from(result);
+          loading = false;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => loading = false);
+        _message(error.toString());
+      }
+    }
+  }
+
+  Offset _normalized(Offset point) {
+    if (canvasSize.width <= 0 || canvasSize.height <= 0) return point;
+    return Offset(
+      (point.dx / canvasSize.width).clamp(0.0, 1.0),
+      (point.dy / canvasSize.height).clamp(0.0, 1.0),
+    );
+  }
+
+  Future<void> _save() async {
+    if (points.length < 2) {
+      setState(() => points = []);
+      return;
+    }
+    try {
+      await db.from('ours_canvas_strokes').insert({
+        'space_id': widget.spaceId,
+        'owner_id': scope == 'personal' ? db.auth.currentUser!.id : null,
+        'scope': scope,
+        'points': points.map((point) => {'x': point.dx, 'y': point.dy}).toList(),
+        'color': color.value,
+        'stroke_width': strokeWidth,
+      });
+      if (mounted) setState(() => points = []);
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => points = []);
+      _message(error.toString());
+    }
+  }
+
+  void _message(String value) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(value)),
+    );
+  }
+
+  @override
+  void dispose() {
+    if (channel != null) db.removeChannel(channel!);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: SegmentedButton<String>(
+            segments: [
+              ButtonSegment(
+                value: 'personal',
+                label: Text(_t(context, 'مرسمي', 'My studio')),
+              ),
+              ButtonSegment(
+                value: 'shared',
+                label: Text(_t(context, 'مرسمنا المشترك', 'Shared studio')),
+              ),
+            ],
+            selected: {scope},
+            onSelectionChanged: (values) {
+              setState(() {
+                scope = values.first;
+                loading = true;
+                points = [];
+              });
+              _load();
+            },
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (final selectedColor in [
+              _l,
+              _g,
+              Colors.white,
+              Colors.redAccent,
+              Colors.lightBlueAccent,
+              Colors.greenAccent,
+            ])
+              IconButton(
+                tooltip: selectedColor.toString(),
+                onPressed: () => setState(() => color = selectedColor),
+                icon: Icon(
+                  Icons.circle,
+                  color: selectedColor,
+                  size: color == selectedColor ? 27 : 22,
+                ),
+              ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              Text(_t(context, 'سُمك القلم', 'Brush size'),
+                  style: const TextStyle(color: _l, fontSize: 12)),
+              Expanded(
+                child: Slider(
+                  min: 1,
+                  max: 14,
+                  divisions: 13,
+                  value: strokeWidth,
+                  onChanged: (value) => setState(() => strokeWidth = value),
+                ),
+              ),
+              Text(strokeWidth.toStringAsFixed(0),
+                  style: const TextStyle(color: _g, fontSize: 12)),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                canvasSize = Size(constraints.maxWidth, constraints.maxHeight);
+                return Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF171522),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onPanStart: (details) => setState(
+                            () => points = [_normalized(details.localPosition)],
+                          ),
+                          onPanUpdate: (details) => setState(
+                            () => points.add(_normalized(details.localPosition)),
+                          ),
+                          onPanEnd: (_) => _save(),
+                          child: CustomPaint(
+                            painter: _CanvasPainter(rows, points, color, strokeWidth),
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                );
+              },
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Text(
+            _t(
+              context,
+              'لكل حساب مرسمه الخاص، ويمكنكما الرسم على لوحة مشتركة. تُحفظ الإحداثيات بشكل متناسب لتظهر بصورة صحيحة على مختلف الشاشات.',
+              'Each account has a private studio and both can draw on a shared canvas. Strokes use normalized coordinates across screen sizes.',
+            ),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: _l, fontSize: 11),
+          ),
+        ),
+      ],
+    );
+  }
 }
-class _CanvasPainter extends CustomPainter{
- final List<Map<String,dynamic>> rows;final List<Offset> active;final Color color;_CanvasPainter(this.rows,this.active,this.color);
- @override void paint(Canvas c,Size s){for(final r in rows){final raw=r['points'];if(raw is! List)continue;final pts=raw.whereType<Map>().map((p)=>Offset((p['x'] as num).toDouble(),(p['y'] as num).toDouble())).toList();_draw(c,pts,Color((r['color'] as num?)?.toInt()??_l.value));}_draw(c,active,color);}
- void _draw(Canvas c,List<Offset> pts,Color col){if(pts.length<2)return;final p=Paint()..color=col..strokeWidth=4..strokeCap=StrokeCap.round..style=PaintingStyle.stroke;final path=Path()..moveTo(pts.first.dx,pts.first.dy);for(final x in pts.skip(1)){path.lineTo(x.dx,x.dy);}c.drawPath(path,p);}
- @override bool shouldRepaint(covariant _CanvasPainter old)=>true;
+
+class _CanvasPainter extends CustomPainter {
+  final List<Map<String, dynamic>> rows;
+  final List<Offset> active;
+  final Color activeColor;
+  final double activeWidth;
+
+  _CanvasPainter(this.rows, this.active, this.activeColor, this.activeWidth);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final row in rows) {
+      final raw = row['points'];
+      if (raw is! List) continue;
+      final points = raw.whereType<Map>().map((point) {
+        return Offset(
+          (point['x'] as num).toDouble(),
+          (point['y'] as num).toDouble(),
+        );
+      }).toList();
+      final normalized = points.every(
+        (point) => point.dx >= 0 && point.dx <= 1 && point.dy >= 0 && point.dy <= 1,
+      );
+      final displayPoints = normalized
+          ? points.map((point) => Offset(point.dx * size.width, point.dy * size.height)).toList()
+          : points;
+      final strokeColor = Color(
+        (row['color'] as num?)?.toInt() ?? _l.value,
+      );
+      final width = (row['stroke_width'] as num?)?.toDouble() ?? 4;
+      _draw(canvas, displayPoints, strokeColor, width);
+    }
+    _draw(
+      canvas,
+      active.map((point) => Offset(point.dx * size.width, point.dy * size.height)).toList(),
+      activeColor,
+      activeWidth,
+    );
+  }
+
+  void _draw(Canvas canvas, List<Offset> points, Color color, double width) {
+    if (points.length < 2) return;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = width
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final point in points.skip(1)) {
+      path.lineTo(point.dx, point.dy);
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CanvasPainter oldDelegate) => true;
 }
 
 class _WatchView extends StatefulWidget{final String spaceId;const _WatchView({required this.spaceId});@override State<_WatchView> createState()=>_WatchState();}
-class _WatchState extends State<_WatchView>{
- final db=Supabase.instance.client;final title=TextEditingController(),url=TextEditingController();Map<String,dynamic>? session;bool busy=false;RealtimeChannel? channel;
- @override void initState(){super.initState();_load();channel=db.channel('ours-watch-live-'+widget.spaceId).onPostgresChanges(event:PostgresChangeEvent.all,schema:'public',table:'ours_watch_sessions',filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'space_id',value:widget.spaceId),callback:(_)=>_load())..subscribe();}
- Future<void> _load()async{try{final r=await db.from('ours_watch_sessions').select().eq('space_id',widget.spaceId).eq('status','active').order('updated_at',ascending:false).limit(1).maybeSingle();if(mounted)setState(()=>session=r);}catch(_){}}
- Future<void> _start()async{final uri=Uri.tryParse(url.text.trim());if(title.text.trim().isEmpty||uri==null||!['http','https'].contains(uri.scheme)){_msg(_t(context,'أدخل اسمًا ورابطًا صالحًا','Enter a title and valid URL'));return;}setState(()=>busy=true);try{await db.from('ours_watch_sessions').update({'status':'ended'}).eq('space_id',widget.spaceId).eq('status','active');await db.from('ours_watch_sessions').insert({'space_id':widget.spaceId,'created_by':db.auth.currentUser!.id,'title':title.text.trim(),'source_url':uri.toString(),'status':'active','position_ms':0,'is_playing':false});await _load();}catch(e){_msg(e.toString());}finally{if(mounted)setState(()=>busy=false);}}
- void _msg(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
- @override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.all(18),children:[
-  const _Header(icon:Icons.live_tv,title:'مشاهدة معًا',subtitle:'جلسة مشاهدة مشتركة'),
-  if(session==null)...[const SizedBox(height:16),TextField(controller:title,decoration:InputDecoration(labelText:_t(c,'اسم المحتوى','Title'))),const SizedBox(height:10),TextField(controller:url,decoration:InputDecoration(labelText:_t(c,'رابط مصدر مرخّص','Licensed source URL'))),const SizedBox(height:12),FilledButton(onPressed:busy?null:_start,child:Text(_t(c,'بدء جلسة','Start session')))]
-  else Card(color:_p,child:ListTile(title:Text(session!['title'].toString()),subtitle:Text(_t(c,'الجلسة نشطة. يمكن فتح المصدر الخارجي.','Session active. Open the external source.'),style:const TextStyle(color:_l)),trailing:IconButton(onPressed:()async{final u=Uri.tryParse(session!['source_url'].toString());if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);},icon:const Icon(Icons.open_in_new,color:_g)))),
-  const SizedBox(height:14),Text(_t(c,'تنبيه: هذه النسخة لا تدّعي تشغيل فيديو مدمج أو مزامنة موضع التشغيل الفعلي. ذلك يتطلب SDK وترخيصًا من مزود المحتوى.','This build does not claim embedded playback or real playback-position sync; these require a licensed provider SDK.'),style:const TextStyle(color:_l,fontSize:11))
- ]);
- @override void dispose(){title.dispose();url.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
+class _WatchState extends State<_WatchView> {
+  final db = Supabase.instance.client;
+  final title = TextEditingController();
+  final url = TextEditingController();
+  Map<String, dynamic>? session;
+  bool busy = false;
+  RealtimeChannel? channel;
+
+  int get _positionMs => (session?['position_ms'] as num?)?.toInt() ?? 0;
+  bool get _isPlaying => session?['is_playing'] == true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    channel = db
+        .channel('ours-watch-live-${widget.spaceId}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'ours_watch_sessions',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'space_id',
+            value: widget.spaceId,
+          ),
+          callback: (_) => _load(),
+        )
+      ..subscribe();
+  }
+
+  Future<void> _load() async {
+    try {
+      final result = await db
+          .from('ours_watch_sessions')
+          .select()
+          .eq('space_id', widget.spaceId)
+          .eq('status', 'active')
+          .order('updated_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (mounted) setState(() => session = result);
+    } catch (error) {
+      _message(error.toString());
+    }
+  }
+
+  Future<void> _start() async {
+    final uri = Uri.tryParse(url.text.trim());
+    if (title.text.trim().isEmpty ||
+        uri == null ||
+        !uri.hasAuthority ||
+        !['http', 'https'].contains(uri.scheme)) {
+      _message(_t(context, 'أدخل اسمًا ورابطًا صالحًا', 'Enter a title and valid URL'));
+      return;
+    }
+
+    setState(() => busy = true);
+    try {
+      await db
+          .from('ours_watch_sessions')
+          .update({'status': 'ended', 'is_playing': false})
+          .eq('space_id', widget.spaceId)
+          .eq('status', 'active');
+      final created = await db
+          .from('ours_watch_sessions')
+          .insert({
+            'space_id': widget.spaceId,
+            'created_by': db.auth.currentUser!.id,
+            'title': title.text.trim(),
+            'source_url': uri.toString(),
+            'status': 'active',
+            'position_ms': 0,
+            'is_playing': false,
+          })
+          .select()
+          .single();
+      if (mounted) setState(() => session = Map<String, dynamic>.from(created));
+    } catch (error) {
+      _message(error.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> _updateSession({
+    int? positionMs,
+    bool? isPlaying,
+    String? status,
+  }) async {
+    final current = session;
+    if (current == null || busy) return;
+    setState(() => busy = true);
+    try {
+      final updated = await db
+          .from('ours_watch_sessions')
+          .update({
+            if (positionMs != null) 'position_ms': positionMs,
+            if (isPlaying != null) 'is_playing': isPlaying,
+            if (status != null) 'status': status,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', current['id'])
+          .eq('status', 'active')
+          .select()
+          .maybeSingle();
+      if (mounted) {
+        setState(() => session = updated == null ? null : Map<String, dynamic>.from(updated));
+      }
+    } catch (error) {
+      _message(error.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  String _formatPosition(int milliseconds) {
+    final seconds = milliseconds ~/ 1000;
+    final minutes = seconds ~/ 60;
+    final remainder = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainder.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _openSource() async {
+    final uri = Uri.tryParse(session?['source_url']?.toString() ?? '');
+    if (uri == null) return;
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened) _message(_t(context, 'تعذر فتح الرابط', 'Could not open the link'));
+    } catch (error) {
+      _message(error.toString());
+    }
+  }
+
+  void _message(String value) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(value)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final current = session;
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        _Header(
+          icon: Icons.live_tv,
+          title: _t(context, 'مشاهدة معًا', 'Watch together'),
+          subtitle: _t(context, 'جلسة مشتركة بين الحسابين', 'One shared session for both accounts'),
+        ),
+        if (current == null) ...[
+          const SizedBox(height: 16),
+          TextField(
+            controller: title,
+            decoration: InputDecoration(labelText: _t(context, 'اسم المحتوى', 'Title')),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: url,
+            keyboardType: TextInputType.url,
+            decoration: InputDecoration(
+              labelText: _t(context, 'رابط مصدر مرخّص', 'Licensed source URL'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: busy ? null : _start,
+            child: Text(_t(context, 'بدء جلسة', 'Start session')),
+          ),
+        ] else ...[
+          const SizedBox(height: 16),
+          Card(
+            color: _p,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    current['title'].toString(),
+                    style: const TextStyle(color: _g, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _t(context, 'جلسة نشطة للحسابين', 'Shared session is active'),
+                    style: const TextStyle(color: _l),
+                  ),
+                  const SizedBox(height: 18),
+                  Center(
+                    child: Text(
+                      _formatPosition(_positionMs),
+                      style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        tooltip: _t(context, 'رجوع 10 ثوانٍ', 'Back 10 seconds'),
+                        onPressed: busy
+                            ? null
+                            : () => _updateSession(positionMs: (_positionMs - 10000).clamp(0, 1 << 62)),
+                        icon: const Icon(Icons.replay_10, color: _g, size: 32),
+                      ),
+                      IconButton.filled(
+                        tooltip: _isPlaying ? _t(context, 'إيقاف مؤقت', 'Pause') : _t(context, 'تشغيل', 'Play'),
+                        onPressed: busy ? null : () => _updateSession(isPlaying: !_isPlaying),
+                        icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                      ),
+                      IconButton(
+                        tooltip: _t(context, 'تقديم 10 ثوانٍ', 'Forward 10 seconds'),
+                        onPressed: busy
+                            ? null
+                            : () => _updateSession(positionMs: _positionMs + 10000),
+                        icon: const Icon(Icons.forward_10, color: _g, size: 32),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: busy ? null : _openSource,
+                      icon: const Icon(Icons.open_in_new),
+                      label: Text(_t(context, 'فتح مصدر المشاهدة', 'Open viewing source')),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: busy ? null : () => _updateSession(status: 'ended', isPlaying: false),
+                      icon: const Icon(Icons.stop_circle_outlined),
+                      label: Text(_t(context, 'إنهاء الجلسة', 'End session')),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Text(
+            _t(
+              context,
+              'حالة الجلسة وموضع التشغيل وأوامر التقديم والإيقاف تتزامن بين الحسابين. تشغيل الفيديو نفسه يتم عبر المصدر الخارجي؛ التشغيل المدمج والتحكم المباشر بالمشغل يحتاجان تكاملًا مرخّصًا مع مزود المحتوى.',
+              'Session state, shared position and play/pause/seek commands sync between both accounts. Video playback opens through the external provider; embedded playback and direct player control require a licensed provider integration.',
+            ),
+            style: const TextStyle(color: _l, fontSize: 11, height: 1.6),
+          ),
+        ],
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    title.dispose();
+    url.dispose();
+    if (channel != null) db.removeChannel(channel!);
+    super.dispose();
+  }
 }
+
 class _SpotifyView extends StatefulWidget{const _SpotifyView();@override State<_SpotifyView> createState()=>_SpotifyState();}
 class _SpotifyState extends State<_SpotifyView>{final q=TextEditingController();Future<void> _search()async{if(q.text.trim().isEmpty)return;final u=Uri.https('open.spotify.com','/search/'+Uri.encodeComponent(q.text.trim()));await launchUrl(u,mode:LaunchMode.externalApplication);}
  @override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.all(18),children:[const _Header(icon:Icons.headphones,title:'موسيقانا',subtitle:'Spotify · عربي وأجنبي'),const SizedBox(height:16),TextField(controller:q,onSubmitted:(_)=>_search(),decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:_t(c,'ابحث عن أغنية أو فنان','Search songs or artists'))),const SizedBox(height:12),FilledButton.icon(onPressed:_search,icon:const Icon(Icons.open_in_new),label:Text(_t(c,'البحث في Spotify','Search Spotify'))),const SizedBox(height:12),Text(_t(c,'التشغيل الكامل داخل OURS يتطلب Spotify Developer Client ID وOAuth وصلاحيات تشغيل معتمدة. لم يتم تفعيل التشغيل المدمج بعد.','Full in-app playback requires Spotify Developer Client ID, OAuth and approved playback permissions. Embedded playback is not enabled yet.'),style:const TextStyle(color:_l,fontSize:11))]);
