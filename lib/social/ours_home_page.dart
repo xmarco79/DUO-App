@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'ours_direct_chat_page.dart';
+import 'ours_profile_page.dart';
 import 'ours_music_page.dart';
 import '../notifications/ours_notifications.dart';
 
@@ -14,19 +15,38 @@ class OursSocialHomePage extends StatefulWidget {
  @override State<OursSocialHomePage> createState()=>_OursSocialHomePageState();
 }
 class _OursSocialHomePageState extends State<OursSocialHomePage>{
- final db=Supabase.instance.client; int tab=0; String? spaceId,error; bool loading=true;
+ final db=Supabase.instance.client; int tab=0; String? spaceId,error,conversationId,partnerId,partnerName; bool loading=true;
  @override void initState(){super.initState();_load();}
  Future<void> _load() async {try{
   final raw=await db.rpc('ensure_ours_pair_space'); final m=Map<String,dynamic>.from(raw as Map);
-  if(mounted)setState(() { spaceId=m['space_id'].toString(); loading=false; });
+  final me=db.auth.currentUser!.id;
+  final ownMembership=await db.from('duo_conversation_members').select('conversation_id').eq('user_id',me).limit(1).maybeSingle();
+  String? foundConversation,foundPartner,foundName;
+  if(ownMembership!=null){
+   foundConversation=ownMembership['conversation_id'].toString();
+   final members=await db.from('duo_conversation_members').select('user_id').eq('conversation_id',foundConversation);
+   final others=members.where((row)=>row['user_id'].toString()!=me).toList();
+   if(others.isNotEmpty){
+    foundPartner=others.first['user_id'].toString();
+    final profile=await db.from('duo_profiles').select('username,display_name').eq('user_id',foundPartner).maybeSingle();
+    final display=profile?['display_name']?.toString().trim()??'';
+    foundName=display.isNotEmpty?display:(profile?['username']?.toString()??'zoi');
+   }
+  }
+  if(mounted)setState(() { spaceId=m['space_id'].toString(); conversationId=foundConversation; partnerId=foundPartner; partnerName=foundName; loading=false; });
  }catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}}
+ void _openChat(){
+  if(conversationId!=null&&partnerId!=null){
+   Navigator.push(context,MaterialPageRoute(builder:(_)=>OursDirectChatPage(conversationId:conversationId!,partnerId:partnerId!,partnerName:partnerName??'OURS',spaceId:spaceId)));
+  }else if(spaceId!=null){widget.onChatTap(spaceId!);}
+ }
  @override Widget build(BuildContext context){
   final labels=[_t(context,'مساحتنا','Space'),_t(context,'مرسمنا','Studio'),_t(context,'المشاهدة','Watch'),_t(context,'موسيقانا','Music'),_t(context,'التقرير','Report')];
   final icons=[Icons.forum_outlined,Icons.brush_outlined,Icons.live_tv_outlined,Icons.music_note_outlined,Icons.insights_outlined];
-  return Scaffold(appBar:AppBar(title:const Text('OURS',style:TextStyle(color:_g,letterSpacing:5)),actions:[if(spaceId!=null) OursNotificationBell(spaceId:spaceId,onOpenMessage:()=>widget.onChatTap(spaceId!)),IconButton(onPressed:widget.onProfileTap,icon:const Icon(Icons.tune,color:_l))]),
+  return Scaffold(appBar:AppBar(title:const Text('OURS',style:TextStyle(color:_g,letterSpacing:5)),actions:[if(spaceId!=null) OursNotificationBell(spaceId:spaceId,onOpenMessage:_openChat),IconButton(onPressed:widget.onProfileTap,icon:const Icon(Icons.tune,color:_l))]),
    body:loading?const Center(child:CircularProgressIndicator(color:_g)):error!=null?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Text(_t(context,'تعذر تجهيز مساحتنا','Could not load space')),Text(error!,style:const TextStyle(color:_l)),TextButton(onPressed:()=>setState(() { loading=true; error=null; _load(); }),child:Text(_t(context,'إعادة المحاولة','Retry')))])):
    IndexedStack(index:tab,children:[
-    _SpaceView(onChat:()=>widget.onChatTap(spaceId!),onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(spaceId:spaceId!)))),
+    _SpaceView(partnerName:partnerName??'zoi',onChat:_openChat,onPartnerProfile:partnerId==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:partnerId!))),onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(spaceId:spaceId!)))),
     _StudioView(spaceId:spaceId!),
     _WatchView(spaceId:spaceId!),
     const OursMusicPage(),
@@ -36,15 +56,52 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
  }
 }
 class _SpaceView extends StatelessWidget{
+ final String partnerName;
  final VoidCallback onChat,onSelf,onAi;
- const _SpaceView({required this.onChat,required this.onSelf,required this.onAi});
- @override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.all(18),children:[
-  Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(color:_p,borderRadius:BorderRadius.circular(22),border:Border.all(color:_g.withValues(alpha:.25))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Icon(Icons.all_inclusive,color:_g,size:34),const SizedBox(height:12),Text(_t(c,'مساحتنا','OUR SPACE'),style:const TextStyle(color:_g,fontSize:24,fontWeight:FontWeight.bold)),Text(_t(c,'مساحة دائمة وخاصة بين naif و zoi.','A permanent private space for naif and zoi.'),style:const TextStyle(color:_l)),const SizedBox(height:16),FilledButton.icon(onPressed:onChat,icon:const Icon(Icons.chat),label:Text(_t(c,'افتح محادثتنا','Open our chat')))])),
-  const SizedBox(height:16),_tile(c,Icons.bookmark_border,_t(c,'مراسلة نفسي','Private notes'),_t(c,'ملاحظات خاصة بحسابك','Notes only you can see'),onSelf),
-  _tile(c,Icons.auto_awesome,'OURS AI',_t(c,'مساعدك الذكي','Your AI assistant'),onAi),
+ final VoidCallback? onPartnerProfile;
+ const _SpaceView({required this.partnerName,required this.onChat,required this.onSelf,required this.onAi,this.onPartnerProfile});
+ @override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.fromLTRB(18,18,18,26),children:[
+  Container(
+   padding:const EdgeInsets.all(22),
+   decoration:BoxDecoration(
+    gradient:const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF302544),Color(0xFF171725),Color(0xFF17323A)]),
+    borderRadius:BorderRadius.circular(26),
+    border:Border.all(color:_g.withValues(alpha:.32)),
+    boxShadow:[BoxShadow(color:_g.withValues(alpha:.07),blurRadius:26,spreadRadius:1)],
+   ),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Row(children:[const Icon(Icons.all_inclusive_rounded,color:_g,size:30),const Spacer(),Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:Colors.white.withValues(alpha:.07),borderRadius:BorderRadius.circular(20)),child:Text(_t(c,'مساحة خاصة','PRIVATE SPACE'),style:const TextStyle(color:_l,fontSize:9,letterSpacing:1.1)))]),
+    const SizedBox(height:18),
+    Text(_t(c,'عالمكما يبدأ هنا','YOUR WORLD, TOGETHER'),style:const TextStyle(color:Colors.white,fontSize:24,fontWeight:FontWeight.w800)),
+    const SizedBox(height:6),
+    Text(_t(c,'مكان واحد يجمع محادثاتكما وأفكاركما ولحظاتكما.','One place for your conversations, ideas and moments.'),style:const TextStyle(color:_l,height:1.6,fontSize:12)),
+    const SizedBox(height:18),
+    Row(children:[
+     Expanded(child:FilledButton.icon(onPressed:onChat,icon:const Icon(Icons.chat_bubble_outline_rounded),label:Text(_t(c,'افتح المحادثة','Open chat')))),
+     if(onPartnerProfile!=null) ...[const SizedBox(width:8),IconButton.filledTonal(onPressed:onPartnerProfile,tooltip:_t(c,'ملف $partnerName','View $partnerName profile'),icon:const Icon(Icons.account_circle_outlined))]
+    ])
+   ]),
+  ),
+  const SizedBox(height:24),
+  Text(_t(c,'محادثاتك','YOUR CONVERSATIONS'),style:const TextStyle(color:_g,fontSize:12,fontWeight:FontWeight.w800,letterSpacing:1.5)),
+  const SizedBox(height:10),
+  _conversationTile(c,icon:Icons.person_outline_rounded,title:partnerName,subtitle:_t(c,'محادثتك الخاصة مع الطرف الآخر','Your private conversation with your partner'),accent:const Color(0xFF8DD9CF),onTap:onChat,onAvatarTap:onPartnerProfile),
+  _conversationTile(c,icon:Icons.bookmark_outline_rounded,title:_t(c,'مراسلة نفسي','Saved messages'),subtitle:_t(c,'مساحة خاصة للملاحظات والرسائل المحفوظة','A private place for notes and saved messages'),accent:const Color(0xFFE6C28B),onTap:onSelf),
+  _conversationTile(c,icon:Icons.auto_awesome_rounded,title:'OURS AI',subtitle:_t(c,'مساعدك الذكي داخل عالمك','Your AI companion inside OURS'),accent:const Color(0xFFC3A5F3),onTap:onAi),
  ]);
 }
-Widget _tile(BuildContext c,IconData i,String title,String sub,VoidCallback tap)=>Card(color:_p,child:ListTile(leading:Icon(i,color:_g),title:Text(title),subtitle:Text(sub,style:const TextStyle(color:_l)),trailing:const Icon(Icons.chevron_right,color:_l),onTap:tap));
+Widget _conversationTile(BuildContext c,{required IconData icon,required String title,required String subtitle,required Color accent,required VoidCallback onTap,VoidCallback? onAvatarTap})=>Container(
+ margin:const EdgeInsets.only(bottom:10),
+ decoration:BoxDecoration(color:_p.withValues(alpha:.82),borderRadius:BorderRadius.circular(19),border:Border.all(color:accent.withValues(alpha:.18))),
+ child:ListTile(
+  contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:7),
+  leading:InkWell(onTap:onAvatarTap,borderRadius:BorderRadius.circular(30),child:CircleAvatar(backgroundColor:accent.withValues(alpha:.14),child:Icon(icon,color:accent))),
+  title:Text(title,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700,fontSize:14)),
+  subtitle:Text(subtitle,style:const TextStyle(color:_l,fontSize:11,height:1.4)),
+  trailing:const Icon(Icons.chevron_right_rounded,color:_l),
+  onTap:onTap,
+ ),
+);
 
 class _StudioView extends StatefulWidget{final String spaceId;const _StudioView({required this.spaceId});@override State<_StudioView> createState()=>_StudioState();}
 class _StudioState extends State<_StudioView> {
