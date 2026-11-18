@@ -1486,7 +1486,17 @@ class _ChatPageState extends State<ChatPage> {
                                         _formatMessageTime(item['created_at']),
                                         style: const TextStyle(color: lavender, fontSize: 10),
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: 6),
+                                      if (isMe && item['deleted_at'] == null)
+                                        const Icon(Icons.check_rounded, color: lavender, size: 13),
+                                      if (item['deleted_at'] == null && item['message_type'] == 'text')
+                                        InkWell(
+                                          onTap: () => _copyMessage(item['body']?.toString() ?? ''),
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(4),
+                                            child: Icon(Icons.copy_rounded, color: lavender, size: 15),
+                                          ),
+                                        ),
                                       if (item['deleted_at'] == null)
                                         InkWell(
                                           onTap: () => _replyToMessage(item),
