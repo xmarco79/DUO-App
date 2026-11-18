@@ -175,8 +175,15 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    content:Text(t('تشغيل المكالمات يحتاج ربط خدمة اتصال آمنة وإعداد مفاتيحها على الخادم. لن نعرض اتصالًا وهميًا.','Real calls require a secure calling provider and server-side credentials. We will not simulate a fake call.')),
    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('حسنًا','OK')))]));
  }
- Future<void> _openAi() async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(conversationId:widget.conversationId)));}
- @override void dispose(){input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
+ Future<void> _openAi() async {
+   final id = widget.spaceId;
+   if (id == null || id.isEmpty) {
+    _show(t('مساعد OURS متاح من داخل مساحتنا.', 'Open OURS AI from inside our space.'));
+    return;
+   }
+   await Navigator.push(context, MaterialPageRoute(builder: (_) => OursAiPage(spaceId: id)));
+  }
+  @override void dispose(){input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
  @override Widget build(BuildContext context){
   final me=db.auth.currentUser!.id;
   return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,centerTitle:true,
@@ -184,7 +191,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    actions:[
     IconButton(tooltip:t('الثيم','Theme'),onPressed:_chooseSkin,icon:Icon(Icons.palette_outlined,color:skin.accent)),
     IconButton(tooltip:t('راسل نفسك','Message yourself'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),icon:Icon(Icons.bookmark_border_rounded,color:skin.accent)),
-    IconButton(tooltip:'OURS AI',onPressed:_openAi,icon:Icon(Icons.auto_awesome_outlined,color:skin.accent)),
+    if(widget.spaceId!=null) IconButton(tooltip:'OURS AI',onPressed:_openAi,icon:Icon(Icons.auto_awesome_outlined,color:skin.accent)),
     IconButton(tooltip:t('اتصال صوتي','Voice call'),onPressed:()=>_callInfo(false),icon:Icon(Icons.call_outlined,color:skin.accent)),
     IconButton(tooltip:t('اتصال مرئي','Video call'),onPressed:()=>_callInfo(true),icon:Icon(Icons.videocam_outlined,color:skin.accent))
    ]),
