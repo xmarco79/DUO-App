@@ -169,6 +169,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    title:Column(mainAxisSize:MainAxisSize.min,children:[Text(widget.partnerName,style:const TextStyle(fontSize:16)),Text(t('محادثة خاصة بينكما','Private conversation'),style:TextStyle(color:skin.accent,fontSize:10))]),
    actions:[
     IconButton(tooltip:t('الثيم','Theme'),onPressed:_chooseSkin,icon:Icon(Icons.palette_outlined,color:skin.accent)),
+    IconButton(tooltip:t('راسل نفسك','Message yourself'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),icon:Icon(Icons.bookmark_border_rounded,color:skin.accent)),
     IconButton(tooltip:'OURS AI',onPressed:_openAi,icon:Icon(Icons.auto_awesome_outlined,color:skin.accent)),
     IconButton(tooltip:t('اتصال صوتي','Voice call'),onPressed:()=>_callInfo(false),icon:Icon(Icons.call_outlined,color:skin.accent)),
     IconButton(tooltip:t('اتصال مرئي','Video call'),onPressed:()=>_callInfo(true),icon:Icon(Icons.videocam_outlined,color:skin.accent))
@@ -239,7 +240,7 @@ class _OursAiPageState extends State<OursAiPage>{
   return List<Map<String,dynamic>>.from(rows).reversed.map((r)=>{'sender':r['sender_id']==db.auth.currentUser!.id?(ar?'أنا':'Me'):(ar?'الشريك':'Partner'),'text':r['body'].toString()}).toList();
  }
  Future<void> _send({String? preset,String task='chat'}) async{
-  final text=(preset??input.text).trim();if(text.isEmpty||sending)return;setState(()=>sending=true);messages.add({'role':'user','content':text});input.clear();_bottom();
+  final text=(preset??input.text).trim();if(text.isEmpty||sending)return;setState(()=>sending=true);messages.add({'role':'user','content':text});input.clear();_persist();_bottom();
   try{
    final ctx=includeContext?await _context():<Map<String,String>>[];final history=messages.length>12?messages.sublist(messages.length-12):messages;
    final r=await db.functions.invoke('ours-ai',body:{'conversation_id':widget.conversationId,'task':task,'messages':history,'context':ctx});
@@ -247,11 +248,14 @@ class _OursAiPageState extends State<OursAiPage>{
    if(r.status!=200){final e=data['error']?.toString()??'';if(e=='GEMINI_SETUP_REQUIRED')throw Exception(t('مفتاح الذكاء الاصطناعي غير مضبوط على الخادم.','AI provider key is not configured on the server.'));
     if(e=='AI_LIMIT_REACHED')throw Exception(t('وصلنا لحد الاستخدام الحالي، حاول لاحقًا.','Usage limit reached. Try later.'));if(r.status==403)throw Exception(t('لا تملك صلاحية هذه المحادثة.','Conversation access denied.'));throw Exception(t('تعذر الاتصال بمساعد OURS.','Could not reach OURS AI.'));
    }
-   final answer=data['answer']?.toString()??'';if(answer.isEmpty)throw Exception('Empty response');if(mounted)messages.add({'role':'assistant','content':answer});_bottom();
-  }catch(e){if(mounted)messages.add({'role':'assistant','content':e.toString().replaceFirst('Exception: ','')});_bottom();}
+   final answer=data['answer']?.toString()??'';if(answer.isEmpty)throw Exception('Empty response');if(mounted){messages.add({'role':'assistant','content':answer});await _persist();}_bottom();
+  }catch(e){if(mounted){messages.add({'role':'assistant','content':e.toString().replaceFirst('Exception: ','')});await _persist();}_bottom();}
   finally{if(mounted)setState(()=>sending=false);}
  }
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
+ @override void initState(){super.initState();_restore();}
+ Future<void> _restore() async{try{final p=await SharedPreferences.getInstance();final raw=p.getString('ours_ai_history_'+db.auth.currentUser!.id);if(raw!=null){final decoded=(jsonDecode(raw) as List).map((e)=>Map<String,String>.from(e)).toList();if(mounted)setState(()=>messages.addAll(decoded));}}catch(_){} }
+ Future<void> _persist() async{try{final p=await SharedPreferences.getInstance();await p.setString('ours_ai_history_'+db.auth.currentUser!.id,jsonEncode(messages.take(100).toList()));}catch(_){} }
  @override void dispose(){input.dispose();scroll.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_navy,appBar:AppBar(backgroundColor:_navy,title:const Text('OURS AI',style:TextStyle(color:_gold,letterSpacing:2)),centerTitle:true),
   body:SafeArea(child:Column(children:[
@@ -290,4 +294,28 @@ class _DirectAudioBubbleState extends State<_DirectAudioBubble>{
    Text(widget.ar?(playing?'تشغيل الصوت…':'رسالة صوتية'):(playing?'Playing…':'Voice message'),style:const TextStyle(fontSize:12))
   ]);
  });
+}
+
+class OursSelfChatPage extends StatefulWidget{
+ const OursSelfChatPage({super.key});
+ @override State<OursSelfChatPage> createState()=>_OursSelfChatPageState();
+}
+class _OursSelfChatPageState extends State<OursSelfChatPage>{
+ final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController();
+ List<Map<String,dynamic>> rows=[];bool loading=true,sending=false;
+ bool get ar=>Localizations.localeOf(context).languageCode=='ar';
+ String t(String a,String e)=>ar?a:e;
+ @override void initState(){super.initState();_load();}
+ Future<void> _load()async{try{final data=await db.from('ours_self_messages').select().order('created_at');if(mounted)setState(()=>rows=List<Map<String,dynamic>>.from(data));}catch(e){_notice(t('تعذر تحميل مذكرتك: $e','Could not load your notes: $e'));}finally{if(mounted)setState(()=>loading=false);}}
+ void _notice(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
+ Future<void> _send()async{final text=input.text.trim();if(text.isEmpty||sending)return;setState(()=>sending=true);try{final row=await db.from('ours_self_messages').insert({'user_id':db.auth.currentUser!.id,'body':text}).select().single();if(mounted)setState(()=>rows.add(Map<String,dynamic>.from(row)));input.clear();}catch(e){_notice(t('تعذر حفظ الرسالة: $e','Could not save note: $e'));}finally{if(mounted)setState(()=>sending=false);}}
+ Future<void> _togglePin(Map<String,dynamic> row)async{try{final v=!(row['pinned']==true);await db.from('ours_self_messages').update({'pinned':v}).eq('id',row['id']);if(mounted)setState(()=>row['pinned']=v);}catch(e){_notice(e.toString());}}
+ Future<void> _delete(Map<String,dynamic> row)async{try{await db.from('ours_self_messages').delete().eq('id',row['id']);if(mounted)setState(()=>rows.removeWhere((r)=>r['id']==row['id']));}catch(e){_notice(e.toString());}}
+ @override void dispose(){input.dispose();scroll.dispose();super.dispose();}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_navy,appBar:AppBar(title:Text(t('مساحتي الخاصة','My private space'))),
+ body:Column(children:[
+  Padding(padding:const EdgeInsets.all(12),child:Text(t('اكتب أفكارك، خططك، تذكيراتك وأشياءك المهمة. لا يراها غيرك.','Save ideas, plans, reminders and important notes. Only you can see them.'),style:const TextStyle(color:_lavender))),
+  Expanded(child:loading?const Center(child:CircularProgressIndicator(color:_gold)):rows.isEmpty?Center(child:Text(t('مساحتك لك وحدك. ابدأ بتدوين أول فكرة.','Your space is yours. Save your first thought.'),style:const TextStyle(color:_lavender))):ListView.builder(controller:scroll,padding:const EdgeInsets.all(12),itemCount:rows.length,itemBuilder:(c,i){final row=rows[rows.length-1-i];return Card(color:_p,child:ListTile(title:SelectableText(row['body'].toString()),subtitle:Text(DateFormat('yyyy/MM/dd · HH:mm').format(DateTime.parse(row['created_at']).toLocal()),style:const TextStyle(color:_lavender,fontSize:11)),leading:row['pinned']==true?const Icon(Icons.push_pin,color:_gold):const Icon(Icons.sticky_note_2_outlined,color:_lavender),trailing:PopupMenuButton<String>(onSelected:(v)=>v=='pin'?_togglePin(row):_delete(row),itemBuilder:(_)=>[PopupMenuItem(value:'pin',child:Text(t('تثبيت / إلغاء التثبيت','Pin / unpin'))),PopupMenuItem(value:'delete',child:Text(t('حذف','Delete')))])));})),
+  SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(10),child:Row(children:[Expanded(child:TextField(controller:input,minLines:1,maxLines:4,decoration:InputDecoration(hintText:t('اكتب لنفسك…','Write a note…'),filled:true,fillColor:_p,border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none)),onSubmitted:(_)=>_send())),IconButton(onPressed:sending?null:_send,icon:const Icon(Icons.send_rounded,color:_gold))])))
+ ]));
 }
