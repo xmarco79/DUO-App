@@ -413,6 +413,27 @@ jobs:
           echo "Release APK build failed after three attempts."
           exit 1
 
+      - name: Sign APK with v1 and v2 for Android compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          KEYSTORE="$HOME/.android/debug.keystore"
+          test -s "$APK"
+          test -s "$KEYSTORE"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" sign \\
+            --ks "$KEYSTORE" \\
+            --ks-key-alias androiddebugkey \\
+            --ks-pass pass:android \\
+            --key-pass pass:android \\
+            --v1-signing-enabled true \\
+            --v2-signing-enabled true \\
+            --out "$APK.compat" "$APK"
+          mv "$APK.compat" "$APK"
+          echo "APK re-signed with both v1 and v2 schemes."
+
       - name: Validate release APK
         shell: bash
         run: |
@@ -429,8 +450,11 @@ jobs:
 
           BADGING="$($AAPT dump badging "$APK")"
           echo "$BADGING" | grep -F "package: name='com.ours.ours'"
-          "$APKSIGNER" verify --verbose "$APK"
-          echo "APK validation passed."
+          VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose "$APK")"
+          echo "$VERIFY_OUTPUT"
+          echo "$VERIFY_OUTPUT" | grep -F "Verified using v1 scheme (JAR signing): true"
+          echo "$VERIFY_OUTPUT" | grep -F "Verified using v2 scheme (APK Signature Scheme v2): true"
+          echo "APK validation passed with v1 and v2 signatures."
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
