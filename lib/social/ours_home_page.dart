@@ -104,8 +104,8 @@ class _StudioState extends State<_StudioView> {
   Offset _normalized(Offset point) {
     if (canvasSize.width <= 0 || canvasSize.height <= 0) return point;
     return Offset(
-      (point.dx / canvasSize.width).clamp(0.0, 1.0),
-      (point.dy / canvasSize.height).clamp(0.0, 1.0),
+      (point.dx / canvasSize.width).clamp(0.0, 1.0).toDouble(),
+      (point.dy / canvasSize.height).clamp(0.0, 1.0).toDouble(),
     );
   }
 
@@ -429,7 +429,7 @@ class _WatchState extends State<_WatchView> {
           .select()
           .maybeSingle();
       if (mounted) {
-        setState(() => session = updated == null ? null : Map<String, dynamic>.from(updated));
+        setState(() => session = status == 'ended' || updated == null ? null : Map<String, dynamic>.from(updated));
       }
     } catch (error) {
       _message(error.toString());
