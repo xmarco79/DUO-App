@@ -460,6 +460,16 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     DateTime? dueDate;
     final feature = features[widget.worldIndex]
         .firstWhere((entry) => entry.$1 == kind);
+    const taskKinds = {
+      'Our List', 'Mini Missions', 'Bucket List', 'World Checklist', 'Our Goals'
+    };
+    const pollKinds = {
+      'Our Votes', 'This or That', 'World Polls', 'Question of the Day', 'Quick Choice'
+    };
+    final isTaskList = taskKinds.contains(kind);
+    final isPoll = pollKinds.contains(kind);
+    final isQuiz = kind == 'Who Knows Who?';
+    final isTimeCapsule = kind == 'Time Capsule';
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -483,13 +493,13 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
               if (Localizations.localeOf(context).languageCode == 'ar') Text(feature.$2, style: const TextStyle(color: _lavender)),
               const SizedBox(height: 18),
               TextField(controller: title, maxLength: 140,
-                decoration: const InputDecoration(
-                  labelText: 'العنوان', border: OutlineInputBorder())),
+                decoration: InputDecoration(
+                  labelText: _worldText(context, 'العنوان', 'Title'), border: const OutlineInputBorder())),
               const SizedBox(height: 12),
               TextField(controller: body, minLines: 3, maxLines: 7,
                 maxLength: 10000,
-                decoration: const InputDecoration(
-                  labelText: 'اكتب التفاصيل هنا', border: OutlineInputBorder())),
+                decoration: InputDecoration(
+                  labelText: _worldText(context, 'التفاصيل (اختياري)', 'Details (optional)'), border: const OutlineInputBorder())),
               if (kind == 'Voice Diary')
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
@@ -506,7 +516,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     ),
                   ),
                 ),
-              if (kind == 'Our Votes' || kind == 'This or That' || kind == 'Who Knows Who?' || kind == 'World Polls' || kind == 'Question of the Day' || kind == 'Quick Choice' || kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist' || kind == 'Our Goals')
+              if (isPoll || isQuiz || isTaskList)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: TextField(
@@ -514,13 +524,13 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     minLines: 2,
                     maxLines: 5,
                     decoration: InputDecoration(
-                      labelText: (kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist' || kind == 'Our Goals') ? _worldText(context, 'المهام (كل مهمة في سطر)', 'Tasks (one per line)') : _worldText(context, 'الخيارات (كل خيار في سطر)', 'Options (one per line)'),
+                      labelText: isTaskList ? _worldText(context, 'المهام (كل مهمة في سطر)', 'Tasks (one per line)') : _worldText(context, 'الخيارات (كل خيار في سطر)', 'Options (one per line)'),
                       hintText: _worldText(context, 'الخيار الأول\nالخيار الثاني', 'Option one\nOption two'),
                       border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
-              if (kind == 'Who Knows Who?')
+              if (isQuiz)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: TextField(
@@ -539,7 +549,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                       final picked = await showDatePicker(
                         context: context,
                         initialDate: dueDate ?? DateTime.now(),
-                        firstDate: DateTime(2020),
+                        firstDate: DateTime.now(),
                         lastDate: DateTime(2100),
                         builder: (context, child) => Theme(
                           data: Theme.of(context).copyWith(
@@ -574,8 +584,6 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     if (result == true && title.text.trim().isNotEmpty) {
       final lines = options.text.split('\n').map((v) => v.trim())
           .where((v) => v.isNotEmpty).take(30).toList();
-      final isTaskList = kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist' || kind == 'Our Goals';
-      final isQuiz = kind == 'Who Knows Who?';
       final quizOptions = lines.take(6).toList();
       final correct = quizOptions.indexWhere((v) =>
           v.toLowerCase() == correctAnswer.text.trim().toLowerCase());
@@ -584,8 +592,14 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
           : isQuiz && quizOptions.length >= 2 && correct >= 0
               ? <String, dynamic>{'options': quizOptions, 'votes': <String, dynamic>{}, 'correct_index': correct}
               : lines.length >= 2 ? <String, dynamic>{'options': quizOptions, 'votes': <String, dynamic>{}} : <String, dynamic>{};
-      if (isQuiz && (quizOptions.length < 2 || correct < 0)) {
-        _snack(_worldText(context, 'أضف خيارين على الأقل وحدد الإجابة الصحيحة من بينها.', 'Add at least two options and select the correct answer.'));
+      if (isTaskList && lines.isEmpty) {
+        _snack(_worldText(context, 'أضف مهمة واحدة على الأقل.', 'Add at least one task.'));
+      } else if ((isPoll || isQuiz) && quizOptions.length < 2) {
+        _snack(_worldText(context, 'أضف خيارين على الأقل حتى يصبح التصويت قابلًا للاستخدام.', 'Add at least two options to make this poll usable.'));
+      } else if (isQuiz && correct < 0) {
+        _snack(_worldText(context, 'حدد الإجابة الصحيحة من بين الخيارات.', 'Select the correct answer from the options.'));
+      } else if (isTimeCapsule && dueDate == null) {
+        _snack(_worldText(context, 'حدد تاريخ فتح الرسالة أولًا.', 'Choose an unlock date first.'));
       } else {
         await createItem(kind, title.text, body.text, payload: payload, dueAt: dueDate);
       }
