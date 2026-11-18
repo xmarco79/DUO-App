@@ -423,13 +423,13 @@ jobs:
           test -s "$APK"
           test -s "$KEYSTORE"
           test -x "$APKSIGNER"
-          "$APKSIGNER" sign \\
-            --ks "$KEYSTORE" \\
-            --ks-key-alias androiddebugkey \\
-            --ks-pass pass:android \\
-            --key-pass pass:android \\
-            --v1-signing-enabled true \\
-            --v2-signing-enabled true \\
+          "$APKSIGNER" sign \
+            --ks "$KEYSTORE" \
+            --ks-key-alias androiddebugkey \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
             --out "$APK.compat" "$APK"
           mv "$APK.compat" "$APK"
           echo "APK re-signed with both v1 and v2 schemes."
