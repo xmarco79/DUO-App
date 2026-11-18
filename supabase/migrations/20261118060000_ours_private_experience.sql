@@ -63,6 +63,20 @@ create policy "OURS members manage watch sessions" on public.ours_watch_sessions
   with check (exists (select 1 from public.duo_members m where m.space_id=ours_watch_sessions.space_id and m.user_id=(select auth.uid())));
 grant select,insert,update,delete on public.ours_watch_sessions to authenticated;
 
+
+do $
+begin
+  if exists (select 1 from pg_publication where pubname='supabase_realtime') then
+    if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='ours_canvas_strokes') then
+      execute 'alter publication supabase_realtime add table public.ours_canvas_strokes';
+    end if;
+    if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='ours_watch_sessions') then
+      execute 'alter publication supabase_realtime add table public.ours_watch_sessions';
+    end if;
+  end if;
+end;
+$;
+
 create table if not exists public.ours_weekly_reports (
   id uuid primary key default gen_random_uuid(),
   space_id uuid not null references public.duo_spaces(id) on delete cascade,
