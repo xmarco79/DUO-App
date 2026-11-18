@@ -39,7 +39,7 @@ Deno.serve(async (req: Request) => {
   const spaceId = typeof body.space_id === "string" ? body.space_id : "";
   const conversationId = typeof body.conversation_id === "string" ? body.conversation_id : "";
   const messages = Array.isArray(body.messages) ? body.messages : [];
-  const allowedTasks = new Set(["chat", "summary", "ideas", "memories", "study", "organize", "journal", "brainstorm"]);
+  const allowedTasks = new Set(["chat", "summary", "ideas", "study", "organize", "journal", "brainstorm"]);
   const task = typeof body.task === "string" && allowedTasks.has(body.task) ? body.task : "chat";
   const context = Array.isArray(body.context) ? body.context.slice(-25) : [];
   if ((!spaceId && !conversationId) || messages.length === 0 || messages.length > 16) {
