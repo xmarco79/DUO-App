@@ -9,7 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../games/ours_tic_tac_toe_page.dart';
 import '../memories/ours_albums_page.dart';
-import 'ours_universe_page.dart';
 
 const _navy = Color(0xFF10101C);
 const _purple = Color(0xFF29213D);
@@ -25,13 +24,11 @@ class OursWorldHubPage extends StatefulWidget {
     required this.spaceId,
     required this.worldIndex,
     this.onSpaceChanged,
-    this.classicUniverse = false,
   });
 
   final String? spaceId;
   final int worldIndex;
   final ValueChanged<String>? onSpaceChanged;
-  final bool classicUniverse;
 
   @override
   State<OursWorldHubPage> createState() => _OursWorldHubPageState();
@@ -69,11 +66,11 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       ('I’m Here', 'إشارة لطيفة بأنك موجود', Icons.waving_hand_outlined),
     ],
     [
-      ('Our Little Planet', 'الكوكب المشترك', Icons.language_rounded),
-      ('Our Garden', 'حديقة تنمو مع نشاطكما', Icons.local_florist_outlined),
-      ('Themes & Symbols', 'الثيمات والرموز', Icons.palette_outlined),
-      ('Constellation', 'نجوم من ذكرياتكما', Icons.stars_rounded),
-      ('Our Aquarium', 'حوضكما الافتراضي', Icons.water_outlined),
+      ('Our World Notes', 'ملاحظات عالمكما', Icons.sticky_note_2_outlined),
+      ('World Checklist', 'قائمة مهام العالم', Icons.checklist_rounded),
+      ('World Polls', 'تصويتات عالمكما', Icons.how_to_vote_outlined),
+      ('World Milestones', 'محطات عالمكما', Icons.flag_outlined),
+      ('Time Capsule', 'رسائل للمستقبل', Icons.lock_clock_outlined),
     ],
     [
       ('Question of the Day', 'سؤال اليوم', Icons.help_outline_rounded),
@@ -509,7 +506,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     ),
                   ),
                 ),
-              if (kind == 'Our Votes' || kind == 'This or That' || kind == 'Who Knows Who?' || kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List')
+              if (kind == 'Our Votes' || kind == 'This or That' || kind == 'Who Knows Who?' || kind == 'World Polls' || kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist')
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: TextField(
@@ -534,7 +531,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     ),
                   ),
                 ),
-              if (worlds[widget.worldIndex].$4 == 'together' || worlds[widget.worldIndex].$4 == 'memories')
+              if (worlds[widget.worldIndex].$4 == 'together' || worlds[widget.worldIndex].$4 == 'memories' || (widget.worldIndex == 1 && (kind == 'World Milestones' || kind == 'Time Capsule')))
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: OutlinedButton.icon(
@@ -577,7 +574,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     if (result == true && title.text.trim().isNotEmpty) {
       final lines = options.text.split('\n').map((v) => v.trim())
           .where((v) => v.isNotEmpty).take(30).toList();
-      final isTaskList = kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List';
+      final isTaskList = kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist';
       final isQuiz = kind == 'Who Knows Who?';
       final quizOptions = lines.take(6).toList();
       final correct = quizOptions.indexWhere((v) =>
@@ -612,20 +609,6 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.worldIndex == 1 && !widget.classicUniverse) {
-      return OursUniversePage(
-        spaceId: widget.spaceId,
-        onOpenClassic: () {
-          Navigator.push(context, MaterialPageRoute(
-            builder: (_) => OursWorldHubPage(
-              spaceId: widget.spaceId,
-              worldIndex: 1,
-              classicUniverse: true,
-            ),
-          ));
-        },
-      );
-    }
     final world = worlds[widget.worldIndex];
     final worldFeatures = features[widget.worldIndex];
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
@@ -645,7 +628,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
           ? FloatingActionButton(
               backgroundColor: _gold,
               foregroundColor: _navy,
-              onPressed: () => _showEditor(worldFeatures.first.$1),
+              onPressed: () => _showEditor(selectedKind ?? worldFeatures.first.$1),
               child: const Icon(Icons.add_rounded),
             )
           : null,
@@ -725,7 +708,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                         ]),
                       ),
                     const SizedBox(height: 18),
-                    Text(_worldText(context, 'الميزات', 'Features'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
+                    Text(_worldText(context, 'اختاري ما تريدان إضافته', 'Choose what to add'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 10),
                   ],
                 ),
