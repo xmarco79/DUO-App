@@ -98,10 +98,11 @@ begin
 
   perform pg_advisory_xact_lock(hashtextextended('ours-fixed-pair-space',0));
 
-  select count(distinct space_id), min(space_id)
-    into v_space_count,v_space
+  select count(distinct space_id)
+    into v_space_count
   from public.duo_members
   where user_id in (v_naif,v_zoi);
+  select space_id into v_space from public.duo_members where user_id in (v_naif,v_zoi) order by joined_at limit 1;
 
   if v_space_count > 1 then
     raise exception 'The two approved accounts are attached to different spaces; manual reconciliation is required';
