@@ -113,7 +113,7 @@ class _StudioState extends State<_StudioView> {
   }
 
   Future<void> _save() async {
-    if (points.length < 2) {
+    if (points.isEmpty) {
       setState(() => points = []);
       return;
     }
