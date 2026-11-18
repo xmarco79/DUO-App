@@ -48,7 +48,7 @@ class _ChatAtmospherePainter extends CustomPainter {
     for(var i=0;i<4;i++){
      final path=Path()..moveTo(-size.width*.1,size.height*(.20+i*.12))
       ..cubicTo(size.width*.25,size.height*(.02+i*.12),size.width*.58,size.height*(.48+i*.08),size.width*1.12,size.height*(.16+i*.13));
-     canvas.drawPath(path,Paint()..color=[accent, const Color(0xFF6B8FE8),const Color(0xFF63C9B5),const Color(0xFF9D83D8)][i].withValues(alpha:.09)..style=PaintingStyle.stroke..strokeWidth=28+i*8..maskFilter=const MaskFilter.blur(BlurStyle.normal,18));
+     canvas.drawPath(path,Paint()..color=[accent, const Color(0xFF6B8FE8),const Color(0xFF63C9B5),const Color(0xFF9D83D8)][i].withValues(alpha:.09)..style=PaintingStyle.stroke..strokeWidth=28.0+i*8.0..maskFilter=const MaskFilter.blur(BlurStyle.normal,18));
     }
     break;
    case 'sunset':
@@ -59,7 +59,7 @@ class _ChatAtmospherePainter extends CustomPainter {
     for(var i=0;i<34;i++){
      final x=((i*83)%997)/997*size.width,y=((i*137)%991)/991*size.height;
      canvas.save();canvas.translate(x,y);canvas.rotate((i%7)*.43);
-     canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:7+(i%3)*2,height:14+(i%4)*2),Paint()..color=accent.withValues(alpha:.13));
+     canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:7.0+(i%3)*2.0,height:14.0+(i%4)*2.0),Paint()..color=accent.withValues(alpha:.13));
      canvas.restore();
     }
     break;
