@@ -170,10 +170,10 @@ jobs:
           size = 1024
           navy = (16, 16, 28, 255)
           gold = (226, 194, 125, 255)
-          image = Image.new("RGBA", (size, size), navy)
-          draw = ImageDraw.Draw(image)
+          foreground = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+          draw = ImageDraw.Draw(foreground)
 
-          # One clean gold infinity mark on a solid deep-navy background.
+          # One clean gold infinity mark; no circle, lettering, or decoration.
           points = []
           for step in range(2400):
               t = 2 * math.pi * step / 2399
@@ -182,21 +182,53 @@ jobs:
               points.append((round(x), round(y)))
           draw.line(points, fill=gold, width=68, joint="curve")
 
+          background = Image.new("RGBA", (size, size), navy)
+          background.alpha_composite(foreground)
           sizes = {"mdpi":48, "hdpi":72, "xhdpi":96, "xxhdpi":144, "xxxhdpi":192}
           for density, pixels in sizes.items():
-              target = Path(f"android/app/src/main/res/mipmap-{density}/ic_launcher.png")
-              target.parent.mkdir(parents=True, exist_ok=True)
-              image.resize((pixels, pixels), Image.Resampling.LANCZOS).save(target, format="PNG", optimize=True)
+              folder = Path(f"android/app/src/main/res/mipmap-{density}")
+              folder.mkdir(parents=True, exist_ok=True)
+              foreground.resize((pixels, pixels), Image.Resampling.LANCZOS).save(
+                  folder / "ic_launcher_foreground.png", format="PNG", optimize=True)
+              background.resize((pixels, pixels), Image.Resampling.LANCZOS).save(
+                  folder / "ic_launcher.png", format="PNG", optimize=True)
+              background.resize((pixels, pixels), Image.Resampling.LANCZOS).save(
+                  folder / "ic_launcher_round.png", format="PNG", optimize=True)
 
-          # Keep the launcher name exactly as OURS.
+          # Adaptive launcher icon for Android 8+; the system applies its normal mask.
+          adaptive = '''<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ours_icon_background" />
+              <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+          </adaptive-icon>
+          '''
+          adaptive_dir = Path("android/app/src/main/res/mipmap-anydpi-v26")
+          adaptive_dir.mkdir(parents=True, exist_ok=True)
+          (adaptive_dir / "ic_launcher.xml").write_text(adaptive)
+          (adaptive_dir / "ic_launcher_round.xml").write_text(adaptive)
+
+          colors = Path("android/app/src/main/res/values/colors.xml")
+          colors.parent.mkdir(parents=True, exist_ok=True)
+          if colors.exists():
+              color_text = colors.read_text()
+          else:
+              color_text = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
+          definition = '<color name="ours_icon_background">#10101C</color>'
+          if re.search(r'<color name="ours_icon_background">.*?</color>', color_text):
+              color_text = re.sub(r'<color name="ours_icon_background">.*?</color>', definition, color_text)
+          else:
+              color_text = color_text.replace('</resources>', f'    {definition}\n</resources>')
+          colors.write_text(color_text)
+
           manifest = Path("android/app/src/main/AndroidManifest.xml")
           manifest_text = manifest.read_text()
           manifest_text = re.sub(r'android:label="[^"]*"', 'android:label="OURS"', manifest_text, count=1)
+          manifest_text = re.sub(r'android:icon="[^"]*"', 'android:icon="@mipmap/ic_launcher"', manifest_text, count=1)
           manifest.write_text(manifest_text)
 
           Path("build").mkdir(parents=True, exist_ok=True)
-          image.save("build/ours_icon_preview.png", format="PNG", optimize=True)
-          print("Generated the minimal OURS infinity launcher icon and uppercase app label.")
+          background.save("build/ours_icon_preview.png", format="PNG", optimize=True)
+          print("Generated the OURS infinity icon for legacy and adaptive Android launchers.")
           PY
           rm -f android/app/src/main/res/drawable/ours_icon.xml
 
