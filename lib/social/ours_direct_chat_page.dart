@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
@@ -19,11 +20,89 @@ class _ChatSkin{
  const _ChatSkin(this.id,this.ar,this.en,this.bg,this.mine,this.partner,this.accent);
 }
 const _skins=[
- _ChatSkin('midnight','ليلي','Midnight',Color(0xFF10101C),Color(0xFF342B4C),Color(0xFF211D30),_gold),
- _ChatSkin('ocean','المحيط','Ocean',Color(0xFF0B1B2A),Color(0xFF174A66),Color(0xFF173244),Color(0xFF75C8D8)),
- _ChatSkin('rose','وردي هادئ','Soft rose',Color(0xFF24151F),Color(0xFF63364D),Color(0xFF382331),Color(0xFFF0AFC4)),
- _ChatSkin('forest','الغابة','Forest',Color(0xFF101F1A),Color(0xFF285342),Color(0xFF1D332B),Color(0xFF9CC9A8)),
+ _ChatSkin('aurora','الشفق القطبي','Aurora',Color(0xFF091A27),Color(0xFF174A55),Color(0xFF142D3B),Color(0xFF75E0D0)),
+ _ChatSkin('sunset','غروب دافئ','Sunset',Color(0xFF211329),Color(0xFF713C52),Color(0xFF38243E),Color(0xFFFFB28A)),
+ _ChatSkin('sakura','حديقة ساكورا','Sakura',Color(0xFF251923),Color(0xFF75445C),Color(0xFF3E2B3A),Color(0xFFFFB9D0)),
+ _ChatSkin('ocean','أعماق المحيط','Deep ocean',Color(0xFF071B30),Color(0xFF15577A),Color(0xFF12354D),Color(0xFF75D5F2)),
+ _ChatSkin('forest','غابة مطيرة','Rainforest',Color(0xFF0D211D),Color(0xFF28664D),Color(0xFF1C3D32),Color(0xFFA8E6B7)),
+ _ChatSkin('cosmos','فضاء نجمي','Cosmic night',Color(0xFF100F2A),Color(0xFF493A82),Color(0xFF242442),Color(0xFFC5B7FF)),
+ _ChatSkin('desert','وهج الصحراء','Desert glow',Color(0xFF241B17),Color(0xFF795034),Color(0xFF443126),Color(0xFFFFD18B)),
+ _ChatSkin('neon','مدينة نيون','Neon city',Color(0xFF130F25),Color(0xFF553A79),Color(0xFF2D2448),Color(0xFF8EF0FF)),
 ];
+
+class _ChatAtmospherePainter extends CustomPainter {
+ final _ChatSkin skin;
+ const _ChatAtmospherePainter(this.skin);
+
+ @override
+ void paint(Canvas canvas, Size size) {
+  final rect=Offset.zero & size;
+  canvas.drawRect(rect,Paint()..shader=LinearGradient(
+   begin:Alignment.topLeft,end:Alignment.bottomRight,
+   colors:[skin.bg,skin.partner.withValues(alpha:.88),skin.bg],
+  ).createShader(rect));
+  final accent=skin.accent;
+  final soft=Paint()..color=accent.withValues(alpha:.10)..style=PaintingStyle.fill;
+  final line=Paint()..color=accent.withValues(alpha:.16)..style=PaintingStyle.stroke..strokeWidth=1.2;
+  switch(skin.id){
+   case 'aurora':
+    for(var i=0;i<4;i++){
+     final path=Path()..moveTo(-size.width*.1,size.height*(.20+i*.12))
+      ..cubicTo(size.width*.25,size.height*(.02+i*.12),size.width*.58,size.height*(.48+i*.08),size.width*1.12,size.height*(.16+i*.13));
+     canvas.drawPath(path,Paint()..color=[accent, const Color(0xFF6B8FE8),const Color(0xFF63C9B5),const Color(0xFF9D83D8)][i].withValues(alpha:.09)..style=PaintingStyle.stroke..strokeWidth=28+i*8..maskFilter=const MaskFilter.blur(BlurStyle.normal,18));
+    }
+    break;
+   case 'sunset':
+    canvas.drawCircle(Offset(size.width*.78,size.height*.16),size.width*.20,Paint()..shader=RadialGradient(colors:[accent.withValues(alpha:.34),accent.withValues(alpha:0)]).createShader(Rect.fromCircle(center:Offset(size.width*.78,size.height*.16),radius:size.width*.20)));
+    for(var i=0;i<3;i++){final p=Path()..moveTo(0,size.height*(.56+i*.10))..quadraticBezierTo(size.width*.48,size.height*(.32+i*.10),size.width,size.height*(.58+i*.10))..lineTo(size.width,size.height)..lineTo(0,size.height)..close();canvas.drawPath(p,Paint()..color=accent.withValues(alpha:.035+i*.018));}
+    break;
+   case 'sakura':
+    for(var i=0;i<34;i++){
+     final x=((i*83)%997)/997*size.width,y=((i*137)%991)/991*size.height;
+     canvas.save();canvas.translate(x,y);canvas.rotate((i%7)*.43);
+     canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:7+(i%3)*2,height:14+(i%4)*2),Paint()..color=accent.withValues(alpha:.13));
+     canvas.restore();
+    }
+    break;
+   case 'ocean':
+    for(var i=0;i<28;i++){
+     final x=((i*97)%991)/991*size.width,y=((i*149)%983)/983*size.height,r=4+(i%6)*3.0;
+     canvas.drawCircle(Offset(x,y),r,line);
+     canvas.drawCircle(Offset(x-r*.28,y-r*.3),r*.18,soft);
+    }
+    break;
+   case 'forest':
+    for(var i=0;i<22;i++){
+     final x=((i*89)%983)/983*size.width,y=((i*127)%977)/977*size.height;
+     canvas.save();canvas.translate(x,y);canvas.rotate((i%8)*.38);
+     final p=Path()..moveTo(0,0)..quadraticBezierTo(24,-28,36,0)..quadraticBezierTo(18,28,0,0);
+     canvas.drawPath(p,Paint()..color=accent.withValues(alpha:.07));
+     canvas.drawLine(Offset.zero,Offset(30,0),line);canvas.restore();
+    }
+    break;
+   case 'cosmos':
+    for(var i=0;i<75;i++){
+     final x=((i*73)%997)/997*size.width,y=((i*139)%991)/991*size.height,r=1+(i%3)*.65;
+     canvas.drawCircle(Offset(x,y),r,Paint()..color=accent.withValues(alpha:.18+(i%4)*.07));
+    }
+    canvas.drawCircle(Offset(size.width*.76,size.height*.22),size.width*.24,line);
+    canvas.drawCircle(Offset(size.width*.76,size.height*.22),size.width*.31,line);
+    break;
+   case 'desert':
+    canvas.drawCircle(Offset(size.width*.78,size.height*.19),size.width*.13,Paint()..color=accent.withValues(alpha:.12));
+    for(var i=0;i<3;i++){final p=Path()..moveTo(0,size.height*(.58+i*.10))..quadraticBezierTo(size.width*.42,size.height*(.40+i*.12),size.width,size.height*(.62+i*.09));canvas.drawPath(p,Paint()..color=accent.withValues(alpha:.06+i*.025)..style=PaintingStyle.stroke..strokeWidth:22);}
+    break;
+   case 'neon':
+    for(var x=0.0;x<size.width;x+=34){canvas.drawLine(Offset(x,0),Offset(x,size.height),line);}
+    for(var y=0.0;y<size.height;y+=34){canvas.drawLine(Offset(0,y),Offset(size.width,y),line);}
+    canvas.drawLine(Offset(size.width*.08,size.height*.72),Offset(size.width*.92,size.height*.18),Paint()..color=accent.withValues(alpha:.15)..strokeWidth:3..maskFilter=const MaskFilter.blur(BlurStyle.normal,8));
+    break;
+  }
+ }
+
+ @override
+ bool shouldRepaint(covariant _ChatAtmospherePainter oldDelegate)=>oldDelegate.skin.id!=skin.id;
+}
 
 class OursDirectChatPage extends StatefulWidget{
  final String conversationId,partnerName,partnerId;
@@ -44,13 +123,37 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final found=_skins.where((s)=>s.id==id);if(mounted)setState(()=>skin=found.isEmpty?_skins.first:found.first);
  }
  Future<void> _chooseSkin() async{
-  final selected=await showModalBottomSheet<_ChatSkin>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,
-   builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    Padding(padding:const EdgeInsets.all(12),child:Text(t('مظهر المحادثة','Chat appearance'),style:const TextStyle(color:_gold,fontSize:18))),
-    for(final s in _skins) ListTile(
-     leading:Container(width:42,height:30,decoration:BoxDecoration(color:s.bg,borderRadius:BorderRadius.circular(8),border:Border.all(color:s.accent)),child:Align(alignment:Alignment.centerRight,child:Container(width:19,height:10,margin:const EdgeInsets.all(4),decoration:BoxDecoration(color:s.mine,borderRadius:BorderRadius.circular(8))))),
-     title:Text(ar?s.ar:s.en),trailing:skin.id==s.id?const Icon(Icons.check_circle,color:_gold):null,onTap:()=>Navigator.pop(ctx,s))
-   ])));
+  final selected=await showModalBottomSheet<_ChatSkin>(
+   context:context,backgroundColor:const Color(0xFF171326),showDragHandle:true,isScrollControlled:true,
+   builder:(ctx)=>SafeArea(child:Padding(
+    padding:const EdgeInsets.fromLTRB(14,8,14,18),
+    child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Text(t('اختر أجواء محادثتكما','Choose your chat atmosphere'),style:const TextStyle(color:_gold,fontSize:18,fontWeight:FontWeight.w800)),
+     const SizedBox(height:5),
+     Text(t('كل أجواء لها مشهدها وتفاصيلها، وليس مجرد لون مختلف.','Each atmosphere has its own scene and details, not just a different color.'),style:const TextStyle(color:_lavender,fontSize:11)),
+     const SizedBox(height:14),
+     GridView.builder(
+      shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:_skins.length,
+      gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,childAspectRatio:1.35,crossAxisSpacing:10,mainAxisSpacing:10),
+      itemBuilder:(context,index){
+       final item=_skins[index];final active=skin.id==item.id;
+       return InkWell(
+        borderRadius:BorderRadius.circular(16),onTap:()=>Navigator.pop(ctx,item),
+        child:Container(
+         decoration:BoxDecoration(borderRadius:BorderRadius.circular(16),border:Border.all(color:active?item.accent:item.accent.withValues(alpha:.3),width:active?2:1)),
+         clipBehavior:Clip.antiAlias,
+         child:Stack(children:[
+          Positioned.fill(child:CustomPaint(painter:_ChatAtmospherePainter(item))),
+          Positioned(left:10,right:10,bottom:10,child:Text(ar?item.ar:item.en,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:12))),
+          if(active)const Positioned(top:8,right:8,child:Icon(Icons.check_circle,color:_gold,size:18)),
+         ]),
+        ),
+       );
+      },
+     ),
+    ]),
+   )),
+  );
   if(selected==null)return;setState(()=>skin=selected);final p=await SharedPreferences.getInstance();await p.setString('ours_direct_skin_'+widget.conversationId,selected.id);
  }
  Future<void> _load() async{
@@ -203,7 +306,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     IconButton(tooltip:t('اتصال صوتي','Voice call'),onPressed:()=>_callInfo(false),icon:Icon(Icons.call_outlined,color:skin.accent)),
     IconButton(tooltip:t('اتصال مرئي','Video call'),onPressed:()=>_callInfo(true),icon:Icon(Icons.videocam_outlined,color:skin.accent))
    ]),
-   body:Column(children:[
+   body:Stack(children:[
+    Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
+    Column(children:[
     Expanded(child:loading?Center(child:CircularProgressIndicator(color:skin.accent)):messages.isEmpty
      ?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
       Icon(Icons.forum_outlined,color:skin.accent,size:52),const SizedBox(height:12),Text(t('ابدأ محادثتكما الخاصة','Start your private conversation'),style:const TextStyle(fontSize:19)),
@@ -249,7 +354,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       IconButton(onPressed:uploading||sending?null:_startRecording,icon:Icon(Icons.mic_none_rounded,color:skin.accent)),
       IconButton.filled(onPressed:sending||uploading?null:_sendText,style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
      ])))
-   ]));
+   ]),
+  ]));
  }
 }
 
