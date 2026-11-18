@@ -1323,8 +1323,8 @@ class _ChatPageState extends State<ChatPage> {
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
                             child: Container(
-                              constraints: const BoxConstraints(
-                                maxWidth: 280,
+                              constraints: BoxConstraints(
+                                maxWidth: MediaQuery.of(context).size.width * 0.80,
                               ),
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.symmetric(
@@ -1335,10 +1335,13 @@ class _ChatPageState extends State<ChatPage> {
                                 color: isMe
                                     ? purple
                                     : const Color(0xFF211D30),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: gold.withOpacity(0.25),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(19),
+                                  topRight: const Radius.circular(19),
+                                  bottomLeft: Radius.circular(isMe ? 19 : 5),
+                                  bottomRight: Radius.circular(isMe ? 5 : 19),
                                 ),
+                                border: Border.all(color: gold.withValues(alpha: 0.18)),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
