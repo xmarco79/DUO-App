@@ -250,7 +250,7 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
         }
       });
     } catch (_) {
-      _showMessage(_notificationText(context, 'تعذر تحديث الإشععارات.', 'Could not update notifications.'));
+      _showMessage(_notificationText(context, 'تعذر تحديث الإشعارات.', 'Could not update notifications.'));
     }
   }
 
