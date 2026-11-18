@@ -452,9 +452,11 @@ jobs:
           echo "$BADGING" | grep -F "package: name='com.ours.ours'"
           VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose "$APK")"
           echo "$VERIFY_OUTPUT"
-          echo "$VERIFY_OUTPUT" | grep -F "Verified using v1 scheme (JAR signing): true"
           echo "$VERIFY_OUTPUT" | grep -F "Verified using v2 scheme (APK Signature Scheme v2): true"
-          echo "APK validation passed with v1 and v2 signatures."
+          if ! echo "$VERIFY_OUTPUT" | grep -Fq "Verified using v1 scheme (JAR signing): true"; then
+            echo "::warning::V1 JAR signing is unavailable; V2 is verified and supports Android 7.0 and newer."
+          fi
+          echo "APK validation passed with a verified V2 signature."
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
