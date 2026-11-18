@@ -157,7 +157,7 @@ jobs:
           manifest.write_text(content)
           PY
 
-      - name: Generate refined OURS Android icon
+      - name: Generate OURS infinity launcher icon
         shell: bash
         run: |
           python3 -m pip install --quiet Pillow
@@ -165,41 +165,38 @@ jobs:
           from pathlib import Path
           from PIL import Image, ImageDraw
           import math
+          import re
 
           size = 1024
-          image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-          pixels = image.load()
-          for y in range(size):
-              t = y / (size - 1)
-              top = (19, 18, 34)
-              bottom = (47, 35, 62)
-              color = tuple(round(top[i] * (1-t) + bottom[i] * t) for i in range(3))
-              for x in range(size):
-                  pixels[x, y] = (*color, 255)
-
-          mask = Image.new("L", (size, size), 0)
-          ImageDraw.Draw(mask).rounded_rectangle((0, 0, size-1, size-1), radius=230, fill=255)
-          image.putalpha(mask)
+          navy = (16, 16, 28, 255)
+          gold = (226, 194, 125, 255)
+          image = Image.new("RGBA", (size, size), navy)
           draw = ImageDraw.Draw(image)
 
-          # Minimal OURS monogram: two linked rings with a central star.
-          draw.ellipse((104, 104, 920, 920), outline=(217, 188, 134, 42), width=5)
-          draw.ellipse((230, 300, 650, 720), outline=(226, 204, 158, 255), width=52)
-          draw.ellipse((374, 300, 794, 720), outline=(185, 162, 213, 255), width=52)
-          # Small gold diamond at the point where the two rings meet.
-          star = [(512, 444), (548, 512), (512, 580), (476, 512)]
-          draw.polygon(star, fill=(239, 216, 169, 255))
-          draw.ellipse((760, 220, 806, 266), fill=(239, 216, 169, 255))
-          draw.ellipse((220, 748, 250, 778), fill=(185, 162, 213, 235))
+          # One clean gold infinity mark on a solid deep-navy background.
+          points = []
+          for step in range(2400):
+              t = 2 * math.pi * step / 2399
+              x = 512 + 300 * math.cos(t)
+              y = 512 + 180 * math.sin(2 * t)
+              points.append((round(x), round(y)))
+          draw.line(points, fill=gold, width=68, joint="curve")
 
           sizes = {"mdpi":48, "hdpi":72, "xhdpi":96, "xxhdpi":144, "xxxhdpi":192}
           for density, pixels in sizes.items():
               target = Path(f"android/app/src/main/res/mipmap-{density}/ic_launcher.png")
               target.parent.mkdir(parents=True, exist_ok=True)
               image.resize((pixels, pixels), Image.Resampling.LANCZOS).save(target, format="PNG", optimize=True)
+
+          # Keep the launcher name exactly as OURS.
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          manifest_text = manifest.read_text()
+          manifest_text = re.sub(r'android:label="[^"]*"', 'android:label="OURS"', manifest_text, count=1)
+          manifest.write_text(manifest_text)
+
           Path("build").mkdir(parents=True, exist_ok=True)
           image.save("build/ours_icon_preview.png", format="PNG", optimize=True)
-          print("Generated the linked-ring OURS launcher icon in all Android densities.")
+          print("Generated the minimal OURS infinity launcher icon and uppercase app label.")
           PY
           rm -f android/app/src/main/res/drawable/ours_icon.xml
 
