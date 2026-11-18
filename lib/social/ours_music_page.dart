@@ -35,7 +35,7 @@ class _OursMusicPageState extends State<OursMusicPage>{
  Future<void> _persist()async{final p=await SharedPreferences.getInstance();await p.setString('ours_local_music_v1',jsonEncode(tracks));}
  Future<void> _add()async{
   if(busy)return;
-  try{final result=await FilePicker.platform.pickFiles(type:FileType.audio,allowMultiple:true,withData:false);if(result==null)return;setState(()=>busy=true);final dir=await _dir();int added=0;
+  try{final result=await FilePicker.platform.pickFiles(type:FileType.audio,allowMultiple:true,withData:false);if(result==null||!mounted)return;setState(()=>busy=true);final dir=await _dir();int added=0;
    for(final f in result.files){final path=f.path;if(path==null)continue;final src=File(path);if(!await src.exists())continue;final safe=f.name.replaceAll(RegExp(r'[^a-zA-Z0-9._ -]'),'_');final target=File('${dir.path}/${DateTime.now().microsecondsSinceEpoch}_$safe');await src.copy(target.path);tracks.add({'name':f.name,'path':target.path});added++;}
    await _persist();if(mounted){setState(()=>current=current<0&&tracks.isNotEmpty?0:current);_notice(added>0?t('أُضيف $added مقطع إلى مكتبتك','Added $added tracks'):t('تعذرت قراءة الملفات المحددة','Could not read selected files'));}
   }catch(e){_notice(t('تعذرت إضافة الموسيقى: $e','Could not import music: $e'));}finally{if(mounted)setState(()=>busy=false);}
@@ -44,7 +44,7 @@ class _OursMusicPageState extends State<OursMusicPage>{
  Future<void> _toggle()async{if(selected==null){if(tracks.isNotEmpty)await _play(0);return;}try{if(player.state==PlayerState.playing){await player.pause();}else if(player.state==PlayerState.paused){await player.resume();}else{await _play(current);}}catch(e){_notice(e.toString());}}
  Future<void> _next()async{if(tracks.isEmpty)return;final i=shuffle&&tracks.length>1?Random().nextInt(tracks.length):current+1;if(i>=tracks.length&&!repeatAll&&!shuffle){await player.stop();if(mounted)setState(()=>position=Duration.zero);return;}await _play(i%tracks.length);}
  Future<void> _prev()async{if(tracks.isEmpty)return;if(position>const Duration(seconds:3)){await player.seek(Duration.zero);return;}await _play((current-1+tracks.length)%tracks.length);}
- Future<void> _remove(int i)async{final path=tracks[i]['path']!;if(i==current)await player.stop();try{final f=File(path);if(await f.exists())await f.delete();}catch(_){}setState((){tracks.removeAt(i);if(tracks.isEmpty)current=-1;else if(i<current)current--;else if(i==current)current=i.clamp(0,tracks.length-1);});await _persist();}
+ Future<void> _remove(int i)async{final path=tracks[i]['path']!;if(i==current)await player.stop();try{final f=File(path);if(await f.exists())await f.delete();}catch(_){}setState((){tracks.removeAt(i);if(tracks.isEmpty)current=-1;else if(i<current)current--;else if(i==current)current=i.clamp(0,tracks.length-1).toInt();});await _persist();}
  void _notice(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
  String _time(Duration d)=>'${d.inMinutes.remainder(60).toString().padLeft(2,'0')}:${d.inSeconds.remainder(60).toString().padLeft(2,'0')}';
  @override void dispose(){search.dispose();player.dispose();super.dispose();}
