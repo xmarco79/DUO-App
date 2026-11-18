@@ -7,7 +7,8 @@ alter table public.duo_direct_messages
 
 alter table public.duo_direct_messages
   add column if not exists viewed_at timestamptz,
-  add column if not exists viewed_by uuid references auth.users(id) on delete set null;
+  add column if not exists viewed_by uuid references auth.users(id) on delete set null,
+  add column if not exists view_once_storage_path text;
 
 alter table storage.buckets
   add column if not exists allowed_mime_types text[];
@@ -59,7 +60,7 @@ begin
   end if;
 
   update public.duo_direct_messages
-    set viewed_at=now(), viewed_by=auth.uid(), body='[viewed]'
+    set viewed_at=now(), viewed_by=auth.uid(), view_once_storage_path=v_path, body='[viewed]'
   where id=p_message_id;
 
   return v_path;
@@ -87,3 +88,19 @@ with check ((select auth.uid())=user_id);
 create index if not exists ours_self_messages_user_created_idx
 on public.ours_self_messages(user_id, created_at desc);
 grant select, insert, update, delete on public.ours_self_messages to authenticated;
+
+-- The recipient may remove only the exact object consumed through the one-time view RPC.
+drop policy if exists "recipient deletes consumed view once media" on storage.objects;
+create policy "recipient deletes consumed view once media"
+on storage.objects for delete to authenticated
+using (
+  bucket_id='ours-direct-media'
+  and exists (
+    select 1 from public.duo_direct_messages m
+    join public.duo_conversation_members cm
+      on cm.conversation_id=m.conversation_id and cm.user_id=(select auth.uid())
+    where m.view_once_storage_path=storage.objects.name
+      and m.viewed_by=(select auth.uid())
+      and m.message_type='view_once'
+  )
+);
