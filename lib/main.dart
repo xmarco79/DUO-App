@@ -1478,7 +1478,7 @@ class _ChatPageState extends State<ChatPage> {
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(color: chatTheme.accent.withValues(alpha: 0.18)),
                                     ),
-                                    child: Text(_formatChatDate(item['created_at']), style: const TextStyle(color: lavender, fontSize: 10)),
+                                    child: Text(_formatChatDate(item['created_at']), style: TextStyle(color: chatTheme.accent, fontSize: 10)),
                                   ),
                                 ),
                               Align(
@@ -1670,7 +1670,7 @@ class _ChatPageState extends State<ChatPage> {
           Container(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
             decoration: BoxDecoration(
-              color: chatTheme.mine,
+              gradient: LinearGradient(colors: [chatTheme.mine, chatTheme.background], begin: Alignment.centerLeft, end: Alignment.centerRight),
               border: Border(
                 top: BorderSide(
                   color: chatTheme.accent.withValues(alpha: 0.2),
