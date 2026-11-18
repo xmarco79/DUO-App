@@ -23,6 +23,7 @@ class OursSocialHomePage extends StatefulWidget {
 
 class _OursSocialHomePageState extends State<OursSocialHomePage> {
   int index = 0;
+  final Set<int> visitedTabs = {0};
   String? spaceId;
   bool loadingSpace = true;
   final db = Supabase.instance.client;
@@ -53,19 +54,22 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      OursConnectHubPage(
-        key: const ValueKey('private-pair'),
-        spaceId: spaceId,
-        loading: loadingSpace,
-        onSpaceChanged: _updateSpace,
-        onChatTap: widget.onChatTap,
-      ),
-      OursWorldHubPage(key: ValueKey('universe-$spaceId'), spaceId: spaceId, worldIndex: 1, onSpaceChanged: _updateSpace),
-      OursWorldHubPage(key: ValueKey('play-$spaceId'), spaceId: spaceId, worldIndex: 2, onSpaceChanged: _updateSpace),
-      OursWorldHubPage(key: ValueKey('memories-$spaceId'), spaceId: spaceId, worldIndex: 3, onSpaceChanged: _updateSpace),
-      OursWorldHubPage(key: ValueKey('together-$spaceId'), spaceId: spaceId, worldIndex: 4, onSpaceChanged: _updateSpace),
-    ];
+    final pages = List<Widget>.generate(5, (tab) {
+      if (!visitedTabs.contains(tab)) return const SizedBox.shrink();
+      return switch (tab) {
+        0 => OursConnectHubPage(
+          key: const ValueKey('private-pair'),
+          spaceId: spaceId,
+          loading: loadingSpace,
+          onSpaceChanged: _updateSpace,
+          onChatTap: widget.onChatTap,
+        ),
+        1 => OursWorldHubPage(key: ValueKey('universe-$spaceId'), spaceId: spaceId, worldIndex: 1, onSpaceChanged: _updateSpace),
+        2 => OursWorldHubPage(key: ValueKey('play-$spaceId'), spaceId: spaceId, worldIndex: 2, onSpaceChanged: _updateSpace),
+        3 => OursWorldHubPage(key: ValueKey('memories-$spaceId'), spaceId: spaceId, worldIndex: 3, onSpaceChanged: _updateSpace),
+        _ => OursWorldHubPage(key: ValueKey('together-$spaceId'), spaceId: spaceId, worldIndex: 4, onSpaceChanged: _updateSpace),
+      };
+    });
     return Scaffold(
       appBar: AppBar(
         backgroundColor: _navy,
@@ -82,7 +86,10 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
         backgroundColor: _purple,
         indicatorColor: _lavender.withValues(alpha: .18),
         selectedIndex: index,
-        onDestinationSelected: (value) => setState(() => index = value),
+        onDestinationSelected: (value) => setState(() {
+          visitedTabs.add(value);
+          index = value;
+        }),
         destinations: [
           NavigationDestination(icon: const Icon(Icons.forum_outlined), selectedIcon: const Icon(Icons.forum), label: _oursText(context, 'مساحتنا', 'Our Space')),
           NavigationDestination(icon: const Icon(Icons.public_outlined), label: _oursText(context, 'العالم', 'Universe')),
