@@ -167,7 +167,10 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { loading = false; error = 'تعذر تحميل الإشعارات'; });
+      setState(() {
+        loading = false;
+        error = _notificationText(context, 'تعذر تحميل الإشعارات. تحقق من اتصالك وحاول مجددًا.', 'Could not load notifications. Check your connection and try again.');
+      });
     }
   }
 
@@ -228,7 +231,9 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
         final index = notifications.indexWhere((row) => row['id'] == item['id']);
         if (index >= 0) notifications[index]['read_at'] = DateTime.now().toIso8601String();
       });
-    } catch (_) {}
+    } catch (_) {
+      _showMessage(_notificationText(context, 'تعذر تحديث الإشعار.', 'Could not update notification.'));
+    }
   }
 
   Future<void> _markAllRead() async {
@@ -244,7 +249,9 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
           row['read_at'] ??= DateTime.now().toIso8601String();
         }
       });
-    } catch (_) {}
+    } catch (_) {
+      _showMessage(_notificationText(context, 'تعذر تحديث الإشععارات.', 'Could not update notifications.'));
+    }
   }
 
   @override
@@ -269,10 +276,10 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
         : error != null
           ? Center(child: Text(error!))
           : notifications.isEmpty
-            ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.notifications_off_outlined, color: _oursLavender, size: 42),
-                SizedBox(height: 10),
-                Text('لا توجد إشعارات حتى الآن'),
+            ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.notifications_off_outlined, color: _oursLavender, size: 42),
+                const SizedBox(height: 10),
+                Text(_notificationText(context, 'لا توجد إشعارات حتى الآن', 'No notifications yet')),
               ]))
             : RefreshIndicator(
                 onRefresh: _load,
