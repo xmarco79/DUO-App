@@ -21,10 +21,8 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
  Future<void> _load() async {try{
   final raw=await db.rpc('ensure_ours_pair_space'); final m=Map<String,dynamic>.from(raw as Map);
   final me=db.auth.currentUser!.id;
-  final ownMembership=await db.from('duo_conversation_members').select('conversation_id').eq('user_id',me).limit(1).maybeSingle();
-  String? foundConversation,foundPartner,foundName;
-  if(ownMembership!=null){
-   foundConversation=ownMembership['conversation_id'].toString();
+  String? foundConversation=m['conversation_id']?.toString(),foundPartner,foundName;
+  if(foundConversation!=null&&foundConversation.isNotEmpty){
    final members=await db.from('duo_conversation_members').select('user_id').eq('conversation_id',foundConversation);
    final others=members.where((row)=>row['user_id'].toString()!=me).toList();
    if(others.isNotEmpty){
