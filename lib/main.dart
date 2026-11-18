@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'social/ours_home_page.dart';
 import 'worlds/world_hub_page.dart';
-import 'memories/ours_albums_page.dart';
 import 'notifications/ours_notifications.dart';
 import 'chat/ours_message_reactions.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -1696,12 +1695,6 @@ class _ChatPageState extends State<ChatPage> {
     controller.dispose();
   }
 
-  void openAlbums() {
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => OursAlbumsPage(spaceId: widget.spaceId),
-    ));
-  }
-
   void openMediaGallery() {
     Navigator.push(
       context,
@@ -1773,11 +1766,6 @@ class _ChatPageState extends State<ChatPage> {
               Icons.search,
               color: searchQuery.isEmpty ? gold : Colors.lightGreenAccent,
             ),
-          ),
-          IconButton(
-            tooltip: 'ألبومات الصور المشتركة',
-            onPressed: openAlbums,
-            icon: const Icon(Icons.photo_album_outlined, color: gold),
           ),
           IconButton(
             tooltip: 'الوسائط والملفات المشتركة',
