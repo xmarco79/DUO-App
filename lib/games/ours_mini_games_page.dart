@@ -14,8 +14,8 @@ class OursMiniGamesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final entries = [
       (Icons.grid_view_rounded, 'لعبة الذاكرة', 'Memory Match', 'اجمعا الأزواج وتنافسا على النقاط', 'Find pairs and compete', const _MemoryPage()),
-      (Icons.bolt_rounded, 'اختبار المعلومات', 'Quick Quiz', 'عشرة أسئلة متنوعة وسريعة', 'Ten quick mixed questions', const _QuizPage()),
-      (Icons.psychology_alt_rounded, 'خمن الكلمة', 'Word Riddle', 'اكتشف الكلمة من التلميح', 'Guess the word from a clue', const _WordPage()),
+      (Icons.bolt_rounded, 'اختبار المعلومات', 'Quick Quiz', 'اختبر معلوماتك بعشرة أسئلة سريعة', 'Test your knowledge with ten quick questions', const _QuizPage()),
+      (Icons.psychology_alt_rounded, 'خمن الكلمة', 'Word Riddle', 'اختبر سرعة ملاحظتك في ثماني جولات', 'Test your observation in eight rounds', const _WordPage()),
     ];
     return Scaffold(
       backgroundColor: _n,
@@ -32,7 +32,7 @@ class OursMiniGamesPage extends StatelessWidget {
             const SizedBox(height: 8),
             Text(_t(context, 'تحديات صغيرة، لحظات أكبر', 'Small games. Big moments.'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text(_t(context, 'اختارا لعبة وابدآ التحدي. الألعاب المصغرة تعمل على الجهاز نفسه ويمكنكما تمرير الجهاز بالتناوب.', 'Pick a game and challenge each other. Mini-games run on this device, so you can take turns passing it.'), style: const TextStyle(color: _l, height: 1.5)),
+            Text(_t(context, 'تنافسا في لعبة الذاكرة، أو اختبرا معلوماتكما في التحديات الفردية. كل الألعاب تعمل دون اتصال.', 'Compete in Memory Match or test your knowledge in solo challenges. All games work offline.'), style: const TextStyle(color: _l, height: 1.5)),
           ])),
         const SizedBox(height: 22),
         Text(_t(context, 'اختارا لعبتكما', 'CHOOSE A GAME'), style: const TextStyle(color: _g, letterSpacing: 2, fontWeight: FontWeight.bold)),
@@ -44,7 +44,7 @@ class OursMiniGamesPage extends StatelessWidget {
           desc: _t(context, 'العبا مباشرة من جهازين عبر مساحتكما المشتركة.', 'Play live from two devices in your shared space.'),
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OursTicTacToePage(spaceId: spaceId!)))),
         const SizedBox(height: 14),
-        Text(_t(context, 'الألعاب المصغرة محلية؛ نتائجها محفوظة على هذا الجهاز فقط ولا تُرسل للطرف الآخر.', 'Mini-game scores stay on this device and are not sent to your partner.'),
+        Text(_t(context, 'الألعاب المصغرة تعمل محليًا؛ أفضل نتيجة للاختبار تُحفظ على هذا الجهاز فقط ولا تُرسل للطرف الآخر.', 'Mini-games run locally. Quiz best score stays on this device and is not shared.'),
           textAlign: TextAlign.center, style: const TextStyle(color: _l, fontSize: 11, height: 1.5)),
       ]),
     );
