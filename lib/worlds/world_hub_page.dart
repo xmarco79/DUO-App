@@ -62,8 +62,8 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       ('Little Notes', 'ملاحظات مشتركة', Icons.sticky_note_2_outlined),
       ('Voice Diary', 'يوميات صوتية', Icons.mic_none_rounded),
       ('Our List', 'قائمة مشتركة', Icons.checklist_rounded),
-      ('Our Radio', 'رسائل صوتية قصيرة', Icons.radio_rounded),
-      ('I’m Here', 'إشارة لطيفة بأنك موجود', Icons.waving_hand_outlined),
+      ('This or That', 'اختارا بين خيارين', Icons.compare_arrows_rounded),
+      ('Our Votes', 'تصويتاتكما المشتركة', Icons.how_to_vote_outlined),
     ],
     [
       ('Our World Notes', 'ملاحظات عالمكما', Icons.sticky_note_2_outlined),
@@ -76,25 +76,25 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       ('Question of the Day', 'سؤال اليوم', Icons.help_outline_rounded),
       ('This or That', 'هذا أم ذاك؟', Icons.compare_arrows_rounded),
       ('Who Knows Who?', 'من يعرف الآخر أكثر؟', Icons.psychology_alt_outlined),
-      ('Spin Together', 'عجلة الاختيارات', Icons.casino_outlined),
+      ('Quick Choice', 'اختيار مشترك بين عدة خيارات', Icons.shuffle_rounded),
       ('Our Votes', 'تصويت مشترك', Icons.how_to_vote_outlined),
       ('Mini Missions', 'مهام بسيطة وآمنة', Icons.task_alt_rounded),
     ],
     [
       ('Our Memories', 'خط زمني للحظاتكما', Icons.photo_library_outlined),
       ('Time Capsule', 'رسائل للمستقبل', Icons.inventory_2_outlined),
-      ('Our Scrapbook', 'ألبوم القصاصات', Icons.collections_bookmark_outlined),
+      ('Scrapbook Notes', 'ملاحظات ألبومكما', Icons.collections_bookmark_outlined),
       ('Open When', 'رسائل لمناسبات محددة', Icons.mail_outline_rounded),
       ('The Archive', 'أرشيف الذكريات', Icons.archive_outlined),
-      ('Our Wrapped', 'ملخص شهري', Icons.auto_graph_rounded),
+      ('Voice Diary', 'يوميات صوتية', Icons.mic_none_rounded),
     ],
     [
       ('Bucket List', 'أشياء نريد تجربتها', Icons.checklist_rounded),
       ('Our Calendar', 'مواعيد ومناسبات', Icons.calendar_month_outlined),
       ('Our Goals', 'أهداف مشتركة', Icons.flag_outlined),
       ('Places to Go', 'أماكن نريد زيارتها', Icons.place_outlined),
-      ('Focus Together', 'جلسة تركيز مشتركة', Icons.timer_outlined),
-      ('Future Predictions', 'توقعات نفتحها لاحقًا', Icons.auto_awesome_outlined),
+      ('Focus Notes', 'ملاحظات جلسات التركيز', Icons.timer_outlined),
+      ('Future Notes', 'ملاحظات للمستقبل', Icons.auto_awesome_outlined),
     ],
   ];
 
@@ -506,7 +506,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     ),
                   ),
                 ),
-              if (kind == 'Our Votes' || kind == 'This or That' || kind == 'Who Knows Who?' || kind == 'World Polls' || kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist')
+              if (kind == 'Our Votes' || kind == 'This or That' || kind == 'Who Knows Who?' || kind == 'World Polls' || kind == 'Question of the Day' || kind == 'Quick Choice' || kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist')
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: TextField(
@@ -514,7 +514,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     minLines: 2,
                     maxLines: 5,
                     decoration: InputDecoration(
-                      labelText: (kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List') ? _worldText(context, 'المهام (كل مهمة في سطر)', 'Tasks (one per line)') : _worldText(context, 'الخيارات (كل خيار في سطر)', 'Options (one per line)'),
+                      labelText: (kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist' || kind == 'Our Goals') ? _worldText(context, 'المهام (كل مهمة في سطر)', 'Tasks (one per line)') : _worldText(context, 'الخيارات (كل خيار في سطر)', 'Options (one per line)'),
                       hintText: _worldText(context, 'الخيار الأول\nالخيار الثاني', 'Option one\nOption two'),
                       border: const OutlineInputBorder(),
                     ),
@@ -574,7 +574,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     if (result == true && title.text.trim().isNotEmpty) {
       final lines = options.text.split('\n').map((v) => v.trim())
           .where((v) => v.isNotEmpty).take(30).toList();
-      final isTaskList = kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist';
+      final isTaskList = kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist' || kind == 'Our Goals';
       final isQuiz = kind == 'Who Knows Who?';
       final quizOptions = lines.take(6).toList();
       final correct = quizOptions.indexWhere((v) =>
