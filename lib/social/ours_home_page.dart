@@ -401,7 +401,12 @@ class _WatchState extends State<_WatchView> {
           .single();
       if (mounted) setState(() => session = Map<String, dynamic>.from(created));
     } catch (error) {
-      _message(error.toString());
+      await _load();
+      if (error.toString().contains('23505')) {
+        _message(_t(context, 'بدأت جلسة مشاهدة أخرى بالفعل.', 'A watch session is already active.'));
+      } else {
+        _message(error.toString());
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
