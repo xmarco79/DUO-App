@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../worlds/world_hub_page.dart';
+import '../games/ours_tic_tac_toe_page.dart';
 
 const _oursGold = Color(0xFFD9BC86);
 const _oursPurple = Color(0xFF29213D);
@@ -8,7 +10,8 @@ String _notificationText(BuildContext context, String ar, String en) => Localiza
 
 class OursNotificationBell extends StatefulWidget {
   final String? spaceId;
-  const OursNotificationBell({super.key, required this.spaceId});
+  final VoidCallback? onOpenMessage;
+  const OursNotificationBell({super.key, required this.spaceId, this.onOpenMessage});
 
   @override
   State<OursNotificationBell> createState() => _OursNotificationBellState();
@@ -86,7 +89,10 @@ class _OursNotificationBellState extends State<OursNotificationBell> {
       tooltip: _notificationText(context, 'الإشعارات', 'Notifications'),
       onPressed: () async {
         await Navigator.push(context, MaterialPageRoute(
-          builder: (_) => OursNotificationsPage(spaceId: widget.spaceId!),
+          builder: (_) => OursNotificationsPage(
+            spaceId: widget.spaceId!,
+            onOpenMessage: widget.onOpenMessage,
+          ),
         ));
         _loadCount();
       },
@@ -112,7 +118,8 @@ class _OursNotificationBellState extends State<OursNotificationBell> {
 
 class OursNotificationsPage extends StatefulWidget {
   final String spaceId;
-  const OursNotificationsPage({super.key, required this.spaceId});
+  final VoidCallback? onOpenMessage;
+  const OursNotificationsPage({super.key, required this.spaceId, this.onOpenMessage});
 
   @override
   State<OursNotificationsPage> createState() => _OursNotificationsPageState();
@@ -162,6 +169,52 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
       if (!mounted) return;
       setState(() { loading = false; error = 'تعذر تحميل الإشعارات'; });
     }
+  }
+
+  Future<void> _openNotification(Map<String, dynamic> item) async {
+    await _markRead(item);
+    if (!mounted) return;
+    final type = item['notification_type']?.toString();
+    if (type == 'message') {
+      widget.onOpenMessage?.call();
+      return;
+    }
+    if (type == 'world_item') {
+      final data = item['data'] is Map
+          ? Map<String, dynamic>.from(item['data'] as Map)
+          : <String, dynamic>{};
+      final entityId = data['entity_id']?.toString();
+      if (entityId == null || entityId.isEmpty) return;
+      try {
+        final row = await db.from('duo_world_items')
+            .select('world')
+            .eq('id', entityId)
+            .eq('space_id', widget.spaceId)
+            .maybeSingle();
+        if (!mounted || row == null) return;
+        const indexes = {
+          'connect': 0, 'universe': 1, 'play': 2, 'memories': 3, 'together': 4,
+        };
+        final index = indexes[row['world']?.toString()];
+        if (index == null) return;
+        await Navigator.push(context, MaterialPageRoute(
+          builder: (_) => OursWorldHubPage(spaceId: widget.spaceId, worldIndex: index),
+        ));
+      } catch (_) {
+        if (mounted) _showMessage(_notificationText(context, 'تعذر فتح العنصر المرتبط.', 'Could not open the related item.'));
+      }
+      return;
+    }
+    if (type == 'game') {
+      await Navigator.push(context, MaterialPageRoute(
+        builder: (_) => OursTicTacToePage(spaceId: widget.spaceId),
+      ));
+    }
+  }
+
+  void _showMessage(String value) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
   }
 
   Future<void> _markRead(Map<String, dynamic> item) async {
@@ -233,7 +286,7 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
                     return Card(
                       color: _oursPurple,
                       child: ListTile(
-                        onTap: () => _markRead(item),
+                        onTap: () => _openNotification(item),
                         leading: CircleAvatar(
                           backgroundColor: _oursGold.withOpacity(.15),
                           child: Icon(
