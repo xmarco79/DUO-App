@@ -244,6 +244,7 @@ class _StudioState extends State<_StudioView> {
                 scope = values.first;
                 loading = true;
                 points = [];
+                redoStack.clear();
               });
               _load();
             },
