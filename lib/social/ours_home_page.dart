@@ -16,13 +16,13 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
  @override void initState(){super.initState();_load();}
  Future<void> _load() async {try{
   final raw=await db.rpc('ensure_ours_pair_space'); final m=Map<String,dynamic>.from(raw as Map);
-  if(mounted)setState(()=>{spaceId=m['space_id'].toString(),conversationId=m['conversation_id'].toString(),loading=false});
- }catch(e){if(mounted)setState(()=>{error=e.toString(),loading=false});}}
+  if(mounted)setState(() { spaceId=m['space_id'].toString(); conversationId=m['conversation_id'].toString(); loading=false; });
+ }catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}}
  @override Widget build(BuildContext context){
   final labels=[_t(context,'مساحتنا','Space'),_t(context,'مرسمنا','Studio'),_t(context,'المشاهدة','Watch'),_t(context,'موسيقانا','Music'),_t(context,'التقرير','Report')];
   final icons=[Icons.forum_outlined,Icons.brush_outlined,Icons.live_tv_outlined,Icons.music_note_outlined,Icons.insights_outlined];
   return Scaffold(appBar:AppBar(title:const Text('OURS',style:TextStyle(color:_g,letterSpacing:5)),actions:[IconButton(onPressed:widget.onProfileTap,icon:const Icon(Icons.tune,color:_l))]),
-   body:loading?const Center(child:CircularProgressIndicator(color:_g)):error!=null?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Text(_t(context,'تعذر تجهيز مساحتنا','Could not load space')),Text(error!,style:const TextStyle(color:_l)),TextButton(onPressed:()=>setState(()=>{loading=true,error=null,_load()}),child:Text(_t(context,'إعادة المحاولة','Retry')))])):
+   body:loading?const Center(child:CircularProgressIndicator(color:_g)):error!=null?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Text(_t(context,'تعذر تجهيز مساحتنا','Could not load space')),Text(error!,style:const TextStyle(color:_l)),TextButton(onPressed:()=>setState(() { loading=true; error=null; _load(); }),child:Text(_t(context,'إعادة المحاولة','Retry')))])):
    IndexedStack(index:tab,children:[
     _SpaceView(spaceId:spaceId!,conversationId:conversationId!,onChat:()=>widget.onChatTap(spaceId!),onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(conversationId:conversationId!)))),
     _StudioView(spaceId:spaceId!),
@@ -48,11 +48,11 @@ class _StudioView extends StatefulWidget{final String spaceId;const _StudioView(
 class _StudioState extends State<_StudioView>{
  final db=Supabase.instance.client;String scope='personal';List<Map<String,dynamic>> rows=[];bool loading=true;Color color=_l;List<Offset> points=[];
  @override void initState(){super.initState();_load();}
- Future<void> _load()async{try{var q=db.from('ours_canvas_strokes').select().eq('space_id',widget.spaceId);q=scope=='personal'?q.eq('owner_id',db.auth.currentUser!.id):q.eq('scope','shared');final r=await q.order('created_at');if(mounted)setState(()=>{rows=List<Map<String,dynamic>>.from(r),loading=false});}catch(_){if(mounted)setState(()=>loading=false);}}
+ Future<void> _load()async{try{var q=db.from('ours_canvas_strokes').select().eq('space_id',widget.spaceId);q=scope=='personal'?q.eq('owner_id',db.auth.currentUser!.id):q.eq('scope','shared');final r=await q.order('created_at');if(mounted)setState(() { rows=List<Map<String,dynamic>>.from(r); loading=false; });}catch(_){if(mounted)setState(()=>loading=false);}}
  Future<void> _save()async{if(points.length<2)return;try{await db.from('ours_canvas_strokes').insert({'space_id':widget.spaceId,'owner_id':scope=='personal'?db.auth.currentUser!.id:null,'scope':scope,'points':points.map((p)=>{'x':p.dx,'y':p.dy}).toList(),'color':color.value,'stroke_width':4});points=[];_load();}catch(e){_msg(e.toString());}}
  void _msg(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
  @override Widget build(BuildContext c)=>Column(children:[
-  Padding(padding:const EdgeInsets.all(12),child:SegmentedButton<String>(segments:[ButtonSegment(value:'personal',label:Text(_t(c,'مرسمي','My studio'))),ButtonSegment(value:'shared',label:Text(_t(c,'مرسمنا المشترك','Shared studio')))],selected:{scope},onSelectionChanged:(v)=>setState(()=>{scope=v.first,loading=true,_load()}))),
+  Padding(padding:const EdgeInsets.all(12),child:SegmentedButton<String>(segments:[ButtonSegment(value:'personal',label:Text(_t(c,'مرسمي','My studio'))),ButtonSegment(value:'shared',label:Text(_t(c,'مرسمنا المشترك','Shared studio')))],selected:{scope},onSelectionChanged:(v)=>setState(() { scope=v.first; loading=true; _load(); }))),
   Row(mainAxisAlignment:MainAxisAlignment.center,children:[for(final x in [_l,_g,Colors.white,Colors.redAccent,Colors.lightBlueAccent])IconButton(onPressed:()=>setState(()=>color=x),icon:Icon(Icons.circle,color:x))]),
   Expanded(child:Padding(padding:const EdgeInsets.all(10),child:Container(decoration:BoxDecoration(color:const Color(0xFF171522),borderRadius:BorderRadius.circular(18)),child:loading?const Center(child:CircularProgressIndicator()):GestureDetector(onPanStart:(d)=>setState(()=>points=[d.localPosition]),onPanUpdate:(d)=>setState(()=>points.add(d.localPosition)),onPanEnd:(_)=>_save(),child:CustomPaint(painter:_CanvasPainter(rows,points,color),child:const SizedBox.expand()))))),
   Padding(padding:const EdgeInsets.all(8),child:Text(_t(c,'المرسم الشخصي خاص بك، والمشترك ظاهر للحسابين.','Personal canvas is private; shared canvas is visible to both.'),style:const TextStyle(color:_l,fontSize:11)))
@@ -88,7 +88,7 @@ class _SpotifyState extends State<_SpotifyView>{final q=TextEditingController();
 class _ReportView extends StatefulWidget{final String spaceId;const _ReportView({required this.spaceId});@override State<_ReportView> createState()=>_ReportState();}
 class _ReportState extends State<_ReportView>{final db=Supabase.instance.client;Map<String,dynamic>? data;bool loading=true;String? error;
  @override void initState(){super.initState();_load();}
- Future<void> _load()async{try{final r=await db.rpc('generate_ours_weekly_report');if(mounted)setState(()=>{data=Map<String,dynamic>.from(r as Map),loading=false});}catch(e){if(mounted)setState(()=>{error=e.toString(),loading=false});}}
+ Future<void> _load()async{try{final r=await db.rpc('generate_ours_weekly_report');if(mounted)setState(() { data=Map<String,dynamic>.from(r as Map); loading=false; });}catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}}
  @override Widget build(BuildContext c){if(loading)return const Center(child:CircularProgressIndicator());if(error!=null)return Center(child:Text(_t(c,'التقرير يحتاج تحديث قاعدة البيانات','Report requires database migration')+'\n'+error!,style:const TextStyle(color:_l)));return ListView(padding:const EdgeInsets.all(18),children:[const _Header(icon:Icons.insights,title:'تقرير OURS',subtitle:'ملخص أسبوعي للحسابين'),for(final key in ['naif','zoi','shared'])Card(color:_p,child:ListTile(title:Text(key=='shared'?_t(c,'نشاطكما المشترك','Shared activity'):key),subtitle:Text((data![key]??{}).toString(),style:const TextStyle(color:_l))))]);}
 }
 class _Header extends StatelessWidget{final IconData icon;final String title,subtitle;const _Header({required this.icon,required this.title,required this.subtitle});@override Widget build(BuildContext c)=>Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:_p,borderRadius:BorderRadius.circular(18)),child:Row(children:[Icon(icon,color:_g,size:30),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),Text(subtitle,style:const TextStyle(color:_l,fontSize:12))]))]));}
