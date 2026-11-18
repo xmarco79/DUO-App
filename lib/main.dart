@@ -31,6 +31,19 @@ String oursText(BuildContext context, String ar, String en) =>
 
 // Preview builds open the home screen without requiring an account.
 
+class _OursChatTheme {
+  final String id, titleAr, titleEn;
+  final Color background, mine, partner, accent;
+  const _OursChatTheme(this.id, this.titleAr, this.titleEn, this.background, this.mine, this.partner, this.accent);
+}
+
+const _oursChatThemes = [
+  _OursChatTheme('midnight', 'ليلي', 'Midnight', Color(0xFF10101C), Color(0xFF342B4C), Color(0xFF211D30), gold),
+  _OursChatTheme('ocean', 'المحيط', 'Ocean', Color(0xFF0B1B2A), Color(0xFF174A66), Color(0xFF173244), Color(0xFF75C8D8)),
+  _OursChatTheme('rose', 'وردي هادئ', 'Soft rose', Color(0xFF24151F), Color(0xFF63364D), Color(0xFF382331), Color(0xFFF0AFC4)),
+  _OursChatTheme('forest', 'الغابة', 'Forest', Color(0xFF101F1A), Color(0xFF285342), Color(0xFF1D332B), Color(0xFF9CC9A8)),
+];
+
 // ==================== APP PREFERENCES ====================
 
 class OursAppSettings {
@@ -550,6 +563,7 @@ class _ChatPageState extends State<ChatPage> {
   String partnerName = 'مساحتكما الخاصة';
   int unreadIncomingCount = 0;
   String searchQuery = '';
+  _OursChatTheme chatTheme = _oursChatThemes.first;
 
   RealtimeChannel? channel;
   RealtimeChannel? presenceChannel;
@@ -561,10 +575,56 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     loadMessages();
+    loadChatTheme();
     loadQuietMode();
     loadParticipantNames();
     listenToMessages();
     listenToPresence();
+  }
+
+  Future<void> loadChatTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getString('ours_chat_theme_${currentUserId}') ?? 'midnight';
+    final selected = _oursChatThemes.where((theme) => theme.id == id);
+    if (mounted) setState(() => chatTheme = selected.isEmpty ? _oursChatThemes.first : selected.first);
+  }
+
+  Future<void> chooseChatTheme() async {
+    final selected = await showModalBottomSheet<_OursChatTheme>(
+      context: context,
+      backgroundColor: purple,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Text(oursText(context, 'مظهر المحادثة', 'Chat appearance'), style: const TextStyle(color: gold, fontSize: 18, fontWeight: FontWeight.w600)),
+            ),
+            for (final theme in _oursChatThemes)
+              ListTile(
+                leading: Container(
+                  width: 42,
+                  height: 30,
+                  decoration: BoxDecoration(color: theme.background, borderRadius: BorderRadius.circular(8), border: Border.all(color: theme.accent)),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: Container(width: 19, height: 10, margin: const EdgeInsets.all(4), decoration: BoxDecoration(color: theme.mine, borderRadius: BorderRadius.circular(8))),
+                  ),
+                ),
+                title: Text(oursText(context, theme.titleAr, theme.titleEn)),
+                trailing: chatTheme.id == theme.id ? const Icon(Icons.check_circle, color: gold) : null,
+                onTap: () => Navigator.pop(sheetContext, theme),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => chatTheme = selected);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ours_chat_theme_${currentUserId}', selected.id);
   }
 
   Future<void> loadQuietMode() async {
@@ -1253,8 +1313,13 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ),
         centerTitle: true,
-        backgroundColor: navy,
+        backgroundColor: chatTheme.background,
         actions: [
+          IconButton(
+            tooltip: 'مظهر المحادثة',
+            onPressed: chooseChatTheme,
+            icon: const Icon(Icons.palette_outlined, color: gold),
+          ),
           IconButton(
             tooltip: 'البحث في المحادثة',
             onPressed: showMessageSearch,
@@ -1332,9 +1397,9 @@ class _ChatPageState extends State<ChatPage> {
                                     margin: const EdgeInsets.only(top: 8, bottom: 14),
                                     padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: purple.withValues(alpha: 0.72),
+                                      color: chatTheme.partner.withValues(alpha: 0.85),
                                       borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: gold.withValues(alpha: 0.18)),
+                                      border: Border.all(color: chatTheme.accent.withValues(alpha: 0.18)),
                                     ),
                                     child: Text(_formatChatDate(item['created_at']), style: const TextStyle(color: lavender, fontSize: 10)),
                                   ),
@@ -1386,9 +1451,9 @@ class _ChatPageState extends State<ChatPage> {
                                       margin: const EdgeInsets.only(bottom: 8),
                                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: navy.withOpacity(0.65),
+                                        color: chatTheme.background.withValues(alpha: 0.65),
                                         borderRadius: BorderRadius.circular(8),
-                                        border: const Border(left: BorderSide(color: gold, width: 3)),
+                                        border: const Border(left: BorderSide(color: chatTheme.accent, width: 3)),
                                       ),
                                       child: Text(
                                         'رد على: ${_messagePreview(messages.firstWhere(
@@ -1530,10 +1595,10 @@ class _ChatPageState extends State<ChatPage> {
           Container(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
             decoration: BoxDecoration(
-              color: purple,
+              color: chatTheme.mine,
               border: Border(
                 top: BorderSide(
-                  color: gold.withOpacity(0.2),
+                  color: chatTheme.accent.withValues(alpha: 0.2),
                 ),
               ),
             ),
