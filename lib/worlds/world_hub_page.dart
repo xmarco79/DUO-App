@@ -506,7 +506,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                     ),
                   ),
                 ),
-              if (kind == 'Our Votes' || kind == 'This or That' || kind == 'Who Knows Who?' || kind == 'World Polls' || kind == 'Question of the Day' || kind == 'Quick Choice' || kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist')
+              if (kind == 'Our Votes' || kind == 'This or That' || kind == 'Who Knows Who?' || kind == 'World Polls' || kind == 'Question of the Day' || kind == 'Quick Choice' || kind == 'Our List' || kind == 'Mini Missions' || kind == 'Bucket List' || kind == 'World Checklist' || kind == 'Our Goals')
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: TextField(
