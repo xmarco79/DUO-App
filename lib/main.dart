@@ -1108,7 +1108,7 @@ class _ChatPageState extends State<ChatPage> {
     if (value == null) return '';
     try {
       final date = DateTime.parse(value.toString()).toLocal();
-      return DateFormat('h:mm a').format(date);
+      return DateFormat(Localizations.localeOf(context).languageCode == 'ar' ? 'HH:mm' : 'h:mm a').format(date);
     } catch (_) {
       return '';
     }
@@ -1124,15 +1124,15 @@ class _ChatPageState extends State<ChatPage> {
     final date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
     if (date == null) return '';
     final now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) return 'اليوم';
+    if (date.year == now.year && date.month == now.month && date.day == now.day) return oursText(context, 'اليوم', 'Today');
     final yesterday = now.subtract(const Duration(days: 1));
-    if (date.year == yesterday.year && date.month == yesterday.month && date.day == yesterday.day) return 'أمس';
+    if (date.year == yesterday.year && date.month == yesterday.month && date.day == yesterday.day) return oursText(context, 'أمس', 'Yesterday');
     return DateFormat('d MMM yyyy', Localizations.localeOf(context).languageCode).format(date);
   }
 
   Future<void> _copyMessage(String value) async {
     await Clipboard.setData(ClipboardData(text: value));
-    showMessage('تم نسخ الرسالة');
+    showMessage(oursText(context, 'تم نسخ الرسالة', 'Message copied'));
   }
 
   void scrollToBottom() {
@@ -1246,7 +1246,7 @@ class _ChatPageState extends State<ChatPage> {
               )),
               const SizedBox(width: 5),
               Text(
-                partnerOnline ? '$partnerName · متصل الآن' : '$partnerName · غير متصل',
+                partnerOnline ? '$partnerName · ${oursText(context, 'متصل الآن', 'Online')}' : '$partnerName · ${oursText(context, 'غير متصل', 'Offline')}',
                 style: const TextStyle(color: lavender, fontSize: 11, letterSpacing: 0),
               ),
             ]),
