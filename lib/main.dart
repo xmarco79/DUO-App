@@ -7,7 +7,6 @@ import 'notifications/ours_push_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'social/ours_home_page.dart';
-import 'notifications/ours_notifications.dart';
 import 'chat/ours_message_reactions.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
