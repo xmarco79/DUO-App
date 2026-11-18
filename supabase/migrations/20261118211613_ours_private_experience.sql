@@ -1,5 +1,5 @@
 -- Permanent two-account OURS space and new creative/reporting features.
--- This migration is committed for review; it is not applied to production here.
+-- Applied to the OURS Supabase project.
 
 create table if not exists public.ours_canvas_strokes (
   id uuid primary key default gen_random_uuid(),
