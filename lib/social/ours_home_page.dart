@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'ours_direct_chat_page.dart';
@@ -528,6 +530,10 @@ class _WatchState extends State<_WatchView> {
   Map<String, dynamic>? session;
   bool busy = false;
   RealtimeChannel? channel;
+  VideoPlayerController? player;
+  Timer? syncTimer;
+  String? loadedSource, playerError;
+  bool playerLoading = false;
 
   int get _positionMs => (session?['position_ms'] as num?)?.toInt() ?? 0;
   bool get _isPlaying => session?['is_playing'] == true;
@@ -536,6 +542,7 @@ class _WatchState extends State<_WatchView> {
   void initState() {
     super.initState();
     _load();
+    syncTimer = Timer.periodic(const Duration(seconds: 4), (_) => _syncPlaybackPosition());
     channel = db
         .channel('ours-watch-live-${widget.spaceId}')
         .onPostgresChanges(
@@ -562,10 +569,100 @@ class _WatchState extends State<_WatchView> {
           .order('updated_at', ascending: false)
           .limit(1)
           .maybeSingle();
-      if (mounted) setState(() => session = result);
+      if (!mounted) return;
+      setState(() => session = result);
+      if (result == null) {
+        loadedSource = null;
+        final old = player;
+        player = null;
+        if (old != null) await old.dispose();
+      } else {
+        await _ensurePlayer(Map<String, dynamic>.from(result));
+      }
     } catch (error) {
       _message(error.toString());
     }
+  }
+
+  bool _isDirectVideoUrl(Uri uri) {
+    final path = uri.path.toLowerCase();
+    return path.endsWith('.mp4') || path.endsWith('.m3u8') || path.endsWith('.webm');
+  }
+
+  Future<void> _ensurePlayer(Map<String, dynamic> current) async {
+    final source = current['source_url']?.toString() ?? '';
+    final uri = Uri.tryParse(source);
+    if (uri == null || !_isDirectVideoUrl(uri)) {
+      playerError = _t(context, 'هذا المصدر لا يوفّر رابط فيديو مباشرًا مدعومًا داخل التطبيق. استخدم رابط MP4 أو HLS مباشرًا.', 'This source does not provide a supported direct video stream. Use a direct MP4 or HLS link.');
+      if (mounted) setState(() => playerLoading = false);
+      return;
+    }
+    if (loadedSource == source && player?.value.isInitialized == true) {
+      await _applyRemoteState(current);
+      return;
+    }
+    final old = player;
+    player = null;
+    loadedSource = source;
+    playerError = null;
+    if (mounted) setState(() => playerLoading = true);
+    if (old != null) await old.dispose();
+    final controller = VideoPlayerController.networkUrl(uri);
+    player = controller;
+    try {
+      await controller.initialize();
+      await controller.setLooping(false);
+      await _applyRemoteState(current);
+      if (mounted && identical(player, controller)) {
+        setState(() => playerLoading = false);
+      }
+    } catch (error) {
+      if (mounted && identical(player, controller)) {
+        setState(() {
+          playerLoading = false;
+          playerError = _t(context, 'تعذر تشغيل الفيديو داخل OURS. تحقق من صلاحية الرابط ودعم صيغة الفيديو.', 'Could not play this video inside OURS. Check the URL and supported video format.');
+        });
+      }
+    }
+  }
+
+  Future<void> _applyRemoteState(Map<String, dynamic> current) async {
+    final controller = player;
+    if (controller == null || !controller.value.isInitialized) return;
+    final target = Duration(milliseconds: (current['position_ms'] as num?)?.toInt() ?? 0);
+    final actual = controller.value.position;
+    if ((actual - target).inMilliseconds.abs() > 1800) {
+      await controller.seekTo(target);
+    }
+    if (current['is_playing'] == true) {
+      if (!controller.value.isPlaying) await controller.play();
+    } else if (controller.value.isPlaying) {
+      await controller.pause();
+    }
+  }
+
+  Future<void> _syncPlaybackPosition() async {
+    final current = session;
+    final controller = player;
+    if (current == null || controller == null || !controller.value.isInitialized ||
+        current['is_playing'] != true ||
+        current['created_by']?.toString() != db.auth.currentUser?.id ||
+        !controller.value.isPlaying) return;
+    try {
+      await db.from('ours_watch_sessions').update({
+        'position_ms': controller.value.position.inMilliseconds,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', current['id']).eq('status', 'active');
+    } catch (_) {
+      // A missed heartbeat is recovered by the next realtime update.
+    }
+  }
+
+  Future<void> _seekBy(int deltaMs) async {
+    final controller = player;
+    if (controller == null || !controller.value.isInitialized) return;
+    final target = (controller.value.position.inMilliseconds + deltaMs).clamp(0, controller.value.duration.inMilliseconds);
+    await _updateSession(positionMs: target);
   }
 
   Future<void> _start() async {
@@ -573,8 +670,9 @@ class _WatchState extends State<_WatchView> {
     if (title.text.trim().isEmpty ||
         uri == null ||
         !uri.hasAuthority ||
-        !['http', 'https'].contains(uri.scheme)) {
-      _message(_t(context, 'أدخل اسمًا ورابطًا صالحًا', 'Enter a title and valid URL'));
+        !['http', 'https'].contains(uri.scheme) ||
+        !_isDirectVideoUrl(uri)) {
+      _message(_t(context, 'أدخل اسمًا ورابط فيديو مباشرًا بصيغة MP4 أو HLS أو WebM.', 'Enter a title and a direct MP4, HLS or WebM video URL.'));
       return;
     }
 
@@ -599,6 +697,7 @@ class _WatchState extends State<_WatchView> {
           .select()
           .single();
       if (mounted) setState(() => session = Map<String, dynamic>.from(created));
+      await _ensurePlayer(Map<String, dynamic>.from(created));
     } catch (error) {
       await _load();
       if (error.toString().contains('23505')) {
@@ -634,6 +733,14 @@ class _WatchState extends State<_WatchView> {
           .maybeSingle();
       if (mounted) {
         setState(() => session = status == 'ended' || updated == null ? null : Map<String, dynamic>.from(updated));
+        if (status == 'ended' || updated == null) {
+          final old = player;
+          player = null;
+          loadedSource = null;
+          if (old != null) await old.dispose();
+        } else {
+          await _applyRemoteState(Map<String, dynamic>.from(updated));
+        }
       }
     } catch (error) {
       _message(error.toString());
@@ -716,46 +823,60 @@ class _WatchState extends State<_WatchView> {
                     style: const TextStyle(color: _l),
                   ),
                   const SizedBox(height: 18),
-                  Center(
-                    child: Text(
-                      _formatPosition(_positionMs),
-                      style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700),
-                    ),
-                  ),
+                  if (playerLoading)
+                    const AspectRatio(aspectRatio: 16 / 9, child: Center(child: CircularProgressIndicator(color: _g)))
+                  else if (playerError != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(16)),
+                      child: Column(children: [
+                        const Icon(Icons.video_library_outlined, color: _g, size: 38),
+                        const SizedBox(height: 10),
+                        Text(playerError!, textAlign: TextAlign.center, style: const TextStyle(color: _l, height: 1.5)),
+                      ]),
+                    )
+                  else if (player?.value.isInitialized == true)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Column(children: [
+                        AspectRatio(aspectRatio: player!.value.aspectRatio, child: VideoPlayer(player!)),
+                        VideoProgressIndicator(
+                          player!,
+                          allowScrubbing: true,
+                          colors: const VideoProgressColors(playedColor: _g, bufferedColor: _l, backgroundColor: Colors.white24),
+                          onSeek: (position) => _updateSession(positionMs: position.inMilliseconds),
+                        ),
+                      ]),
+                    )
+                  else
+                    const AspectRatio(aspectRatio: 16 / 9, child: Center(child: Icon(Icons.play_circle_outline, color: _g, size: 56))),
                   const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       IconButton(
                         tooltip: _t(context, 'رجوع 10 ثوانٍ', 'Back 10 seconds'),
-                        onPressed: busy
-                            ? null
-                            : () => _updateSession(positionMs: (_positionMs - 10000).clamp(0, 1 << 62)),
+                        onPressed: busy ? null : () => _seekBy(-10000),
                         icon: const Icon(Icons.replay_10, color: _g, size: 32),
                       ),
                       IconButton.filled(
                         tooltip: _isPlaying ? _t(context, 'إيقاف مؤقت', 'Pause') : _t(context, 'تشغيل', 'Play'),
-                        onPressed: busy ? null : () => _updateSession(isPlaying: !_isPlaying),
+                        onPressed: busy || player?.value.isInitialized != true ? null : () => _updateSession(isPlaying: !_isPlaying),
                         icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
                       ),
                       IconButton(
                         tooltip: _t(context, 'تقديم 10 ثوانٍ', 'Forward 10 seconds'),
-                        onPressed: busy
-                            ? null
-                            : () => _updateSession(positionMs: _positionMs + 10000),
+                        onPressed: busy ? null : () => _seekBy(10000),
                         icon: const Icon(Icons.forward_10, color: _g, size: 32),
                       ),
                     ],
                   ),
+                  Center(child: Text(
+                    _formatPosition(player?.value.isInitialized == true ? player!.value.position.inMilliseconds : _positionMs),
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                  )),
                   const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: busy ? null : _openSource,
-                      icon: const Icon(Icons.open_in_new),
-                      label: Text(_t(context, 'فتح مصدر المشاهدة', 'Open viewing source')),
-                    ),
-                  ),
                   const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
@@ -772,8 +893,8 @@ class _WatchState extends State<_WatchView> {
           Text(
             _t(
               context,
-              'حالة الجلسة وموضع التشغيل وأوامر التقديم والإيقاف تتزامن بين الحسابين. تشغيل الفيديو نفسه يتم عبر المصدر الخارجي؛ التشغيل المدمج والتحكم المباشر بالمشغل يحتاجان تكاملًا مرخّصًا مع مزود المحتوى.',
-              'Session state, shared position and play/pause/seek commands sync between both accounts. Video playback opens through the external provider; embedded playback and direct player control require a licensed provider integration.',
+              'الفيديو يعمل داخل OURS مباشرة عند استخدام رابط ملف فيديو مباشر مدعوم. تتزامن أوامر التشغيل والإيقاف والتقديم وموضع المشاهدة بين الحسابين؛ الروابط التي تفتح صفحات منصات خارجية غير مدعومة كمشغل مضمّن.',
+              'Video plays directly inside OURS when using a supported direct video stream. Play, pause, seek and playback position sync between both accounts; external platform webpages are not supported as embedded streams.',
             ),
             style: const TextStyle(color: _l, fontSize: 11, height: 1.6),
           ),
@@ -786,6 +907,8 @@ class _WatchState extends State<_WatchView> {
   void dispose() {
     title.dispose();
     url.dispose();
+    syncTimer?.cancel();
+    player?.dispose();
     if (channel != null) db.removeChannel(channel!);
     super.dispose();
   }
