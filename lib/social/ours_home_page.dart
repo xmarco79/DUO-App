@@ -14,7 +14,7 @@ class OursSocialHomePage extends StatefulWidget {
 }
 class _OursSocialHomePageState extends State<OursSocialHomePage>{
  final db=Supabase.instance.client; int tab=0; String? spaceId,conversationId,error; bool loading=true;
- @override void initState(){super.initState();_load();}
+ @override void initState(){super.initState();_load();channel=db.channel('ours-studio-live-'+widget.spaceId).onPostgresChanges(event:PostgresChangeEvent.all,schema:'public',table:'ours_canvas_strokes',filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'space_id',value:widget.spaceId),callback:(_)=>_load())..subscribe();}
  Future<void> _load() async {try{
   final raw=await db.rpc('ensure_ours_pair_space'); final m=Map<String,dynamic>.from(raw as Map);
   if(mounted)setState(() { spaceId=m['space_id'].toString(); conversationId=m['conversation_id'].toString(); loading=false; });
@@ -47,11 +47,12 @@ Widget _tile(BuildContext c,IconData i,String title,String sub,VoidCallback tap)
 
 class _StudioView extends StatefulWidget{final String spaceId;const _StudioView({required this.spaceId});@override State<_StudioView> createState()=>_StudioState();}
 class _StudioState extends State<_StudioView>{
- final db=Supabase.instance.client;String scope='personal';List<Map<String,dynamic>> rows=[];bool loading=true;Color color=_l;List<Offset> points=[];
- @override void initState(){super.initState();_load();}
+ final db=Supabase.instance.client;String scope='personal';List<Map<String,dynamic>> rows=[];bool loading=true;Color color=_l;List<Offset> points=[];RealtimeChannel? channel;
+ @override void initState(){super.initState();_load();channel=db.channel('ours-watch-live-'+widget.spaceId).onPostgresChanges(event:PostgresChangeEvent.all,schema:'public',table:'ours_watch_sessions',filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'space_id',value:widget.spaceId),callback:(_)=>_load())..subscribe();}
  Future<void> _load()async{try{var q=db.from('ours_canvas_strokes').select().eq('space_id',widget.spaceId);q=scope=='personal'?q.eq('owner_id',db.auth.currentUser!.id):q.eq('scope','shared');final r=await q.order('created_at');if(mounted)setState(() { rows=List<Map<String,dynamic>>.from(r); loading=false; });}catch(_){if(mounted)setState(()=>loading=false);}}
  Future<void> _save()async{if(points.length<2)return;try{await db.from('ours_canvas_strokes').insert({'space_id':widget.spaceId,'owner_id':scope=='personal'?db.auth.currentUser!.id:null,'scope':scope,'points':points.map((p)=>{'x':p.dx,'y':p.dy}).toList(),'color':color.value,'stroke_width':4});points=[];_load();}catch(e){_msg(e.toString());}}
  void _msg(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
+ @override void dispose(){if(channel!=null)db.removeChannel(channel!);super.dispose();}
  @override Widget build(BuildContext c)=>Column(children:[
   Padding(padding:const EdgeInsets.all(12),child:SegmentedButton<String>(segments:[ButtonSegment(value:'personal',label:Text(_t(c,'مرسمي','My studio'))),ButtonSegment(value:'shared',label:Text(_t(c,'مرسمنا المشترك','Shared studio')))],selected:{scope},onSelectionChanged:(v)=>setState(() { scope=v.first; loading=true; _load(); }))),
   Row(mainAxisAlignment:MainAxisAlignment.center,children:[for(final x in [_l,_g,Colors.white,Colors.redAccent,Colors.lightBlueAccent])IconButton(onPressed:()=>setState(()=>color=x),icon:Icon(Icons.circle,color:x))]),
@@ -68,7 +69,7 @@ class _CanvasPainter extends CustomPainter{
 
 class _WatchView extends StatefulWidget{final String spaceId;const _WatchView({required this.spaceId});@override State<_WatchView> createState()=>_WatchState();}
 class _WatchState extends State<_WatchView>{
- final db=Supabase.instance.client;final title=TextEditingController(),url=TextEditingController();Map<String,dynamic>? session;bool busy=false;
+ final db=Supabase.instance.client;final title=TextEditingController(),url=TextEditingController();Map<String,dynamic>? session;bool busy=false;RealtimeChannel? channel;
  @override void initState(){super.initState();_load();}
  Future<void> _load()async{try{final r=await db.from('ours_watch_sessions').select().eq('space_id',widget.spaceId).eq('status','active').order('updated_at',ascending:false).limit(1).maybeSingle();if(mounted)setState(()=>session=r);}catch(_){}}
  Future<void> _start()async{final uri=Uri.tryParse(url.text.trim());if(title.text.trim().isEmpty||uri==null||!['http','https'].contains(uri.scheme)){_msg(_t(context,'أدخل اسمًا ورابطًا صالحًا','Enter a title and valid URL'));return;}setState(()=>busy=true);try{await db.from('ours_watch_sessions').update({'status':'ended'}).eq('space_id',widget.spaceId).eq('status','active');await db.from('ours_watch_sessions').insert({'space_id':widget.spaceId,'created_by':db.auth.currentUser!.id,'title':title.text.trim(),'source_url':uri.toString(),'status':'active','position_ms':0,'is_playing':false});await _load();}catch(e){_msg(e.toString());}finally{if(mounted)setState(()=>busy=false);}}
@@ -79,7 +80,7 @@ class _WatchState extends State<_WatchView>{
   else Card(color:_p,child:ListTile(title:Text(session!['title'].toString()),subtitle:Text(_t(c,'الجلسة نشطة. يمكن فتح المصدر الخارجي.','Session active. Open the external source.'),style:const TextStyle(color:_l)),trailing:IconButton(onPressed:()async{final u=Uri.tryParse(session!['source_url'].toString());if(u!=null)await launchUrl(u,mode:LaunchMode.externalApplication);},icon:const Icon(Icons.open_in_new,color:_g)))),
   const SizedBox(height:14),Text(_t(c,'تنبيه: هذه النسخة لا تدّعي تشغيل فيديو مدمج أو مزامنة موضع التشغيل الفعلي. ذلك يتطلب SDK وترخيصًا من مزود المحتوى.','This build does not claim embedded playback or real playback-position sync; these require a licensed provider SDK.'),style:const TextStyle(color:_l,fontSize:11))
  ]);
- @override void dispose(){title.dispose();url.dispose();super.dispose();}
+ @override void dispose(){title.dispose();url.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
 }
 class _SpotifyView extends StatefulWidget{const _SpotifyView();@override State<_SpotifyView> createState()=>_SpotifyState();}
 class _SpotifyState extends State<_SpotifyView>{final q=TextEditingController();Future<void> _search()async{if(q.text.trim().isEmpty)return;final u=Uri.https('open.spotify.com','/search/'+Uri.encodeComponent(q.text.trim()));await launchUrl(u,mode:LaunchMode.externalApplication);}
