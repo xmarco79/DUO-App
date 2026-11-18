@@ -11,6 +11,7 @@ import 'package:record/record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'ours_profile_page.dart';
 
 const _navy=Color(0xFF10101C),_gold=Color(0xFFD9BC86),_lavender=Color(0xFFB9A2D5),_bucket='ours-direct-media';
 class _ChatSkin{
@@ -25,9 +26,9 @@ const _skins=[
 ];
 
 class OursDirectChatPage extends StatefulWidget{
- final String conversationId,partnerName;
+ final String conversationId,partnerName,partnerId;
  final String? spaceId;
- const OursDirectChatPage({super.key,required this.conversationId,required this.partnerName,this.spaceId});
+ const OursDirectChatPage({super.key,required this.conversationId,required this.partnerName,required this.partnerId,this.spaceId});
  @override State<OursDirectChatPage> createState()=>_OursDirectChatPageState();
 }
 class _OursDirectChatPageState extends State<OursDirectChatPage>{
@@ -187,7 +188,14 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  @override Widget build(BuildContext context){
   final me=db.auth.currentUser!.id;
   return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,centerTitle:true,
-   title:Column(mainAxisSize:MainAxisSize.min,children:[Text(widget.partnerName,style:const TextStyle(fontSize:16)),Text(t('محادثة خاصة بينكما','Private conversation'),style:TextStyle(color:skin.accent,fontSize:10))]),
+   title:InkWell(
+    borderRadius:BorderRadius.circular(12),
+    onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:widget.partnerId))),
+    child:Column(mainAxisSize:MainAxisSize.min,children:[
+     Text(widget.partnerName,style:const TextStyle(fontSize:16)),
+     Text(t('اضغط لعرض الملف الشخصي','Tap to view profile'),style:TextStyle(color:skin.accent,fontSize:10))
+    ]),
+   ),
    actions:[
     IconButton(tooltip:t('الثيم','Theme'),onPressed:_chooseSkin,icon:Icon(Icons.palette_outlined,color:skin.accent)),
     IconButton(tooltip:t('راسل نفسك','Message yourself'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),icon:Icon(Icons.bookmark_border_rounded,color:skin.accent)),
