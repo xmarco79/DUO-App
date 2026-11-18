@@ -72,7 +72,7 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
         title: const Text('OURS', style: TextStyle(color: _gold, letterSpacing: 5)),
         centerTitle: true,
         actions: [
-          OursNotificationBell(spaceId: spaceId),
+          OursNotificationBell(spaceId: spaceId, onOpenMessage: () => widget.onChatTap(spaceId!)),
           IconButton(onPressed: widget.onProfileTap,
             icon: const Icon(Icons.person_outline, color: _lavender)),
         ],
