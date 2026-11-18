@@ -6,10 +6,8 @@ import 'notifications/ours_push_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'worlds/world_hub_page.dart';
-import 'social/ours_social_pages.dart';
+import 'social/ours_home_page.dart';
 import 'notifications/ours_notifications.dart';
-import 'memories/ours_albums_page.dart';
 import 'chat/ours_message_reactions.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
@@ -286,7 +284,7 @@ class WelcomePage extends StatelessWidget {
                 Text(oursText(context, 'عالمك الخاص، بطريقتكما', 'A private universe for two'), textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 12),
-                Text(oursText(context, 'مساحة رقمية خاصة تجمعك أنت وشريكك فقط؛ للمحادثات والذكريات والعوالم التي تصنعانها معًا.', 'A private space for you and your partner to chat, share memories, and build your own worlds together.'),
+                Text(oursText(context, 'مساحة رقمية خاصة تجمع naif و zoi للمحادثات والإبداع والموسيقى.', 'A private space for naif and zoi to chat, create, and enjoy music together.'),
                   textAlign: TextAlign.center, style: const TextStyle(color: lavender, height: 1.8, fontSize: 15)),
                 const SizedBox(height: 38),
                 SizedBox(width: double.infinity, height: 54,
