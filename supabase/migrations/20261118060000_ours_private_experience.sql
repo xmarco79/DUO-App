@@ -64,18 +64,8 @@ create policy "OURS members manage watch sessions" on public.ours_watch_sessions
 grant select,insert,update,delete on public.ours_watch_sessions to authenticated;
 
 
-do $
-begin
-  if exists (select 1 from pg_publication where pubname='supabase_realtime') then
-    if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='ours_canvas_strokes') then
-      execute 'alter publication supabase_realtime add table public.ours_canvas_strokes';
-    end if;
-    if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='ours_watch_sessions') then
-      execute 'alter publication supabase_realtime add table public.ours_watch_sessions';
-    end if;
-  end if;
-end;
-$;
+alter publication supabase_realtime add table public.ours_canvas_strokes;
+alter publication supabase_realtime add table public.ours_watch_sessions;
 
 create table if not exists public.ours_weekly_reports (
   id uuid primary key default gen_random_uuid(),
