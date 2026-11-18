@@ -45,6 +45,7 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
   String? activeVoicePath;
   String? playingVoicePath;
   RealtimeChannel? worldChannel;
+  int _loadRequestId = 0;
 
   SupabaseClient get db => Supabase.instance.client;
   bool get canSync => widget.spaceId != null && db.auth.currentUser != null;
@@ -140,8 +141,10 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
   }
 
   Future<void> loadItems() async {
+    if (!mounted) return;
+    final requestId = ++_loadRequestId;
     if (!canSync) {
-      if (mounted) setState(() {
+      setState(() {
         items = [];
         loading = false;
         error = null;
@@ -159,13 +162,13 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       if (selectedKind != null) query = query.eq('kind', selectedKind!);
       final result = await query.order('is_pinned', ascending: false)
           .order('created_at', ascending: false);
-      if (!mounted) return;
+      if (!mounted || requestId != _loadRequestId) return;
       setState(() {
         items = List<Map<String, dynamic>>.from(result);
         loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || requestId != _loadRequestId) return;
       setState(() {
         loading = false;
         error = _friendlyError(e);
