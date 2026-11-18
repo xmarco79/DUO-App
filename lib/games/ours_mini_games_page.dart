@@ -181,13 +181,13 @@ class _QuizState extends State<_QuizPage> {
   @override void initState(){super.initState();_round=[..._questions]..shuffle();}
   Future<void> _answer(int v) async {
     if(_selected!=-1||_done)return;
-    setState(()=>{_selected=v,if(v==_round[_i].correct)_score++});
+    setState(() { _selected = v; if (v == _round[_i].correct) _score++; });
     await Future.delayed(const Duration(milliseconds:800)); if(!mounted)return;
     if(_i==_round.length-1){setState(()=>_done=true);_saveBest();}
-    else setState(()=>{_i++,_selected=-1});
+    else setState(() { _i++; _selected = -1; });
   }
   Future<void> _saveBest() async {try{final p=await SharedPreferences.getInstance();final old=p.getInt('ours_quiz_best')??0;if(_score>old)await p.setInt('ours_quiz_best',_score);}catch(_){}}
-  void _restart()=>setState(()=>{_round=[..._questions]..shuffle(),_i=0,_score=0,_selected=-1,_done=false});
+  void _restart() => setState(() { _round = [..._questions]..shuffle(); _i = 0; _score = 0; _selected = -1; _done = false; });
   @override Widget build(BuildContext context)=>_Shell(_t(context,'اختبار المعلومات','Quick Quiz'),
     _t(context,'عشرة أسئلة متنوعة. اختر الإجابة الصحيحة وانتقل للسؤال التالي.','Ten mixed questions. Choose the correct answer to continue.'),
     FutureBuilder<int>(future:SharedPreferences.getInstance().then((p)=>p.getInt('ours_quiz_best')??0),builder:(c,b)=>Column(children:[
@@ -231,8 +231,8 @@ class _WordPage extends StatefulWidget{const _WordPage();@override State<_WordPa
 class _WordState extends State<_WordPage>{
   late List<_Word> _round;int _i=0,_score=0,_selected=-1;bool _done=false;
   @override void initState(){super.initState();_round=[..._words]..shuffle();}
-  Future<void> _choose(int v)async{if(_selected!=-1||_done)return;setState(()=>{_selected=v,if(v==_round[_i].answer)_score++});await Future.delayed(const Duration(milliseconds:850));if(!mounted)return;if(_i==_round.length-1)setState(()=>_done=true);else setState(()=>{_i++,_selected=-1});}
-  void _restart()=>setState(()=>{_round=[..._words]..shuffle(),_i=0,_score=0,_selected=-1,_done=false});
+  Future<void> _choose(int v) async { if (_selected != -1 || _done) return; setState(() { _selected = v; if (v == _round[_i].answer) _score++; }); await Future.delayed(const Duration(milliseconds: 850)); if (!mounted) return; if (_i == _round.length - 1) setState(() => _done = true); else setState(() { _i++; _selected = -1; }); }
+  void _restart() => setState(() { _round = [..._words]..shuffle(); _i = 0; _score = 0; _selected = -1; _done = false; });
   @override Widget build(BuildContext context)=>_Shell(_t(context,'خمن الكلمة','Word Riddle'),_t(context,'اقرأ التلميح واختر الكلمة المناسبة. لديك ثماني جولات.','Read the clue and choose the matching word. Eight rounds.'),
     Column(children:[
       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[_Score(_t(context,'النقاط','POINTS'),_score),_Score(_t(context,'الجولة','ROUND'),_done?8:_i+1,_l)]),
