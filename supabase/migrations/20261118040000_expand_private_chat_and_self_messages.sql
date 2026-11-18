@@ -10,21 +10,8 @@ alter table public.duo_direct_messages
   add column if not exists viewed_by uuid references auth.users(id) on delete set null,
   add column if not exists view_once_storage_path text;
 
-alter table storage.buckets
-  add column if not exists allowed_mime_types text[];
-
-update storage.buckets
-set allowed_mime_types = array[
-  'image/jpeg','image/png','image/webp',
-  'audio/mp4','audio/aac','audio/mpeg','audio/ogg','audio/webm',
-  'video/mp4','video/webm','video/quicktime',
-  'application/pdf','text/plain','text/csv','application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/zip'
-]
-where id='ours-direct-media';
+-- Storage bucket MIME limits are managed by Supabase Storage and are intentionally
+-- left unchanged here; this migration only updates application metadata and RLS.
 
 create or replace function public.consume_ours_view_once(p_message_id uuid)
 returns text
