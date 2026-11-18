@@ -282,7 +282,7 @@ class _OursAiPageState extends State<OursAiPage>{
  Future<void> _restore() async{try{final p=await SharedPreferences.getInstance();final raw=p.getString('ours_ai_history_'+db.auth.currentUser!.id);if(raw!=null){final decoded=(jsonDecode(raw) as List).map((e)=>Map<String,String>.from(e)).toList();if(mounted)setState(()=>messages.addAll(decoded));}}catch(_){} }
  Future<void> _persist() async{try{final p=await SharedPreferences.getInstance();await p.setString('ours_ai_history_'+db.auth.currentUser!.id,jsonEncode(messages.take(100).toList()));}catch(_){} }
  @override void dispose(){input.dispose();scroll.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_navy,appBar:AppBar(backgroundColor:_navy,title:const Text('OURS AI',style:TextStyle(color:_gold,letterSpacing:2)),centerTitle:true),
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_navy,appBar:AppBar(backgroundColor:_navy,centerTitle:true,title:Column(mainAxisSize:MainAxisSize.min,children:[const Text('OURS AI',style:TextStyle(color:_gold,letterSpacing:2,fontWeight:FontWeight.w800)),Text(t('مساعدك الذكي','Your private assistant'),style:const TextStyle(color:_lavender,fontSize:10))])),
   body:SafeArea(child:Column(children:[
    SwitchListTile(value:includeContext,onChanged:(v)=>setState(()=>includeContext=v),activeColor:_gold,title:Text(t('السماح باستخدام سياق المحادثة','Allow chat context')),subtitle:Text(t('مغلق افتراضيًا. تُرسل آخر الرسائل النصية فقط عند تفعيله.','Off by default. Recent text messages are shared only when enabled.'),style:const TextStyle(color:_lavender,fontSize:11))),
    Wrap(spacing:7,children:[
@@ -341,10 +341,96 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  Future<void> _togglePin(Map<String,dynamic> row)async{try{final v=!(row['pinned']==true);await db.from('ours_self_messages').update({'pinned':v}).eq('id',row['id']);if(mounted)setState(()=>row['pinned']=v);}catch(e){_notice(e.toString());}}
  Future<void> _delete(Map<String,dynamic> row)async{try{await db.from('ours_self_messages').delete().eq('id',row['id']);if(mounted)setState(()=>rows.removeWhere((r)=>r['id']==row['id']));}catch(e){_notice(e.toString());}}
  @override void dispose(){input.dispose();scroll.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_navy,appBar:AppBar(title:Text(t('مساحتي الخاصة','My private space'))),
- body:Column(children:[
-  Padding(padding:const EdgeInsets.all(12),child:Text(t('اكتب أفكارك، خططك، تذكيراتك وأشياءك المهمة. لا يراها غيرك.','Save ideas, plans, reminders and important notes. Only you can see them.'),style:const TextStyle(color:_lavender))),
-  Expanded(child:loading?const Center(child:CircularProgressIndicator(color:_gold)):rows.isEmpty?Center(child:Text(t('مساحتك لك وحدك. ابدأ بتدوين أول فكرة.','Your space is yours. Save your first thought.'),style:const TextStyle(color:_lavender))):ListView.builder(controller:scroll,padding:const EdgeInsets.all(12),itemCount:rows.length,itemBuilder:(c,i){final row=rows[rows.length-1-i];return Card(color:const Color(0xFF29213D),child:ListTile(title:SelectableText(row['body'].toString()),subtitle:Text(DateFormat('yyyy/MM/dd · HH:mm').format(DateTime.parse(row['created_at']).toLocal()),style:const TextStyle(color:_lavender,fontSize:11)),leading:row['pinned']==true?const Icon(Icons.push_pin,color:_gold):const Icon(Icons.sticky_note_2_outlined,color:_lavender),trailing:PopupMenuButton<String>(onSelected:(v)=>v=='pin'?_togglePin(row):_delete(row),itemBuilder:(_)=>[PopupMenuItem(value:'pin',child:Text(t('تثبيت / إلغاء التثبيت','Pin / unpin'))),PopupMenuItem(value:'delete',child:Text(t('حذف','Delete')))])));})),
-  SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(10),child:Row(children:[Expanded(child:TextField(controller:input,minLines:1,maxLines:4,decoration:InputDecoration(hintText:t('اكتب لنفسك…','Write a note…'),filled:true,fillColor:const Color(0xFF29213D),border:OutlineInputBorder(borderRadius:BorderRadius.circular(20),borderSide:BorderSide.none)),onSubmitted:(_)=>_send())),IconButton(onPressed:sending?null:_send,icon:const Icon(Icons.send_rounded,color:_gold))])))
- ]));
+ @override Widget build(BuildContext context)=>Scaffold(
+  backgroundColor:_navy,
+  appBar:AppBar(
+   backgroundColor:_navy,
+   centerTitle:true,
+   title:Column(mainAxisSize:MainAxisSize.min,children:[
+    Text(t('مراسلة نفسي','Saved messages'),style:const TextStyle(color:_gold,fontSize:16,fontWeight:FontWeight.w800)),
+    Text(t('مساحة لا يراها غيرك','Private to you'),style:const TextStyle(color:_lavender,fontSize:10))
+   ]),
+  ),
+  body:Column(children:[
+   Expanded(
+    child:loading
+     ?const Center(child:CircularProgressIndicator(color:_gold))
+     :rows.isEmpty
+      ?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
+        const Icon(Icons.bookmark_add_outlined,color:_gold,size:46),
+        const SizedBox(height:12),
+        Text(t('ابدأ أول رسالة لنفسك','Write your first note'),style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w700)),
+        const SizedBox(height:6),
+        Text(t('احفظ أفكارك ورسائلك المهمة هنا.','Keep ideas and important messages here.'),style:const TextStyle(color:_lavender),textAlign:TextAlign.center)
+       ])))
+      :ListView.builder(
+       controller:scroll,
+       padding:const EdgeInsets.fromLTRB(14,14,14,18),
+       itemCount:rows.length,
+       itemBuilder:(c,i){
+        final row=rows[rows.length-1-i];
+        final date=DateTime.tryParse(row['created_at']?.toString()??'')?.toLocal();
+        final time=date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);
+        return Align(
+         alignment:AlignmentDirectional.centerEnd,
+         child:Container(
+          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.84),
+          margin:const EdgeInsets.symmetric(vertical:5),
+          padding:const EdgeInsets.fromLTRB(14,11,9,8),
+          decoration:BoxDecoration(
+           color:const Color(0xFF342B4C),
+           borderRadius:BorderRadius.circular(18),
+           border:Border.all(color:_gold.withValues(alpha:.15)),
+          ),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+           SelectableText(row['body'].toString(),style:const TextStyle(color:Colors.white,height:1.5)),
+           const SizedBox(height:5),
+           Row(mainAxisSize:MainAxisSize.min,children:[
+            if(row['pinned']==true)const Icon(Icons.push_pin_rounded,color:_gold,size:13),
+            Text(time,style:const TextStyle(color:_lavender,fontSize:10)),
+            const SizedBox(width:4),
+            PopupMenuButton<String>(
+             padding:EdgeInsets.zero,
+             constraints:const BoxConstraints(minWidth:150),
+             icon:const Icon(Icons.more_horiz,color:_lavender,size:18),
+             onSelected:(v)=>v=='pin'?_togglePin(row):_delete(row),
+             itemBuilder:(_)=>[
+              PopupMenuItem(value:'pin',child:Text(t('تثبيت / إلغاء التثبيت','Pin / unpin'))),
+              PopupMenuItem(value:'delete',child:Text(t('حذف الرسالة','Delete note'))),
+             ],
+            ),
+           ]),
+          ]),
+         ),
+        );
+       },
+      ),
+   ),
+   SafeArea(
+    top:false,
+    child:Container(
+     padding:const EdgeInsets.fromLTRB(10,8,10,12),
+     decoration:const BoxDecoration(border:Border(top:BorderSide(color:Color(0x3329293D)))),
+     child:Row(children:[
+      Expanded(child:TextField(
+       controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,
+       onSubmitted:(_)=>_send(),
+       decoration:InputDecoration(
+        hintText:t('اكتب لنفسك…','Write a note…'),
+        filled:true,fillColor:const Color(0xFF211D30),
+        border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),
+        contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:12),
+       ),
+      )),
+      const SizedBox(width:7),
+      IconButton.filled(
+       onPressed:sending?null:_send,
+       style:IconButton.styleFrom(backgroundColor:_gold,foregroundColor:_navy),
+       icon:sending?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),
+      ),
+     ]),
+    ),
+   ),
+  ]),
+ );
 }
