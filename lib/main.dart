@@ -32,16 +32,42 @@ String oursText(BuildContext context, String ar, String en) =>
 // Preview builds open the home screen without requiring an account.
 
 class _OursChatTheme {
-  final String id, titleAr, titleEn;
+  final String id, titleAr, titleEn, detailAr, detailEn;
   final Color background, mine, partner, accent;
-  const _OursChatTheme(this.id, this.titleAr, this.titleEn, this.background, this.mine, this.partner, this.accent);
+  final List<Color> mineGradient, partnerGradient;
+  final IconData symbol;
+  const _OursChatTheme(
+    this.id, this.titleAr, this.titleEn, this.detailAr, this.detailEn,
+    this.background, this.mine, this.partner, this.accent,
+    this.mineGradient, this.partnerGradient, this.symbol,
+  );
 }
 
 const _oursChatThemes = [
-  _OursChatTheme('midnight', 'ليلي', 'Midnight', Color(0xFF10101C), Color(0xFF342B4C), Color(0xFF211D30), gold),
-  _OursChatTheme('ocean', 'المحيط', 'Ocean', Color(0xFF0B1B2A), Color(0xFF174A66), Color(0xFF173244), Color(0xFF75C8D8)),
-  _OursChatTheme('rose', 'وردي هادئ', 'Soft rose', Color(0xFF24151F), Color(0xFF63364D), Color(0xFF382331), Color(0xFFF0AFC4)),
-  _OursChatTheme('forest', 'الغابة', 'Forest', Color(0xFF101F1A), Color(0xFF285342), Color(0xFF1D332B), Color(0xFF9CC9A8)),
+  _OursChatTheme('aurora','الشفق القطبي','Aurora','ألوان سماوية ولمعات فيروزية','Sky tones with teal highlights',
+    Color(0xFF091A27),Color(0xFF174A55),Color(0xFF142D3B),Color(0xFF75E0D0),
+    [Color(0xFF236A70),Color(0xFF17465F)],[Color(0xFF183C4B),Color(0xFF102A3A)],Icons.auto_awesome),
+  _OursChatTheme('sunset','غروب دافئ','Sunset','تدرجات الغروب والمرجان','Warm sunset and coral tones',
+    Color(0xFF211329),Color(0xFF713C52),Color(0xFF38243E),Color(0xFFFFB28A),
+    [Color(0xFF9A4D5C),Color(0xFF5B315A)],[Color(0xFF4C2C4B),Color(0xFF2B203B)],Icons.wb_twilight),
+  _OursChatTheme('sakura','حديقة ساكورا','Sakura','وردي مزهر ولمسات كريمية','Blooming pink with soft cream accents',
+    Color(0xFF251923),Color(0xFF75445C),Color(0xFF3E2B3A),Color(0xFFFFB9D0),
+    [Color(0xFF98536E),Color(0xFF69405F)],[Color(0xFF503447),Color(0xFF332638)],Icons.local_florist),
+  _OursChatTheme('ocean','أعماق المحيط','Deep ocean','أزرق عميق وفقاعات زجاجية','Deep blue with aqua glass tones',
+    Color(0xFF071B30),Color(0xFF15577A),Color(0xFF12354D),Color(0xFF75D5F2),
+    [Color(0xFF16759A),Color(0xFF174A79)],[Color(0xFF1B455F),Color(0xFF102C43)],Icons.waves),
+  _OursChatTheme('forest','غابة مطيرة','Rainforest','أخضر زمردي وطبيعة هادئة','Emerald greens and calm nature',
+    Color(0xFF0D211D),Color(0xFF28664D),Color(0xFF1C3D32),Color(0xFFA8E6B7),
+    [Color(0xFF347B59),Color(0xFF205C54)],[Color(0xFF285343),Color(0xFF17372F)],Icons.park),
+  _OursChatTheme('lavender','حلم بنفسجي','Lavender dream','بنفسجي متوهج ودرجات ليل','Glowing violet and dreamy night shades',
+    Color(0xFF17132B),Color(0xFF55418A),Color(0xFF30294F),Color(0xFFC5A8FF),
+    [Color(0xFF7255A9),Color(0xFF493A82)],[Color(0xFF443B68),Color(0xFF282442)],Icons.nights_stay),
+  _OursChatTheme('desert','وهج الصحراء','Desert glow','رملي ونحاسي بلمسة ذهبية','Sand, copper and golden warmth',
+    Color(0xFF241B17),Color(0xFF795034),Color(0xFF443126),Color(0xFFFFD18B),
+    [Color(0xFF98613B),Color(0xFF6C4932)],[Color(0xFF60452F),Color(0xFF35291F)],Icons.wb_sunny),
+  _OursChatTheme('neon','مدينة نيون','Neon city','ألوان كهربائية وسط ليل داكن','Electric accents over a midnight city',
+    Color(0xFF130F25),Color(0xFF553A79),Color(0xFF2D2448),Color(0xFF8EF0FF),
+    [Color(0xFF6A3C9B),Color(0xFF344C91)],[Color(0xFF3B315F),Color(0xFF24203F)],Icons.bolt),
 ];
 
 // ==================== APP PREFERENCES ====================
@@ -592,32 +618,82 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> chooseChatTheme() async {
     final selected = await showModalBottomSheet<_OursChatTheme>(
       context: context,
-      backgroundColor: purple,
+      backgroundColor: const Color(0xFF171326),
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Text(oursText(context, 'مظهر المحادثة', 'Chat appearance'), style: const TextStyle(color: gold, fontSize: 18, fontWeight: FontWeight.w600)),
-            ),
-            for (final theme in _oursChatThemes)
-              ListTile(
-                leading: Container(
-                  width: 42,
-                  height: 30,
-                  decoration: BoxDecoration(color: theme.background, borderRadius: BorderRadius.circular(8), border: Border.all(color: theme.accent)),
-                  child: Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: Container(width: 19, height: 10, margin: const EdgeInsets.all(4), decoration: BoxDecoration(color: theme.mine, borderRadius: BorderRadius.circular(8))),
+        child: SizedBox(
+          height: MediaQuery.of(sheetContext).size.height * 0.68,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(oursText(context, 'اختر أجواء محادثتكما', 'Choose your chat atmosphere'),
+                  style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(oursText(context, 'كل ثيم له خلفية وفقاعات وألوانه الخاصة', 'Every theme has its own mood, bubbles and colors'),
+                  style: const TextStyle(color: lavender, fontSize: 12)),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: GridView.builder(
+                    itemCount: _oursChatThemes.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2, childAspectRatio: 1.32,
+                      crossAxisSpacing: 11, mainAxisSpacing: 11,
+                    ),
+                    itemBuilder: (context, index) {
+                      final theme = _oursChatThemes[index];
+                      final active = chatTheme.id == theme.id;
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => Navigator.pop(sheetContext, theme),
+                        child: Container(
+                          padding: const EdgeInsets.all(11),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(colors: [theme.background, theme.partner], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: active ? theme.accent : theme.accent.withValues(alpha: .28), width: active ? 2 : 1),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                Icon(theme.symbol, color: theme.accent, size: 19),
+                                const Spacer(),
+                                if (active) Icon(Icons.check_circle_rounded, color: theme.accent, size: 19),
+                              ]),
+                              const Spacer(),
+                              Align(alignment: AlignmentDirectional.centerEnd, child: Container(
+                                width: 76, height: 22, decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: theme.mineGradient),
+                                  borderRadius: const BorderRadiusDirectional.only(topStart: Radius.circular(12), bottomStart: Radius.circular(12), bottomEnd: Radius.circular(12)),
+                                ),
+                              )),
+                              const SizedBox(height: 5),
+                              Align(alignment: AlignmentDirectional.centerStart, child: Container(
+                                width: 62, height: 19, decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: theme.partnerGradient),
+                                  borderRadius: const BorderRadiusDirectional.only(topEnd: Radius.circular(12), bottomStart: Radius.circular(12), bottomEnd: Radius.circular(12)),
+                                  border: Border.all(color: theme.accent.withValues(alpha: .24)),
+                                ),
+                              )),
+                              const SizedBox(height: 9),
+                              Text(oursText(context, theme.titleAr, theme.titleEn),
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+                              Text(oursText(context, theme.detailAr, theme.detailEn),
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: theme.accent.withValues(alpha: .9), fontSize: 9)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-                title: Text(oursText(context, theme.titleAr, theme.titleEn)),
-                trailing: chatTheme.id == theme.id ? const Icon(Icons.check_circle, color: gold) : null,
-                onTap: () => Navigator.pop(sheetContext, theme),
-              ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1419,7 +1495,7 @@ class _ChatPageState extends State<ChatPage> {
                                 vertical: 12,
                               ),
                               decoration: BoxDecoration(
-                                color: isMe ? chatTheme.mine : chatTheme.partner,
+                                gradient: LinearGradient(colors: isMe ? chatTheme.mineGradient : chatTheme.partnerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(19),
                                   topRight: const Radius.circular(19),
