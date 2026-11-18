@@ -133,7 +133,7 @@ class _MemoryState extends State<_MemoryPage> {
       : _score[0] > _score[1] ? _t(context,'فاز اللاعب الأول!','Player 1 wins!') : _t(context,'فاز اللاعب الثاني!','Player 2 wins!');
     showDialog<void>(context: context, barrierDismissible: false, builder: (d) => AlertDialog(backgroundColor: _p,
       title: Text(winner, textAlign: TextAlign.center),
-      content: Text(_t(context,'النتيجة: ','Score: ') + _score[0].toString() + ' - ' + _score[1].toString(),
+      content: Text(_t(context, 'النتيجة: ', 'Score: ') + '${_score[0]} - ${_score[1]}',
         textAlign: TextAlign.center, style: const TextStyle(color: _l)),
       actions: [FilledButton(onPressed: () { Navigator.pop(d); _reset(); }, child: Text(_t(context,'العبا مجددًا','Play again')))]));
   }
@@ -184,7 +184,7 @@ class _QuizState extends State<_QuizPage> {
     setState(() { _selected = v; if (v == _round[_i].correct) _score++; });
     await Future.delayed(const Duration(milliseconds:800)); if(!mounted)return;
     if(_i==_round.length-1){setState(()=>_done=true);_saveBest();}
-    else setState(() { _i++; _selected = -1; });
+    else { setState(() { _i++; _selected = -1; }); }
   }
   Future<void> _saveBest() async {try{final p=await SharedPreferences.getInstance();final old=p.getInt('ours_quiz_best')??0;if(_score>old)await p.setInt('ours_quiz_best',_score);}catch(_){}}
   void _restart() => setState(() { _round = [..._questions]..shuffle(); _i = 0; _score = 0; _selected = -1; _done = false; });
@@ -195,12 +195,12 @@ class _QuizState extends State<_QuizPage> {
       const SizedBox(height:18),
       if(_done)...[
         const Icon(Icons.emoji_events_rounded,color:_g,size:70),const SizedBox(height:12),
-        Text(_t(context,'أحسنت! نتيجتك ','Well done! You scored ')+_score.toString()+'/10',textAlign:TextAlign.center,style:const TextStyle(color:_g,fontSize:22,fontWeight:FontWeight.bold)),
+        Text('${_t(context, 'أحسنت! نتيجتك ', 'Well done! You scored ')}$_score/10',textAlign:TextAlign.center,style:const TextStyle(color:_g,fontSize:22,fontWeight:FontWeight.bold)),
         const SizedBox(height:16),FilledButton.icon(onPressed:_restart,icon:const Icon(Icons.replay),label:Text(_t(context,'العب مرة أخرى','Play again'))),
       ]else...[
         LinearProgressIndicator(value:(_i+1)/_round.length,minHeight:7,backgroundColor:_p,borderRadius:BorderRadius.circular(8)),
         const SizedBox(height:16),
-        Text(_t(context,'السؤال ','QUESTION ')+(_i+1).toString()+' / 10',style:const TextStyle(color:_l)),
+        Text('${_t(context, 'السؤال ', 'QUESTION ')}${_i+1} / 10',style:const TextStyle(color:_l)),
         const SizedBox(height:12),
         Container(width:double.infinity,padding:const EdgeInsets.all(20),decoration:BoxDecoration(color:_p,borderRadius:BorderRadius.circular(18)),
           child:Text(_t(context,_round[_i].ar,_round[_i].en),textAlign:TextAlign.center,style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold,height:1.4))),
@@ -231,7 +231,7 @@ class _WordPage extends StatefulWidget{const _WordPage();@override State<_WordPa
 class _WordState extends State<_WordPage>{
   late List<_Word> _round;int _i=0,_score=0,_selected=-1;bool _done=false;
   @override void initState(){super.initState();_round=[..._words]..shuffle();}
-  Future<void> _choose(int v) async { if (_selected != -1 || _done) return; setState(() { _selected = v; if (v == _round[_i].answer) _score++; }); await Future.delayed(const Duration(milliseconds: 850)); if (!mounted) return; if (_i == _round.length - 1) setState(() => _done = true); else setState(() { _i++; _selected = -1; }); }
+  Future<void> _choose(int v) async { if (_selected != -1 || _done) return; setState(() { _selected = v; if (v == _round[_i].answer) _score++; }); await Future.delayed(const Duration(milliseconds: 850)); if (!mounted) return; if (_i == _round.length - 1) { setState(() => _done = true); } else { setState(() { _i++; _selected = -1; }); } }
   void _restart() => setState(() { _round = [..._words]..shuffle(); _i = 0; _score = 0; _selected = -1; _done = false; });
   @override Widget build(BuildContext context)=>_Shell(_t(context,'خمن الكلمة','Word Riddle'),_t(context,'اقرأ التلميح واختر الكلمة المناسبة. لديك ثماني جولات.','Read the clue and choose the matching word. Eight rounds.'),
     Column(children:[
@@ -239,7 +239,7 @@ class _WordState extends State<_WordPage>{
       const SizedBox(height:18),
       if(_done)...[
         const Icon(Icons.lightbulb_rounded,color:_g,size:70),const SizedBox(height:12),
-        Text(_t(context,'أصبت ','You got ')+_score.toString()+'/8',style:const TextStyle(color:_g,fontSize:22,fontWeight:FontWeight.bold)),
+        Text('${_t(context, 'أصبت ', 'You got ')}$_score/8',style:const TextStyle(color:_g,fontSize:22,fontWeight:FontWeight.bold)),
         const SizedBox(height:16),FilledButton.icon(onPressed:_restart,icon:const Icon(Icons.replay),label:Text(_t(context,'جولة جديدة','New round'))),
       ]else...[
         LinearProgressIndicator(value:(_i+1)/8,minHeight:7,backgroundColor:_p,borderRadius:BorderRadius.circular(8)),
