@@ -782,7 +782,7 @@ class _WatchState extends State<_WatchView> {
             controller: url,
             keyboardType: TextInputType.url,
             decoration: InputDecoration(
-              labelText: _t(context, 'رابط مصدر مرخّص', 'Licensed source URL'),
+              labelText: _t(context, 'رابط فيديو مباشر (MP4 / HLS / WebM)', 'Direct video URL (MP4 / HLS / WebM)'),
             ),
           ),
           const SizedBox(height: 12),
