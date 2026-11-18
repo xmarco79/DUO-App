@@ -1320,6 +1320,9 @@ class _ChatPageState extends State<ChatPage> {
 
                           final showDate = index == 0 ||
                               !_sameChatDay(displayedMessages[index - 1]['created_at'], item['created_at']);
+                          final groupedWithPrevious = index > 0 &&
+                              !showDate &&
+                              displayedMessages[index - 1]['sender_id'] == item['sender_id'];
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -1344,7 +1347,7 @@ class _ChatPageState extends State<ChatPage> {
                               constraints: BoxConstraints(
                                 maxWidth: MediaQuery.of(context).size.width * 0.80,
                               ),
-                              margin: const EdgeInsets.only(bottom: 12),
+                              margin: EdgeInsets.only(bottom: groupedWithPrevious ? 4 : 12),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 12,
@@ -1365,7 +1368,7 @@ class _ChatPageState extends State<ChatPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (!isMe)
+                                  if (!isMe && !groupedWithPrevious)
                                     Padding(
                                       padding: const EdgeInsets.only(bottom: 6),
                                       child: Text(
