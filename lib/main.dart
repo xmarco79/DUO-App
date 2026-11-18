@@ -1288,6 +1288,7 @@ class _ChatPageState extends State<ChatPage> {
           }).toList();
 
     return Scaffold(
+      backgroundColor: chatTheme.background,
       appBar: AppBar(
         title: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1418,16 +1419,14 @@ class _ChatPageState extends State<ChatPage> {
                                 vertical: 12,
                               ),
                               decoration: BoxDecoration(
-                                color: isMe
-                                    ? purple
-                                    : const Color(0xFF211D30),
+                                color: isMe ? chatTheme.mine : chatTheme.partner,
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(19),
                                   topRight: const Radius.circular(19),
                                   bottomLeft: Radius.circular(isMe ? 19 : 5),
                                   bottomRight: Radius.circular(isMe ? 5 : 19),
                                 ),
-                                border: Border.all(color: gold.withValues(alpha: 0.18)),
+                                border: Border.all(color: chatTheme.accent.withValues(alpha: 0.18)),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1453,7 +1452,7 @@ class _ChatPageState extends State<ChatPage> {
                                       decoration: BoxDecoration(
                                         color: chatTheme.background.withValues(alpha: 0.65),
                                         borderRadius: BorderRadius.circular(8),
-                                        border: const Border(left: BorderSide(color: chatTheme.accent, width: 3)),
+                                        border: Border(left: BorderSide(color: chatTheme.accent, width: 3)),
                                       ),
                                       child: Text(
                                         'رد على: ${_messagePreview(messages.firstWhere(
@@ -1656,7 +1655,7 @@ class _ChatPageState extends State<ChatPage> {
                           ? 'اكتب رسالتك...'
                           : 'الرد على: ${_messagePreview(replyingTo!)}',
                       filled: true,
-                      fillColor: navy,
+                      fillColor: chatTheme.partner,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,
