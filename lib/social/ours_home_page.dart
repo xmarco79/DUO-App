@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'ours_direct_chat_page.dart';
 import '../notifications/ours_notifications.dart';
 
-const _n=Color(0xFF10101C), _p=Color(0xFF29213D), _l=Color(0xFFB9A2D5), _g=Color(0xFFD9BC86);
+const _p=Color(0xFF29213D), _l=Color(0xFFB9A2D5), _g=Color(0xFFD9BC86);
 String _t(BuildContext c,String a,String e)=>Localizations.localeOf(c).languageCode=='ar'?a:e;
 
 class OursSocialHomePage extends StatefulWidget {
