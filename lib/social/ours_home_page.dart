@@ -120,7 +120,7 @@ class _StudioState extends State<_StudioView> {
     try {
       await db.from('ours_canvas_strokes').insert({
         'space_id': widget.spaceId,
-        'owner_id': scope == 'personal' ? db.auth.currentUser!.id : null,
+        'owner_id': db.auth.currentUser!.id,
         'scope': scope,
         'points': points.map((point) => {'x': point.dx, 'y': point.dy}).toList(),
         'color': erasing ? canvasBackground.toARGB32() : color.toARGB32(),
@@ -138,7 +138,7 @@ class _StudioState extends State<_StudioView> {
     try {
       var query = db.from('ours_canvas_strokes').select('id')
           .eq('space_id', widget.spaceId).eq('scope', scope);
-      if (scope == 'personal') query = query.eq('owner_id', db.auth.currentUser!.id);
+      query = query.eq('owner_id', db.auth.currentUser!.id);
       final last = await query.order('created_at', ascending: false).limit(1).maybeSingle();
       if (last == null) return;
       await db.from('ours_canvas_strokes').delete().eq('id', last['id']);
@@ -156,8 +156,8 @@ class _StudioState extends State<_StudioView> {
         title: Text(_t(context, 'مسح اللوحة؟', 'Clear canvas?')),
         content: Text(_t(
           context,
-          scope == 'personal' ? 'سيتم حذف رسومات مرسمك الشخصي.' : 'سيتم حذف جميع الرسومات من اللوحة المشتركة للحسابين.',
-          scope == 'personal' ? 'This removes the drawings in your personal studio.' : 'This removes every drawing from the shared canvas for both accounts.',
+          scope == 'personal' ? 'سيتم حذف رسومات مرسمك الشخصي.' : 'سيتم حذف رسوماتك أنت فقط من اللوحة المشتركة، وستبقى رسومات الطرف الآخر.',
+          scope == 'personal' ? 'This removes the drawings in your personal studio.' : 'This removes only your drawings from the shared canvas. The other person’s drawings stay.',
         )),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(_t(context, 'إلغاء', 'Cancel'))),
@@ -168,7 +168,7 @@ class _StudioState extends State<_StudioView> {
     if (confirmed != true) return;
     try {
       var query = db.from('ours_canvas_strokes').delete().eq('space_id', widget.spaceId).eq('scope', scope);
-      if (scope == 'personal') query = query.eq('owner_id', db.auth.currentUser!.id);
+      query = query.eq('owner_id', db.auth.currentUser!.id);
       await query;
       if (mounted) setState(() => points = []);
       await _load();
