@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../worlds/world_hub_page.dart';
-import '../games/ours_tic_tac_toe_page.dart';
 
 const _oursGold = Color(0xFFD9BC86);
 const _oursPurple = Color(0xFF29213D);
@@ -177,41 +175,8 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
   Future<void> _openNotification(Map<String, dynamic> item) async {
     await _markRead(item);
     if (!mounted) return;
-    final type = item['notification_type']?.toString();
-    if (type == 'message') {
+    if (item['notification_type']?.toString() == 'message') {
       widget.onOpenMessage?.call();
-      return;
-    }
-    if (type == 'world_item') {
-      final data = item['data'] is Map
-          ? Map<String, dynamic>.from(item['data'] as Map)
-          : <String, dynamic>{};
-      final entityId = data['entity_id']?.toString();
-      if (entityId == null || entityId.isEmpty) return;
-      try {
-        final row = await db.from('duo_world_items')
-            .select('world')
-            .eq('id', entityId)
-            .eq('space_id', widget.spaceId)
-            .maybeSingle();
-        if (!mounted || row == null) return;
-        const indexes = {
-          'connect': 0, 'universe': 1, 'play': 2, 'memories': 3, 'together': 4,
-        };
-        final index = indexes[row['world']?.toString()];
-        if (index == null) return;
-        await Navigator.push(context, MaterialPageRoute(
-          builder: (_) => OursWorldHubPage(spaceId: widget.spaceId, worldIndex: index),
-        ));
-      } catch (_) {
-        if (mounted) _showMessage(_notificationText(context, 'تعذر فتح العنصر المرتبط.', 'Could not open the related item.'));
-      }
-      return;
-    }
-    if (type == 'game') {
-      await Navigator.push(context, MaterialPageRoute(
-        builder: (_) => OursTicTacToePage(spaceId: widget.spaceId),
-      ));
     }
   }
 
