@@ -16,6 +16,8 @@ class OursMiniGamesPage extends StatelessWidget {
       (Icons.grid_view_rounded, 'لعبة الذاكرة', 'Memory Match', 'اجمعا الأزواج وتنافسا على النقاط', 'Find pairs and compete', const _MemoryPage()),
       (Icons.bolt_rounded, 'اختبار المعلومات', 'Quick Quiz', 'اختبر معلوماتك بعشرة أسئلة سريعة', 'Test your knowledge with ten quick questions', const _QuizPage()),
       (Icons.psychology_alt_rounded, 'خمن الكلمة', 'Word Riddle', 'اختبر سرعة ملاحظتك في ثماني جولات', 'Test your observation in eight rounds', const _WordPage()),
+      (Icons.sports_martial_arts_rounded, 'حجر ورقة مقص', 'Rock Paper Scissors', 'تحديا بعضكما في خمس جولات', 'Challenge each other in five rounds', const _RpsPage()),
+      (Icons.casino_rounded, 'مبارزة النرد', 'Dice Duel', 'ارميا النرد واجمعا أعلى نتيجة', 'Roll the dice and chase the highest score', const _DicePage()),
     ];
     return Scaffold(
       backgroundColor: _n,
@@ -211,6 +213,36 @@ class _QuizState extends State<_QuizPage> {
             child:Text(_t(context,_round[_i].a[v],_round[_i].b[v]),style:TextStyle(color:_selected!=-1&&correct?const Color(0xFF75B99B):Colors.white)))));}),
       ],
     ])));
+}
+
+
+class _RpsPage extends StatefulWidget { const _RpsPage(); @override State<_RpsPage> createState()=>_RpsState(); }
+class _RpsState extends State<_RpsPage>{
+ static const choices=['✊','✋','✌️'];static const names=['حجر','ورقة','مقص'];
+ int round=1,turn=0,first=-1,scoreA=0,scoreB=0;bool done=false;
+ void choose(int v){if(done)return;if(turn==0){setState(()=>{first=v,turn=1});}else{final a=first,b=v;setState((){if(a!=b){if((a==0&&b==2)||(a==1&&b==0)||(a==2&&b==1))scoreA++;else scoreB++;}round++;turn=0;first=-1;if(round>5)done=true;});}}
+ void reset()=>setState(()=>{round=1,turn=0,first=-1,scoreA=0,scoreB=0,done=false});
+ @override Widget build(BuildContext context)=>_Shell(_t(context,'حجر ورقة مقص','Rock Paper Scissors'),_t(context,'اختارا الحركة بالتناوب دون أن يرى اللاعب الثاني اختيار الأول. خمس جولات تحسم الفائز.','Take turns choosing without showing the first player’s move. Five rounds decide the winner.'),
+ Column(children:[
+  Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[_Score(_t(context,'الأول','PLAYER 1'),scoreA),_Score(_t(context,'الثاني','PLAYER 2'),scoreB)]),
+  const SizedBox(height:16),Text(done?_t(context,scoreA==scoreB?'تعادل!':scoreA>scoreB?'فاز اللاعب الأول':'فاز اللاعب الثاني',scoreA==scoreB?'Tie!':scoreA>scoreB?'Player 1 wins':'Player 2 wins'):_t(context,'الجولة '+round.toString()+' من 5 · دور اللاعب '+(turn+1).toString(),'Round '+round.toString()+' of 5 · Player '+(turn+1).toString()),style:const TextStyle(color:_g,fontWeight:FontWeight.bold,fontSize:18)),
+  const SizedBox(height:22),
+  if(!done)Wrap(spacing:12,children:List.generate(3,(i)=>FilledButton(onPressed:()=>choose(i),style:FilledButton.styleFrom(backgroundColor:_p,padding:const EdgeInsets.all(18)),child:Column(children:[Text(choices[i],style:const TextStyle(fontSize:36)),Text(_t(context,names[i],['Rock','Paper','Scissors'][i]))])))),
+  if(done)Padding(padding:const EdgeInsets.all(20),child:FilledButton.icon(onPressed:reset,icon:const Icon(Icons.replay),label:Text(_t(context,'إعادة اللعب','Play again'))))
+ ]));
+}
+class _DicePage extends StatefulWidget { const _DicePage(); @override State<_DicePage> createState()=>_DiceState(); }
+class _DiceState extends State<_DicePage>{
+ final _rng=Random();int turn=0,a=0,b=0,round=1;bool done=false;
+ void roll(){if(done)return;final value=_rng.nextInt(6)+1;setState((){if(turn==0){a+=value;turn=1;}else{b+=value;turn=0;round++;if(round>5)done=true;}});}
+ void reset()=>setState(()=>{turn=0,a=0,b=0,round=1,done=false});
+ @override Widget build(BuildContext context)=>_Shell(_t(context,'مبارزة النرد','Dice Duel'),_t(context,'خمسة أدوار لكل لاعب. ارميا النرد بالتناوب واجمعا النقاط.','Five turns each. Roll the dice alternately and collect points.'),
+ Column(children:[
+  Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[_Score(_t(context,'الأول','PLAYER 1'),a),_Score(_t(context,'الثاني','PLAYER 2'),b)]),
+  const SizedBox(height:22),Text(done?_t(context,a==b?'تعادل!':a>b?'فاز اللاعب الأول':'فاز اللاعب الثاني',a==b?'Tie!':a>b?'Player 1 wins':'Player 2 wins'):_t(context,'دور اللاعب '+(turn+1).toString()+' · الرمية '+round.toString()+' من 5','Player '+(turn+1).toString()+' · Roll '+round.toString()+' of 5'),style:const TextStyle(color:_g,fontSize:18,fontWeight:FontWeight.bold)),
+  const SizedBox(height:24),FilledButton.icon(onPressed:done?null:roll,style:FilledButton.styleFrom(backgroundColor:_p,padding:const EdgeInsets.symmetric(horizontal:30,vertical:18)),icon:const Icon(Icons.casino_rounded),label:Text(_t(context,'ارمِ النرد','Roll dice'))),
+  if(done)Padding(padding:const EdgeInsets.all(18),child:FilledButton.icon(onPressed:reset,icon:const Icon(Icons.replay),label:Text(_t(context,'جولة جديدة','New game'))))
+ ]));
 }
 
 class _Word {
