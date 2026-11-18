@@ -13,11 +13,11 @@ class OursSocialHomePage extends StatefulWidget {
  @override State<OursSocialHomePage> createState()=>_OursSocialHomePageState();
 }
 class _OursSocialHomePageState extends State<OursSocialHomePage>{
- final db=Supabase.instance.client; int tab=0; String? spaceId,conversationId,error; bool loading=true;
+ final db=Supabase.instance.client; int tab=0; String? spaceId,error; bool loading=true;
  @override void initState(){super.initState();_load();}
  Future<void> _load() async {try{
   final raw=await db.rpc('ensure_ours_pair_space'); final m=Map<String,dynamic>.from(raw as Map);
-  if(mounted)setState(() { spaceId=m['space_id'].toString(); conversationId=m['conversation_id'].toString(); loading=false; });
+  if(mounted)setState(() { spaceId=m['space_id'].toString(); loading=false; });
  }catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}}
  @override Widget build(BuildContext context){
   final labels=[_t(context,'مساحتنا','Space'),_t(context,'مرسمنا','Studio'),_t(context,'المشاهدة','Watch'),_t(context,'موسيقانا','Music'),_t(context,'التقرير','Report')];
@@ -25,7 +25,7 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
   return Scaffold(appBar:AppBar(title:const Text('OURS',style:TextStyle(color:_g,letterSpacing:5)),actions:[if(spaceId!=null) OursNotificationBell(spaceId:spaceId,onOpenMessage:()=>widget.onChatTap(spaceId!)),IconButton(onPressed:widget.onProfileTap,icon:const Icon(Icons.tune,color:_l))]),
    body:loading?const Center(child:CircularProgressIndicator(color:_g)):error!=null?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Text(_t(context,'تعذر تجهيز مساحتنا','Could not load space')),Text(error!,style:const TextStyle(color:_l)),TextButton(onPressed:()=>setState(() { loading=true; error=null; _load(); }),child:Text(_t(context,'إعادة المحاولة','Retry')))])):
    IndexedStack(index:tab,children:[
-    _SpaceView(onChat:()=>widget.onChatTap(spaceId!),onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(conversationId:conversationId!)))),
+    _SpaceView(onChat:()=>widget.onChatTap(spaceId!),onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(spaceId:spaceId!)))),
     _StudioView(spaceId:spaceId!),
     _WatchView(spaceId:spaceId!),
     const _SpotifyView(),
