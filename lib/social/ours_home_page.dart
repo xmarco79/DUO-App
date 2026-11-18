@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'ours_direct_chat_page.dart';
 import 'ours_profile_page.dart';
 import 'ours_music_page.dart';
@@ -754,17 +753,6 @@ class _WatchState extends State<_WatchView> {
     final minutes = seconds ~/ 60;
     final remainder = seconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${remainder.toString().padLeft(2, '0')}';
-  }
-
-  Future<void> _openSource() async {
-    final uri = Uri.tryParse(session?['source_url']?.toString() ?? '');
-    if (uri == null) return;
-    try {
-      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!opened) _message(_t(context, 'تعذر فتح الرابط', 'Could not open the link'));
-    } catch (error) {
-      _message(error.toString());
-    }
   }
 
   void _message(String value) {
