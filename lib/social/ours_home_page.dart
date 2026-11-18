@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'ours_direct_chat_page.dart';
+import '../notifications/ours_notifications.dart';
 
 const _n=Color(0xFF10101C), _p=Color(0xFF29213D), _l=Color(0xFFB9A2D5), _g=Color(0xFFD9BC86);
 String _t(BuildContext c,String a,String e)=>Localizations.localeOf(c).languageCode=='ar'?a:e;
@@ -21,7 +22,7 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
  @override Widget build(BuildContext context){
   final labels=[_t(context,'مساحتنا','Space'),_t(context,'مرسمنا','Studio'),_t(context,'المشاهدة','Watch'),_t(context,'موسيقانا','Music'),_t(context,'التقرير','Report')];
   final icons=[Icons.forum_outlined,Icons.brush_outlined,Icons.live_tv_outlined,Icons.music_note_outlined,Icons.insights_outlined];
-  return Scaffold(appBar:AppBar(title:const Text('OURS',style:TextStyle(color:_g,letterSpacing:5)),actions:[IconButton(onPressed:widget.onProfileTap,icon:const Icon(Icons.tune,color:_l))]),
+  return Scaffold(appBar:AppBar(title:const Text('OURS',style:TextStyle(color:_g,letterSpacing:5)),actions:[if(spaceId!=null) OursNotificationBell(spaceId:spaceId,onOpenMessage:()=>widget.onChatTap(spaceId!)),IconButton(onPressed:widget.onProfileTap,icon:const Icon(Icons.tune,color:_l))]),
    body:loading?const Center(child:CircularProgressIndicator(color:_g)):error!=null?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Text(_t(context,'تعذر تجهيز مساحتنا','Could not load space')),Text(error!,style:const TextStyle(color:_l)),TextButton(onPressed:()=>setState(() { loading=true; error=null; _load(); }),child:Text(_t(context,'إعادة المحاولة','Retry')))])):
    IndexedStack(index:tab,children:[
     _SpaceView(spaceId:spaceId!,conversationId:conversationId!,onChat:()=>widget.onChatTap(spaceId!),onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(conversationId:conversationId!)))),
