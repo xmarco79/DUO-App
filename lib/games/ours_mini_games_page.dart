@@ -220,8 +220,8 @@ class _RpsPage extends StatefulWidget { const _RpsPage(); @override State<_RpsPa
 class _RpsState extends State<_RpsPage>{
  static const choices=['✊','✋','✌️'];static const names=['حجر','ورقة','مقص'];
  int round=1,turn=0,first=-1,scoreA=0,scoreB=0;bool done=false;
- void choose(int v){if(done)return;if(turn==0){setState(()=>{first=v,turn=1});}else{final a=first,b=v;setState((){if(a!=b){if((a==0&&b==2)||(a==1&&b==0)||(a==2&&b==1))scoreA++;else scoreB++;}round++;turn=0;first=-1;if(round>5)done=true;});}}
- void reset()=>setState(()=>{round=1,turn=0,first=-1,scoreA=0,scoreB=0,done=false});
+ void choose(int v){if(done)return;if(turn==0){setState(() { first = v; turn = 1; });}else{final a=first,b=v;setState((){if(a!=b){if((a==0&&b==2)||(a==1&&b==0)||(a==2&&b==1))scoreA++;else scoreB++;}round++;turn=0;first=-1;if(round>5)done=true;});}}
+ void reset() => setState(() { round = 1; turn = 0; first = -1; scoreA = 0; scoreB = 0; done = false; });
  @override Widget build(BuildContext context)=>_Shell(_t(context,'حجر ورقة مقص','Rock Paper Scissors'),_t(context,'اختارا الحركة بالتناوب دون أن يرى اللاعب الثاني اختيار الأول. خمس جولات تحسم الفائز.','Take turns choosing without showing the first player’s move. Five rounds decide the winner.'),
  Column(children:[
   Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[_Score(_t(context,'الأول','PLAYER 1'),scoreA),_Score(_t(context,'الثاني','PLAYER 2'),scoreB)]),
@@ -235,7 +235,7 @@ class _DicePage extends StatefulWidget { const _DicePage(); @override State<_Dic
 class _DiceState extends State<_DicePage>{
  final _rng=Random();int turn=0,a=0,b=0,round=1;bool done=false;
  void roll(){if(done)return;final value=_rng.nextInt(6)+1;setState((){if(turn==0){a+=value;turn=1;}else{b+=value;turn=0;round++;if(round>5)done=true;}});}
- void reset()=>setState(()=>{turn=0,a=0,b=0,round=1,done=false});
+ void reset() => setState(() { turn = 0; a = 0; b = 0; round = 1; done = false; });
  @override Widget build(BuildContext context)=>_Shell(_t(context,'مبارزة النرد','Dice Duel'),_t(context,'خمسة أدوار لكل لاعب. ارميا النرد بالتناوب واجمعا النقاط.','Five turns each. Roll the dice alternately and collect points.'),
  Column(children:[
   Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[_Score(_t(context,'الأول','PLAYER 1'),a),_Score(_t(context,'الثاني','PLAYER 2'),b)]),
