@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'notifications/ours_push_service.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'social/ours_home_page.dart';
 import 'chat/ours_message_reactions.dart';
@@ -1113,6 +1114,27 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  bool _sameChatDay(dynamic first, dynamic second) {
+    final a = DateTime.tryParse(first?.toString() ?? '')?.toLocal();
+    final b = DateTime.tryParse(second?.toString() ?? '')?.toLocal();
+    return a != null && b != null && a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  String _formatChatDate(dynamic value) {
+    final date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+    if (date == null) return '';
+    final now = DateTime.now();
+    if (date.year == now.year && date.month == now.month && date.day == now.day) return 'اليوم';
+    final yesterday = now.subtract(const Duration(days: 1));
+    if (date.year == yesterday.year && date.month == yesterday.month && date.day == yesterday.day) return 'أمس';
+    return DateFormat('d MMM yyyy', Localizations.localeOf(context).languageCode).format(date);
+  }
+
+  Future<void> _copyMessage(String value) async {
+    await Clipboard.setData(ClipboardData(text: value));
+    showMessage('تم نسخ الرسالة');
+  }
+
   void scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !scrollController.hasClients) return;
@@ -1322,6 +1344,19 @@ class _ChatPageState extends State<ChatPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  if (index == 0 || !_sameChatDay(displayedMessages[index - 1]['created_at'], item['created_at']))
+                                    Center(
+                                      child: Container(
+                                        margin: const EdgeInsets.only(bottom: 10),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: navy.withValues(alpha: 0.72),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: gold.withValues(alpha: 0.16)),
+                                        ),
+                                        child: Text(_formatChatDate(item['created_at']), style: const TextStyle(color: lavender, fontSize: 10)),
+                                      ),
+                                    ),
                                   if (!isMe)
                                     Padding(
                                       padding: const EdgeInsets.only(bottom: 6),
@@ -1423,12 +1458,9 @@ class _ChatPageState extends State<ChatPage> {
                                       },
                                     )
                                   else
-                                    Text(
+                                    SelectableText(
                                       item['body']?.toString() ?? '',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                      ),
+                                      style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5),
                                     ),
                                   if (item['deleted_at'] == null)
                                     Padding(
