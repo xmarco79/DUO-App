@@ -841,11 +841,22 @@ class _WatchState extends State<_WatchView> {
                       borderRadius: BorderRadius.circular(16),
                       child: Column(children: [
                         AspectRatio(aspectRatio: player!.value.aspectRatio, child: VideoPlayer(player!)),
-                        VideoProgressIndicator(
-                          player!,
-                          allowScrubbing: true,
-                          colors: const VideoProgressColors(playedColor: _g, bufferedColor: _l, backgroundColor: Colors.white24),
-                          onSeek: (position) => _updateSession(positionMs: position.inMilliseconds),
+                        ValueListenableBuilder<VideoPlayerValue>(
+                          valueListenable: player!,
+                          builder: (context, value, _) {
+                            final duration = value.duration.inMilliseconds;
+                            if (duration <= 0) return const LinearProgressIndicator(minHeight: 3, color: _g);
+                            final position = value.position.inMilliseconds.clamp(0, duration).toDouble();
+                            return Slider(
+                              min: 0,
+                              max: duration.toDouble(),
+                              value: position,
+                              activeColor: _g,
+                              inactiveColor: Colors.white24,
+                              onChanged: (next) => player!.seekTo(Duration(milliseconds: next.round())),
+                              onChangeEnd: (next) => _updateSession(positionMs: next.round()),
+                            );
+                          },
                         ),
                       ]),
                     )
