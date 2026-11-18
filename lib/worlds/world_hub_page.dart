@@ -660,8 +660,8 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('YOUR PRIVATE UNIVERSE',
-                        style: TextStyle(color: _gold, letterSpacing: 3, fontSize: 10)),
+                    Text(isArabic ? 'عالمكما الخاص' : 'YOUR PRIVATE UNIVERSE',
+                        style: const TextStyle(color: _gold, letterSpacing: 3, fontSize: 10)),
                     const SizedBox(height: 16),
                     Row(children: [
                       Icon(world.$3, color: _gold, size: 34),
