@@ -90,11 +90,11 @@ class _ChatAtmospherePainter extends CustomPainter {
     break;
    case 'desert':
     canvas.drawCircle(Offset(size.width*.78,size.height*.19),size.width*.13,Paint()..color=accent.withValues(alpha:.12));
-    for(var i=0;i<3;i++){final p=Path()..moveTo(0,size.height*(.58+i*.10))..quadraticBezierTo(size.width*.42,size.height*(.40+i*.12),size.width,size.height*(.62+i*.09));canvas.drawPath(p,Paint()..color=accent.withValues(alpha:.06+i*.025)..style=PaintingStyle.stroke..strokeWidth:22);}
+    for(var i=0;i<3;i++){final p=Path()..moveTo(0,size.height*(.58+i*.10))..quadraticBezierTo(size.width*.42,size.height*(.40+i*.12),size.width,size.height*(.62+i*.09));canvas.drawPath(p,Paint()..color=accent.withValues(alpha:.06+i*.025)..style=PaintingStyle.stroke..strokeWidth=22);}
     break;
    case 'neon':
-    for(var x=0.0;x<size.width;x+=34){canvas.drawLine(Offset(x,0),Offset(x,size.height),line);}
-    for(var y=0.0;y<size.height;y+=34){canvas.drawLine(Offset(0,y),Offset(size.width,y),line);}
+    for(var x=0.0;x<size.width;x+=34.0){canvas.drawLine(Offset(x,0),Offset(x,size.height),line);}
+    for(var y=0.0;y<size.height;y+=34.0){canvas.drawLine(Offset(0,y),Offset(size.width,y),line);}
     canvas.drawLine(Offset(size.width*.08,size.height*.72),Offset(size.width*.92,size.height*.18),Paint()..color=accent.withValues(alpha:.15)..strokeWidth:3..maskFilter=const MaskFilter.blur(BlurStyle.normal,8));
     break;
   }
