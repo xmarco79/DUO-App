@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../games/ours_tic_tac_toe_page.dart';
+import '../games/ours_mini_games_page.dart';
 import '../memories/ours_albums_page.dart';
 
 const _navy = Color(0xFF10101C);
@@ -678,12 +679,12 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                         icon: const Icon(Icons.person_add_alt_1),
                         label: Text(_worldText(context, 'دعوة شريكك إلى العالم', 'Invite your partner to this world')),
                       )),
-                    if (canSync && widget.worldIndex == 2)
+                    if (widget.worldIndex == 2)
                       SizedBox(width: double.infinity, child: FilledButton.icon(
                         onPressed: () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => OursTicTacToePage(spaceId: widget.spaceId!))),
-                        icon: const Icon(Icons.grid_3x3_rounded),
-                        label: Text(_worldText(context, 'العبا XO مباشرة', 'Play XO together')),
+                          builder: (_) => OursMiniGamesPage(spaceId: widget.spaceId))),
+                        icon: const Icon(Icons.sports_esports_rounded),
+                        label: Text(_worldText(context, 'افتحا صالة الألعاب', 'Open the game arcade')),
                       )),
                     if (canSync && widget.worldIndex == 3)
                       SizedBox(width: double.infinity, child: OutlinedButton.icon(
