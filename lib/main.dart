@@ -1318,10 +1318,28 @@ class _ChatPageState extends State<ChatPage> {
                           final isMe =
                               item['sender_id'] == currentUserId;
 
-                          return Align(
+                          final showDate = index == 0 ||
+                              !_sameChatDay(displayedMessages[index - 1]['created_at'], item['created_at']);
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (showDate)
+                                Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.only(top: 8, bottom: 14),
+                                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: purple.withValues(alpha: 0.72),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: gold.withValues(alpha: 0.18)),
+                                    ),
+                                    child: Text(_formatChatDate(item['created_at']), style: const TextStyle(color: lavender, fontSize: 10)),
+                                  ),
+                                ),
+                              Align(
                             alignment: isMe
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
+                                ? AlignmentDirectional.centerEnd
+                                : AlignmentDirectional.centerStart,
                             child: Container(
                               constraints: BoxConstraints(
                                 maxWidth: MediaQuery.of(context).size.width * 0.80,
@@ -1347,19 +1365,6 @@ class _ChatPageState extends State<ChatPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (index == 0 || !_sameChatDay(displayedMessages[index - 1]['created_at'], item['created_at']))
-                                    Center(
-                                      child: Container(
-                                        margin: const EdgeInsets.only(bottom: 10),
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                        decoration: BoxDecoration(
-                                          color: navy.withValues(alpha: 0.72),
-                                          borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(color: gold.withValues(alpha: 0.16)),
-                                        ),
-                                        child: Text(_formatChatDate(item['created_at']), style: const TextStyle(color: lavender, fontSize: 10)),
-                                      ),
-                                    ),
                                   if (!isMe)
                                     Padding(
                                       padding: const EdgeInsets.only(bottom: 6),
@@ -1503,6 +1508,9 @@ class _ChatPageState extends State<ChatPage> {
                                 ],
                               ),
                             ),
+                          ),
+                              ),
+                            ],
                           );
                         },
                       ),
