@@ -161,8 +161,8 @@ declare
   v_conversation uuid;
   v_start timestamptz := date_trunc('week',now());
   v_end timestamptz := date_trunc('week',now()) + interval '1 week';
-  v_naif jsonb;
-  v_zoi jsonb;
+  v_naif_stats jsonb;
+  v_zoi_stats jsonb;
   v_shared jsonb;
   v_report jsonb;
 begin
@@ -184,20 +184,20 @@ begin
     'media',(select count(*) from public.duo_direct_messages where conversation_id=v_conversation and sender_id=v_naif and message_type in ('image','video','audio','file','view_once') and created_at>=v_start and created_at<v_end),
     'drawings',(select count(*) from public.ours_canvas_strokes where space_id=v_space and scope='personal' and owner_id=v_naif and created_at>=v_start and created_at<v_end),
     'watch_sessions',(select count(*) from public.ours_watch_sessions where space_id=v_space and created_by=v_naif and created_at>=v_start and created_at<v_end)
-  ) into v_naif;
+  ) into v_naif_stats;
   select jsonb_build_object(
     'messages',(select count(*) from public.duo_direct_messages where conversation_id=v_conversation and sender_id=v_zoi and created_at>=v_start and created_at<v_end),
     'media',(select count(*) from public.duo_direct_messages where conversation_id=v_conversation and sender_id=v_zoi and message_type in ('image','video','audio','file','view_once') and created_at>=v_start and created_at<v_end),
     'drawings',(select count(*) from public.ours_canvas_strokes where space_id=v_space and scope='personal' and owner_id=v_zoi and created_at>=v_start and created_at<v_end),
     'watch_sessions',(select count(*) from public.ours_watch_sessions where space_id=v_space and created_by=v_zoi and created_at>=v_start and created_at<v_end)
-  ) into v_zoi;
+  ) into v_zoi_stats;
   select jsonb_build_object(
     'messages',(select count(*) from public.duo_messages where space_id=v_space and created_at>=v_start and created_at<v_end),
     'drawings',(select count(*) from public.ours_canvas_strokes where space_id=v_space and scope='shared' and created_at>=v_start and created_at<v_end),
     'watch_sessions',(select count(*) from public.ours_watch_sessions where space_id=v_space and created_at>=v_start and created_at<v_end)
   ) into v_shared;
 
-  v_report:=jsonb_build_object('week_start',v_start::date,'week_end',(v_end::date-1),'naif',v_naif,'zoi',v_zoi,'shared',v_shared);
+  v_report:=jsonb_build_object('week_start',v_start::date,'week_end',(v_end::date-1),'naif',v_naif_stats,'zoi',v_zoi_stats,'shared',v_shared);
   insert into public.ours_weekly_reports(space_id,week_start,report,generated_at)
     values(v_space,v_start::date,v_report,now())
     on conflict(space_id,week_start) do update set report=excluded.report,generated_at=excluded.generated_at;
