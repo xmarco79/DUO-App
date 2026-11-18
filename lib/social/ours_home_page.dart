@@ -60,6 +60,8 @@ class _StudioState extends State<_StudioView> {
   double opacity = 1.0;
   static const Color canvasBackground = Color(0xFF171522);
   List<Offset> points = [];
+  final List<Map<String, dynamic>> redoStack = [];
+  final TransformationController zoomController = TransformationController();
   Size canvasSize = Size.zero;
   RealtimeChannel? channel;
 
@@ -129,7 +131,7 @@ class _StudioState extends State<_StudioView> {
         'color': erasing ? canvasBackground.toARGB32() : color.withValues(alpha: marker ? opacity * 0.42 : opacity).toARGB32(),
         'stroke_width': erasing ? 28 : marker ? strokeWidth * 2.2 : strokeWidth,
       });
-      if (mounted) setState(() => points = []);
+      if (mounted) setState(() { points = []; redoStack.clear(); });
       await _load();
     } catch (error) {
       if (mounted) setState(() => points = []);
@@ -139,16 +141,41 @@ class _StudioState extends State<_StudioView> {
 
   Future<void> _undoLastStroke() async {
     try {
-      var query = db.from('ours_canvas_strokes').select('id')
+      var query = db.from('ours_canvas_strokes').select()
           .eq('space_id', widget.spaceId).eq('scope', scope);
       query = query.eq('owner_id', db.auth.currentUser!.id);
       final last = await query.order('created_at', ascending: false).limit(1).maybeSingle();
       if (last == null) return;
       await db.from('ours_canvas_strokes').delete().eq('id', last['id']);
+      if (mounted) setState(() => redoStack.add(Map<String, dynamic>.from(last)));
       await _load();
     } catch (error) {
       _message(error.toString());
     }
+  }
+
+  Future<void> _redoLastStroke() async {
+    if (redoStack.isEmpty) return;
+    final stroke = redoStack.removeLast();
+    try {
+      await db.from('ours_canvas_strokes').insert({
+        'space_id': widget.spaceId,
+        'owner_id': db.auth.currentUser!.id,
+        'scope': scope,
+        'points': stroke['points'],
+        'color': stroke['color'],
+        'stroke_width': stroke['stroke_width'],
+      });
+      await _load();
+      if (mounted) setState(() {});
+    } catch (error) {
+      if (mounted) setState(() => redoStack.add(stroke));
+      _message(error.toString());
+    }
+  }
+
+  void _resetZoom() {
+    zoomController.value = Matrix4.identity();
   }
 
   Future<void> _clearBoard() async {
@@ -173,7 +200,7 @@ class _StudioState extends State<_StudioView> {
       var query = db.from('ours_canvas_strokes').delete().eq('space_id', widget.spaceId).eq('scope', scope);
       query = query.eq('owner_id', db.auth.currentUser!.id);
       await query;
-      if (mounted) setState(() => points = []);
+      if (mounted) setState(() { points = []; redoStack.clear(); });
       await _load();
     } catch (error) {
       _message(error.toString());
@@ -189,6 +216,7 @@ class _StudioState extends State<_StudioView> {
 
   @override
   void dispose() {
+    zoomController.dispose();
     if (channel != null) db.removeChannel(channel!);
     super.dispose();
   }
@@ -255,6 +283,16 @@ class _StudioState extends State<_StudioView> {
                 icon: const Icon(Icons.undo_rounded, color: _l),
               ),
               IconButton(
+                tooltip: _t(context, 'إعادة الخط', 'Redo stroke'),
+                onPressed: redoStack.isEmpty ? null : _redoLastStroke,
+                icon: const Icon(Icons.redo_rounded, color: _l),
+              ),
+              IconButton(
+                tooltip: _t(context, 'إعادة ضبط التكبير', 'Reset zoom'),
+                onPressed: _resetZoom,
+                icon: const Icon(Icons.zoom_out_map_rounded, color: _l),
+              ),
+              IconButton(
                 tooltip: _t(context, 'مسح اللوحة', 'Clear canvas'),
                 onPressed: rows.isEmpty ? null : _clearBoard,
                 icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent),
@@ -303,18 +341,25 @@ class _StudioState extends State<_StudioView> {
                   ),
                   child: loading
                       ? const Center(child: CircularProgressIndicator())
-                      : GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onPanStart: (details) => setState(
-                            () => points = [_normalized(details.localPosition)],
-                          ),
-                          onPanUpdate: (details) => setState(
-                            () => points.add(_normalized(details.localPosition)),
-                          ),
-                          onPanEnd: (_) => _save(),
-                          child: CustomPaint(
-                            painter: _CanvasPainter(rows, points, color.withValues(alpha: marker ? opacity * 0.42 : opacity), marker ? strokeWidth * 2.2 : strokeWidth, showGrid),
-                            child: const SizedBox.expand(),
+                      : InteractiveViewer(
+                          transformationController: zoomController,
+                          minScale: 0.8,
+                          maxScale: 3.5,
+                          panEnabled: false,
+                          scaleEnabled: true,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onPanStart: (details) => setState(
+                              () => points = [_normalized(details.localPosition)],
+                            ),
+                            onPanUpdate: (details) => setState(
+                              () => points.add(_normalized(details.localPosition)),
+                            ),
+                            onPanEnd: (_) => _save(),
+                            child: CustomPaint(
+                              painter: _CanvasPainter(rows, points, color.withValues(alpha: marker ? opacity * 0.42 : opacity), marker ? strokeWidth * 2.2 : strokeWidth, showGrid),
+                              child: const SizedBox.expand(),
+                            ),
                           ),
                         ),
                 );
