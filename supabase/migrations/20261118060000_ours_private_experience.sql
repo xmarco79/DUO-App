@@ -159,8 +159,8 @@ declare
   v_uid uuid := auth.uid();
   v_space uuid;
   v_conversation uuid;
-  v_start timestamptz := date_trunc('week',now());
-  v_end timestamptz := date_trunc('week',now()) + interval '1 week';
+  v_start timestamptz := date_trunc('week',now()) - interval '1 week';
+  v_end timestamptz := date_trunc('week',now());
   v_naif_stats jsonb;
   v_zoi_stats jsonb;
   v_shared jsonb;
