@@ -55,6 +55,9 @@ class _StudioState extends State<_StudioView> {
   Color color = _l;
   double strokeWidth = 4;
   bool erasing = false;
+  bool marker = false;
+  bool showGrid = true;
+  double opacity = 1.0;
   static const Color canvasBackground = Color(0xFF171522);
   List<Offset> points = [];
   Size canvasSize = Size.zero;
@@ -123,8 +126,8 @@ class _StudioState extends State<_StudioView> {
         'owner_id': db.auth.currentUser!.id,
         'scope': scope,
         'points': points.map((point) => {'x': point.dx, 'y': point.dy}).toList(),
-        'color': erasing ? canvasBackground.toARGB32() : color.toARGB32(),
-        'stroke_width': erasing ? 22 : strokeWidth,
+        'color': erasing ? canvasBackground.toARGB32() : color.withValues(alpha: marker ? opacity * 0.42 : opacity).toARGB32(),
+        'stroke_width': erasing ? 28 : marker ? strokeWidth * 2.2 : strokeWidth,
       });
       if (mounted) setState(() => points = []);
       await _load();
@@ -222,7 +225,7 @@ class _StudioState extends State<_StudioView> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              for (final selectedColor in [_l, _g, Colors.white, Colors.redAccent, Colors.lightBlueAccent, Colors.greenAccent, Colors.orangeAccent, Colors.pinkAccent])
+              for (final selectedColor in [_l, _g, Colors.white, const Color(0xFFFF6B6B), const Color(0xFFFF9F43), const Color(0xFFFFD166), const Color(0xFF9BE564), const Color(0xFF36D6A8), const Color(0xFF45C4E8), const Color(0xFF5B8DEF), const Color(0xFF9B7BFF), const Color(0xFFE879F9), const Color(0xFFFF8FC7), const Color(0xFFB7C5D3), const Color(0xFF8D6E63), const Color(0xFF222222)])
                 IconButton(
                   tooltip: selectedColor.toString(),
                   onPressed: () => setState(() { color = selectedColor; erasing = false; }),
@@ -233,6 +236,18 @@ class _StudioState extends State<_StudioView> {
                 onPressed: () => setState(() => erasing = !erasing),
                 color: erasing ? _g : _l,
                 icon: const Icon(Icons.auto_fix_high_rounded),
+              ),
+              IconButton(
+                tooltip: _t(context, 'قلم تظليل', 'Marker brush'),
+                onPressed: () => setState(() { marker = !marker; erasing = false; }),
+                color: marker ? _g : _l,
+                icon: const Icon(Icons.brush_rounded),
+              ),
+              IconButton(
+                tooltip: _t(context, 'إظهار شبكة اللوحة', 'Toggle canvas grid'),
+                onPressed: () => setState(() => showGrid = !showGrid),
+                color: showGrid ? _g : _l,
+                icon: const Icon(Icons.grid_4x4_rounded),
               ),
               IconButton(
                 tooltip: _t(context, 'تراجع عن آخر خط', 'Undo last stroke'),
@@ -256,8 +271,8 @@ class _StudioState extends State<_StudioView> {
               Expanded(
                 child: Slider(
                   min: 1,
-                  max: 14,
-                  divisions: 13,
+                  max: 32,
+                  divisions: 31,
                   value: strokeWidth,
                   onChanged: (value) => setState(() => strokeWidth = value),
                 ),
@@ -266,6 +281,14 @@ class _StudioState extends State<_StudioView> {
                   style: const TextStyle(color: _g, fontSize: 12)),
             ],
           ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(children: [
+            Text(_t(context, 'شفافية', 'Opacity'), style: const TextStyle(color: _l, fontSize: 12)),
+            Expanded(child: Slider(min: 0.1, max: 1, divisions: 9, value: opacity, onChanged: (value) => setState(() => opacity = value))),
+            Text('${(opacity * 100).round()}%', style: const TextStyle(color: _g, fontSize: 11)),
+          ]),
         ),
         Expanded(
           child: Padding(
@@ -290,7 +313,7 @@ class _StudioState extends State<_StudioView> {
                           ),
                           onPanEnd: (_) => _save(),
                           child: CustomPaint(
-                            painter: _CanvasPainter(rows, points, color, strokeWidth),
+                            painter: _CanvasPainter(rows, points, color.withValues(alpha: marker ? opacity * 0.42 : opacity), marker ? strokeWidth * 2.2 : strokeWidth, showGrid),
                             child: const SizedBox.expand(),
                           ),
                         ),
@@ -321,11 +344,22 @@ class _CanvasPainter extends CustomPainter {
   final List<Offset> active;
   final Color activeColor;
   final double activeWidth;
+  final bool showGrid;
 
-  _CanvasPainter(this.rows, this.active, this.activeColor, this.activeWidth);
+  _CanvasPainter(this.rows, this.active, this.activeColor, this.activeWidth, this.showGrid);
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (showGrid) {
+      final gridPaint = Paint()..color = _l.withValues(alpha: .075)..strokeWidth = .6;
+      const step = 28.0;
+      for (double x = step; x < size.width; x += step) {
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+      }
+      for (double y = step; y < size.height; y += step) {
+        canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+      }
+    }
     for (final row in rows) {
       final raw = row['points'];
       if (raw is! List) continue;
@@ -377,7 +411,10 @@ class _CanvasPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CanvasPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _CanvasPainter oldDelegate) =>
+      oldDelegate.rows != rows || oldDelegate.active != active ||
+      oldDelegate.activeColor != activeColor || oldDelegate.activeWidth != activeWidth ||
+      oldDelegate.showGrid != showGrid;
 }
 
 class _WatchView extends StatefulWidget{final String spaceId;const _WatchView({required this.spaceId});@override State<_WatchView> createState()=>_WatchState();}
