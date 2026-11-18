@@ -214,18 +214,18 @@ class _QuizState extends State<_QuizPage> {
 }
 
 class _Word {
-  final String clueAr,clueEn; final List<String> choices; final int answer;
-  const _Word(this.clueAr,this.clueEn,this.choices,this.answer);
+  final String clueAr,clueEn; final List<String> choicesAr,choicesEn; final int answer;
+  const _Word(this.clueAr,this.clueEn,this.choicesAr,this.choicesEn,this.answer);
 }
-const _words=< _Word>[
-  _Word('يظهر مضيئًا في السماء ليلًا','It lights up the night sky',['شمس','قمر','نجم','سحاب'],1),
-  _Word('نستخدمه لفتح الأقفال','Used to open locks',['باب','مفتاح','مصباح','كتاب'],1),
-  _Word('مساحة واسعة من الماء المالح','A large body of salt water',['نهر','بحر','جبل','صحراء'],1),
-  _Word('تخبرنا بالوقت','It tells us the time',['ساعة','مرآة','نافذة','حقيبة'],0),
-  _Word('نقرأ صفحاته لنتعلم','We read its pages to learn',['قلم','كرسي','كتاب','هاتف'],2),
-  _Word('لها جذع وأغصان وأوراق','It has a trunk, branches and leaves',['زهرة','شجرة','حجر','غيمة'],1),
-  _Word('تسافر في السماء','It travels through the sky',['سفينة','قطار','طائرة','دراجة'],2),
-  _Word('ماء متجمد وبارد','Frozen water',['رمل','مطر','ثلج','دخان'],2),
+const _words = <_Word>[
+  _Word('يظهر مضيئًا في السماء ليلًا','It lights up the night sky',['شمس','قمر','نجم','سحاب'],['Sun','Moon','Star','Cloud'],1),
+  _Word('نستخدمه لفتح الأقفال','Used to open locks',['باب','مفتاح','مصباح','كتاب'],['Door','Key','Lamp','Book'],1),
+  _Word('مساحة واسعة من الماء المالح','A large body of salt water',['نهر','بحر','جبل','صحراء'],['River','Sea','Mountain','Desert'],1),
+  _Word('تخبرنا بالوقت','It tells us the time',['ساعة','مرآة','نافذة','حقيبة'],['Clock','Mirror','Window','Bag'],0),
+  _Word('نقرأ صفحاته لنتعلم','We read its pages to learn',['قلم','كرسي','كتاب','هاتف'],['Pen','Chair','Book','Phone'],2),
+  _Word('لها جذع وأغصان وأوراق','It has a trunk, branches and leaves',['زهرة','شجرة','حجر','غيمة'],['Flower','Tree','Stone','Cloud'],1),
+  _Word('تسافر في السماء','It travels through the sky',['سفينة','قطار','طائرة','دراجة'],['Ship','Train','Airplane','Bicycle'],2),
+  _Word('ماء متجمد وبارد','Frozen water',['رمل','مطر','ثلج','دخان'],['Sand','Rain','Ice','Smoke'],2),
 ];
 class _WordPage extends StatefulWidget{const _WordPage();@override State<_WordPage> createState()=>_WordState();}
 class _WordState extends State<_WordPage>{
@@ -251,7 +251,7 @@ class _WordState extends State<_WordPage>{
         ...List.generate(4,(v){final correct=v==_round[_i].answer;final col=_selected==-1?_l.withValues(alpha:.25):correct?const Color(0xFF75B99B):v==_selected?const Color(0xFFE47D83):_l.withValues(alpha:.15);
           return Padding(padding:const EdgeInsets.only(bottom:9),child:SizedBox(width:double.infinity,child:OutlinedButton(
             onPressed:_selected==-1?()=>_choose(v):null,style:OutlinedButton.styleFrom(backgroundColor:_selected!=-1&&correct?const Color(0xFF75B99B).withValues(alpha:.12):_p,side:BorderSide(color:col),padding:const EdgeInsets.symmetric(vertical:15)),
-            child:Text(_round[_i].choices[v],style:const TextStyle(color:Colors.white,fontSize:16)))));}),
+            child:Text(_t(context,_round[_i].choicesAr[v],_round[_i].choicesEn[v]),style:const TextStyle(color:Colors.white,fontSize:16)))));}),
       ],
     ]));
 }
