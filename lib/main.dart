@@ -913,6 +913,40 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  Future<void> _showMessageActions(Map<String, dynamic> item, bool isMine) async {
+    if (item['deleted_at'] != null) return;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: chatTheme.partner,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: Icon(Icons.reply_rounded, color: chatTheme.accent),
+            title: Text(oursText(context, 'الرد على الرسالة', 'Reply')),
+            onTap: () => Navigator.pop(sheetContext, 'reply'),
+          ),
+          if (item['message_type'] == 'text')
+            ListTile(
+              leading: Icon(Icons.copy_rounded, color: chatTheme.accent),
+              title: Text(oursText(context, 'نسخ النص', 'Copy text')),
+              onTap: () => Navigator.pop(sheetContext, 'copy'),
+            ),
+          if (isMine)
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+              title: Text(oursText(context, 'حذف الرسالة', 'Delete message')),
+              onTap: () => Navigator.pop(sheetContext, 'delete'),
+            ),
+        ]),
+      ),
+    );
+    if (!mounted || action == null) return;
+    if (action == 'reply') _replyToMessage(item);
+    if (action == 'copy') await _copyMessage(item['body']?.toString() ?? '');
+    if (action == 'delete') await _deleteMessage(item);
+  }
+
   void _replyToMessage(Map<String, dynamic> item) {
     setState(() => replyingTo = item);
     showMessage('الرد على: ${_messagePreview(item)}');
@@ -1366,30 +1400,42 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       backgroundColor: chatTheme.background,
       appBar: AppBar(
-        title: Column(
+        title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'OURS',
-              style: TextStyle(
-                color: gold,
-                letterSpacing: 5,
+            CircleAvatar(
+              radius: 19,
+              backgroundColor: chatTheme.accent.withValues(alpha: .18),
+              child: Text(
+                partnerName.isNotEmpty ? partnerName.substring(0, 1).toUpperCase() : 'O',
+                style: TextStyle(color: chatTheme.accent, fontWeight: FontWeight.w800),
               ),
             ),
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 7, height: 7, decoration: BoxDecoration(
-                color: partnerOnline ? Colors.lightGreenAccent : Colors.grey,
-                shape: BoxShape.circle,
-              )),
-              const SizedBox(width: 5),
-              Text(
-                partnerOnline ? '$partnerName · ${oursText(context, 'متصل الآن', 'Online')}' : '$partnerName · ${oursText(context, 'غير متصل', 'Offline')}',
-                style: const TextStyle(color: lavender, fontSize: 11, letterSpacing: 0),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(partnerName, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    Container(width: 7, height: 7, decoration: BoxDecoration(
+                      color: partnerOnline ? const Color(0xFF61D69A) : Colors.grey,
+                      shape: BoxShape.circle,
+                    )),
+                    const SizedBox(width: 5),
+                    Text(
+                      partnerOnline ? oursText(context, 'متصل الآن', 'online') : oursText(context, 'غير متصل', 'offline'),
+                      style: TextStyle(color: chatTheme.accent, fontSize: 10),
+                    ),
+                  ]),
+                ],
               ),
-            ]),
+            ),
           ],
         ),
-        centerTitle: true,
+        centerTitle: false,
         backgroundColor: chatTheme.background,
         actions: [
           IconButton(
@@ -1485,7 +1531,9 @@ class _ChatPageState extends State<ChatPage> {
                             alignment: isMe
                                 ? AlignmentDirectional.centerEnd
                                 : AlignmentDirectional.centerStart,
-                            child: Container(
+                            child: GestureDetector(
+                              onLongPress: () => _showMessageActions(item, isMe),
+                              child: Container(
                               constraints: BoxConstraints(
                                 maxWidth: MediaQuery.of(context).size.width * 0.80,
                               ),
@@ -1632,34 +1680,12 @@ class _ChatPageState extends State<ChatPage> {
                                       const SizedBox(width: 6),
                                       if (isMe && item['deleted_at'] == null)
                                         const Icon(Icons.check_rounded, color: lavender, size: 13),
-                                      if (item['deleted_at'] == null && item['message_type'] == 'text')
-                                        InkWell(
-                                          onTap: () => _copyMessage(item['body']?.toString() ?? ''),
-                                          child: const Padding(
-                                            padding: EdgeInsets.all(4),
-                                            child: Icon(Icons.copy_rounded, color: lavender, size: 15),
-                                          ),
-                                        ),
-                                      if (item['deleted_at'] == null)
-                                        InkWell(
-                                          onTap: () => _replyToMessage(item),
-                                          child: const Padding(
-                                            padding: EdgeInsets.all(4),
-                                            child: Icon(Icons.reply_rounded, color: lavender, size: 17),
-                                          ),
-                                        ),
-                                      if (isMe && item['deleted_at'] == null)
-                                        InkWell(
-                                          onTap: () => _deleteMessage(item),
-                                          child: const Padding(
-                                            padding: EdgeInsets.all(4),
-                                            child: Icon(Icons.delete_outline, color: Colors.redAccent, size: 17),
-                                          ),
-                                        ),
+
                                     ],
                                   ),
                                 ],
                               ),
+                            ),
                             ),
                           ),
                             ],
