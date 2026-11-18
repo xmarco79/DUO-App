@@ -26,7 +26,8 @@ const _skins=[
 
 class OursDirectChatPage extends StatefulWidget{
  final String conversationId,partnerName;
- const OursDirectChatPage({super.key,required this.conversationId,required this.partnerName});
+ final String? spaceId;
+ const OursDirectChatPage({super.key,required this.conversationId,required this.partnerName,this.spaceId});
  @override State<OursDirectChatPage> createState()=>_OursDirectChatPageState();
 }
 class _OursDirectChatPageState extends State<OursDirectChatPage>{
