@@ -109,7 +109,7 @@ class _OursProfilePageState extends State<OursProfilePage> {
                               backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl),
                               child: avatarUrl == null
                                   ? Text(
-                                      name.isEmpty ? 'O' : name.characters.first.toUpperCase(),
+                                      name.isEmpty ? 'O' : name.substring(0, 1).toUpperCase(),
                                       style: const TextStyle(
                                         color: _profileGold,
                                         fontSize: 38,
