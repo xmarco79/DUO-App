@@ -25,18 +25,18 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
   return Scaffold(appBar:AppBar(title:const Text('OURS',style:TextStyle(color:_g,letterSpacing:5)),actions:[if(spaceId!=null) OursNotificationBell(spaceId:spaceId,onOpenMessage:()=>widget.onChatTap(spaceId!)),IconButton(onPressed:widget.onProfileTap,icon:const Icon(Icons.tune,color:_l))]),
    body:loading?const Center(child:CircularProgressIndicator(color:_g)):error!=null?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Text(_t(context,'تعذر تجهيز مساحتنا','Could not load space')),Text(error!,style:const TextStyle(color:_l)),TextButton(onPressed:()=>setState(() { loading=true; error=null; _load(); }),child:Text(_t(context,'إعادة المحاولة','Retry')))])):
    IndexedStack(index:tab,children:[
-    _SpaceView(spaceId:spaceId!,conversationId:conversationId!,onChat:()=>widget.onChatTap(spaceId!),onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(conversationId:conversationId!)))),
+    _SpaceView(onChat:()=>widget.onChatTap(spaceId!),onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(conversationId:conversationId!)))),
     _StudioView(spaceId:spaceId!),
     _WatchView(spaceId:spaceId!),
     const _SpotifyView(),
-    _ReportView(spaceId:spaceId!),
+    const _ReportView(),
    ]),
    bottomNavigationBar:NavigationBar(backgroundColor:_p,selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:List.generate(5,(i)=>NavigationDestination(icon:Icon(icons[i]),label:labels[i]))));
  }
 }
 class _SpaceView extends StatelessWidget{
- final String spaceId,conversationId; final VoidCallback onChat,onSelf,onAi;
- const _SpaceView({required this.spaceId,required this.conversationId,required this.onChat,required this.onSelf,required this.onAi});
+ final VoidCallback onChat,onSelf,onAi;
+ const _SpaceView({required this.onChat,required this.onSelf,required this.onAi});
  @override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.all(18),children:[
   Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(color:_p,borderRadius:BorderRadius.circular(22),border:Border.all(color:_g.withValues(alpha:.25))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Icon(Icons.all_inclusive,color:_g,size:34),const SizedBox(height:12),Text(_t(c,'مساحتنا','OUR SPACE'),style:const TextStyle(color:_g,fontSize:24,fontWeight:FontWeight.bold)),Text(_t(c,'مساحة دائمة وخاصة بين naif و zoi.','A permanent private space for naif and zoi.'),style:const TextStyle(color:_l)),const SizedBox(height:16),FilledButton.icon(onPressed:onChat,icon:const Icon(Icons.chat),label:Text(_t(c,'افتح محادثتنا','Open our chat')))])),
   const SizedBox(height:16),_tile(c,Icons.bookmark_border,_t(c,'مراسلة نفسي','Private notes'),_t(c,'ملاحظات خاصة بحسابك','Notes only you can see'),onSelf),
@@ -86,7 +86,7 @@ class _SpotifyState extends State<_SpotifyView>{final q=TextEditingController();
  @override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.all(18),children:[const _Header(icon:Icons.headphones,title:'موسيقانا',subtitle:'Spotify · عربي وأجنبي'),const SizedBox(height:16),TextField(controller:q,onSubmitted:(_)=>_search(),decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:_t(c,'ابحث عن أغنية أو فنان','Search songs or artists'))),const SizedBox(height:12),FilledButton.icon(onPressed:_search,icon:const Icon(Icons.open_in_new),label:Text(_t(c,'البحث في Spotify','Search Spotify'))),const SizedBox(height:12),Text(_t(c,'التشغيل الكامل داخل OURS يتطلب Spotify Developer Client ID وOAuth وصلاحيات تشغيل معتمدة. لم يتم تفعيل التشغيل المدمج بعد.','Full in-app playback requires Spotify Developer Client ID, OAuth and approved playback permissions. Embedded playback is not enabled yet.'),style:const TextStyle(color:_l,fontSize:11))]);
  @override void dispose(){q.dispose();super.dispose();}
 }
-class _ReportView extends StatefulWidget{final String spaceId;const _ReportView({required this.spaceId});@override State<_ReportView> createState()=>_ReportState();}
+class _ReportView extends StatefulWidget{const _ReportView();@override State<_ReportView> createState()=>_ReportState();}
 class _ReportState extends State<_ReportView>{final db=Supabase.instance.client;Map<String,dynamic>? data;bool loading=true;String? error;
  @override void initState(){super.initState();_load();}
  Future<void> _load()async{try{final r=await db.rpc('generate_ours_weekly_report');if(mounted)setState(() { data=Map<String,dynamic>.from(r as Map); loading=false; });}catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}}
