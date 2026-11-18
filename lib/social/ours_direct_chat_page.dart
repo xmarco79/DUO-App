@@ -123,6 +123,18 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    if(mounted)setState(()=>messages.firstWhere((m)=>m['id']==messageId)['body']='[viewed]');
   }catch(e){_show(t('تعذر فتح الصورة: $e','Could not open one-time photo: $e'));}
  }
+ Future<void> _showAttachments() async{
+  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,
+   builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+    ListTile(leading:Icon(Icons.image_outlined,color:skin.accent),title:Text(t('صورة','Photo')),onTap:()=>Navigator.pop(ctx,'image')),
+    ListTile(leading:Icon(Icons.timer_outlined,color:skin.accent),title:Text(t('صورة لمرة واحدة','View-once photo')),onTap:()=>Navigator.pop(ctx,'once')),
+    ListTile(leading:Icon(Icons.video_library_outlined,color:skin.accent),title:Text(t('مقطع فيديو','Video')),onTap:()=>Navigator.pop(ctx,'video')),
+    ListTile(leading:Icon(Icons.insert_drive_file_outlined,color:skin.accent),title:Text(t('ملف','File')),onTap:()=>Navigator.pop(ctx,'file')),
+    ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:skin.accent),title:Text(t('ملصق','Sticker')),onTap:()=>Navigator.pop(ctx,'sticker')),
+   ])));
+  if(choice==null)return;
+  switch(choice){case 'image':await _pickImage();break;case 'once':await _pickImage(viewOnce:true);break;case 'video':await _pickVideo();break;case 'file':await _pickFile();break;case 'sticker':await _sendSticker();break;}
+ }
  Future<void> _pickFile() async{
   try{final r=await FilePicker.platform.pickFiles(withData:true);if(r==null||r.files.isEmpty)return;final f=r.files.single;
    final bytes=f.bytes??(f.path==null?null:await File(f.path!).readAsBytes());if(bytes==null)throw Exception('No file data');await _upload(bytes,f.name,'file');
@@ -215,11 +227,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       Expanded(child:Text(t('جارٍ تسجيل الرسالة الصوتية…','Recording voice message…'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))),
       IconButton(onPressed:sending?null:_sendRecording,icon:Icon(Icons.send,color:skin.accent))
      ]):Row(children:[
-      IconButton(onPressed:uploading||sending?null:_pickFile,icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.attach_file,color:skin.accent)),
-      IconButton(onPressed:uploading||sending?null:()=>_pickImage(),icon:Icon(Icons.image_outlined,color:skin.accent)),
-      IconButton(onPressed:uploading||sending?null:()=>_pickImage(viewOnce:true),tooltip:t('صورة لمرة واحدة','View once photo'),icon:Icon(Icons.timer_outlined,color:skin.accent)),
-      IconButton(onPressed:uploading||sending?null:_pickVideo,tooltip:t('فيديو','Video'),icon:Icon(Icons.video_library_outlined,color:skin.accent)),
-      IconButton(onPressed:uploading||sending?null:_sendSticker,tooltip:t('ملصقات','Stickers'),icon:Icon(Icons.emoji_emotions_outlined,color:skin.accent)),
+      IconButton(onPressed:uploading||sending?null:_showAttachments,tooltip:t('المرفقات والملصقات','Attachments and stickers'),icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.add_circle_outline_rounded,color:skin.accent)),
       Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onSubmitted:(_)=>_sendText(),
        decoration:InputDecoration(hintText:t('اكتب رسالة…','Write a message…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:11)))),
       IconButton(onPressed:uploading||sending?null:_startRecording,icon:Icon(Icons.mic_none_rounded,color:skin.accent)),
