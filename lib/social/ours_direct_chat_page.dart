@@ -53,36 +53,36 @@ class _ChatAtmospherePainter extends CustomPainter {
     break;
    case 'sunset':
     canvas.drawCircle(Offset(size.width*.78,size.height*.16),size.width*.20,Paint()..shader=RadialGradient(colors:[accent.withValues(alpha:.34),accent.withValues(alpha:0)]).createShader(Rect.fromCircle(center:Offset(size.width*.78,size.height*.16),radius:size.width*.20)));
-    for(var i=0;i<3;i++){final p=Path()..moveTo(0,size.height*(.56+i*.10))..quadraticBezierTo(size.width*.48,size.height*(.32+i*.10),size.width,size.height*(.58+i*.10))..lineTo(size.width,size.height)..lineTo(0,size.height)..close();canvas.drawPath(p,Paint()..color=accent.withValues(alpha:.035+i*.018));}
+    for(var i=0;i<3;i++){final sunsetPath=Path()..moveTo(0,size.height*(.56+i*.10))..quadraticBezierTo(size.width*.48,size.height*(.32+i*.10),size.width,size.height*(.58+i*.10))..lineTo(size.width,size.height)..lineTo(0,size.height)..close();canvas.drawPath(sunsetPath,Paint()..color=accent.withValues(alpha:.035+i*.018));}
     break;
    case 'sakura':
     for(var i=0;i<34;i++){
-     final x=((i*83)%997)/997*size.width,y=((i*137)%991)/991*size.height;
-     canvas.save();canvas.translate(x,y);canvas.rotate((i%7)*.43);
+     final sx=((i*83)%997)/997*size.width,sy=((i*137)%991)/991*size.height;
+     canvas.save();canvas.translate(sx,sy);canvas.rotate((i%7)*.43);
      canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:7.0+(i%3)*2.0,height:14.0+(i%4)*2.0),Paint()..color=accent.withValues(alpha:.13));
      canvas.restore();
     }
     break;
    case 'ocean':
     for(var i=0;i<28;i++){
-     final x=((i*97)%991)/991*size.width,y=((i*149)%983)/983*size.height,r=4+(i%6)*3.0;
-     canvas.drawCircle(Offset(x,y),r,line);
-     canvas.drawCircle(Offset(x-r*.28,y-r*.3),r*.18,soft);
+     final ox=((i*97)%991)/991*size.width,oy=((i*149)%983)/983*size.height,radius=4+(i%6)*3.0;
+     canvas.drawCircle(Offset(ox,oy),radius,line);
+     canvas.drawCircle(Offset(ox-radius*.28,oy-radius*.3),radius*.18,soft);
     }
     break;
    case 'forest':
     for(var i=0;i<22;i++){
-     final x=((i*89)%983)/983*size.width,y=((i*127)%977)/977*size.height;
-     canvas.save();canvas.translate(x,y);canvas.rotate((i%8)*.38);
-     final p=Path()..moveTo(0,0)..quadraticBezierTo(24,-28,36,0)..quadraticBezierTo(18,28,0,0);
-     canvas.drawPath(p,Paint()..color=accent.withValues(alpha:.07));
+     final fx=((i*89)%983)/983*size.width,fy=((i*127)%977)/977*size.height;
+     canvas.save();canvas.translate(fx,fy);canvas.rotate((i%8)*.38);
+     final leafPath=Path()..moveTo(0,0)..quadraticBezierTo(24,-28,36,0)..quadraticBezierTo(18,28,0,0);
+     canvas.drawPath(leafPath,Paint()..color=accent.withValues(alpha:.07));
      canvas.drawLine(Offset.zero,Offset(30,0),line);canvas.restore();
     }
     break;
    case 'cosmos':
     for(var i=0;i<75;i++){
-     final x=((i*73)%997)/997*size.width,y=((i*139)%991)/991*size.height,r=1+(i%3)*.65;
-     canvas.drawCircle(Offset(x,y),r,Paint()..color=accent.withValues(alpha:.18+(i%4)*.07));
+     final cx=((i*73)%997)/997*size.width,cy=((i*139)%991)/991*size.height,starRadius=1+(i%3)*.65;
+     canvas.drawCircle(Offset(cx,cy),starRadius,Paint()..color=accent.withValues(alpha:.18+(i%4)*.07));
     }
     canvas.drawCircle(Offset(size.width*.76,size.height*.22),size.width*.24,line);
     canvas.drawCircle(Offset(size.width*.76,size.height*.22),size.width*.31,line);
