@@ -238,21 +238,21 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
 }
 
 class OursAiPage extends StatefulWidget{
- final String conversationId;const OursAiPage({super.key,required this.conversationId});
+ final String spaceId;const OursAiPage({super.key,required this.spaceId});
  @override State<OursAiPage> createState()=>_OursAiPageState();
 }
 class _OursAiPageState extends State<OursAiPage>{
  final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController();final messages=<Map<String,String>>[];
  bool sending=false,includeContext=false;bool get ar=>Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
  Future<List<Map<String,String>>> _context() async{
-  final rows=await db.from('duo_direct_messages').select('body,sender_id').eq('conversation_id',widget.conversationId).eq('message_type','text').order('created_at',ascending:false).limit(20);
+  final rows=await db.from('duo_messages').select('body,sender_id').eq('space_id',widget.spaceId).eq('message_type','text').isFilter('deleted_at',null).order('created_at',ascending:false).limit(20);
   return List<Map<String,dynamic>>.from(rows).reversed.map((r)=>{'sender':r['sender_id']==db.auth.currentUser!.id?(ar?'أنا':'Me'):(ar?'الشريك':'Partner'),'text':r['body'].toString()}).toList();
  }
  Future<void> _send({String? preset,String task='chat'}) async{
   final text=(preset??input.text).trim();if(text.isEmpty||sending)return;setState(()=>sending=true);messages.add({'role':'user','content':text});input.clear();_persist();_bottom();
   try{
    final ctx=includeContext?await _context():<Map<String,String>>[];final history=messages.length>12?messages.sublist(messages.length-12):messages;
-   final r=await db.functions.invoke('ours-ai',body:{'conversation_id':widget.conversationId,'task':task,'messages':history,'context':ctx});
+   final r=await db.functions.invoke('ours-ai',body:{'space_id':widget.spaceId,'task':task,'messages':history,'context':ctx});
    final data=r.data is Map?Map<String,dynamic>.from(r.data):<String,dynamic>{};
    if(r.status!=200){final e=data['error']?.toString()??'';if(e=='GEMINI_SETUP_REQUIRED')throw Exception(t('مفتاح الذكاء الاصطناعي غير مضبوط على الخادم.','AI provider key is not configured on the server.'));
     if(e=='AI_LIMIT_REACHED')throw Exception(t('وصلنا لحد الاستخدام الحالي، حاول لاحقًا.','Usage limit reached. Try later.'));if(r.status==403)throw Exception(t('لا تملك صلاحية هذه المحادثة.','Conversation access denied.'));throw Exception(t('تعذر الاتصال بمساعد OURS.','Could not reach OURS AI.'));
