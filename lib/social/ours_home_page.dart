@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'ours_direct_chat_page.dart';
+import 'ours_music_page.dart';
 import '../notifications/ours_notifications.dart';
 
 const _p=Color(0xFF29213D), _l=Color(0xFFB9A2D5), _g=Color(0xFFD9BC86);
@@ -28,7 +29,7 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
     _SpaceView(onChat:()=>widget.onChatTap(spaceId!),onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(spaceId:spaceId!)))),
     _StudioView(spaceId:spaceId!),
     _WatchView(spaceId:spaceId!),
-    const _SpotifyView(),
+    const OursMusicPage(),
     const _ReportView(),
    ]),
    bottomNavigationBar:NavigationBar(backgroundColor:_p,selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:List.generate(5,(i)=>NavigationDestination(icon:Icon(icons[i]),label:labels[i]))));
@@ -53,6 +54,8 @@ class _StudioState extends State<_StudioView> {
   bool loading = true;
   Color color = _l;
   double strokeWidth = 4;
+  bool erasing = false;
+  static const Color canvasBackground = Color(0xFF171522);
   List<Offset> points = [];
   Size canvasSize = Size.zero;
   RealtimeChannel? channel;
@@ -120,13 +123,56 @@ class _StudioState extends State<_StudioView> {
         'owner_id': scope == 'personal' ? db.auth.currentUser!.id : null,
         'scope': scope,
         'points': points.map((point) => {'x': point.dx, 'y': point.dy}).toList(),
-        'color': color.value,
-        'stroke_width': strokeWidth,
+        'color': erasing ? canvasBackground.toARGB32() : color.toARGB32(),
+        'stroke_width': erasing ? 22 : strokeWidth,
       });
       if (mounted) setState(() => points = []);
       await _load();
     } catch (error) {
       if (mounted) setState(() => points = []);
+      _message(error.toString());
+    }
+  }
+
+  Future<void> _undoLastStroke() async {
+    try {
+      var query = db.from('ours_canvas_strokes').select('id')
+          .eq('space_id', widget.spaceId).eq('scope', scope);
+      if (scope == 'personal') query = query.eq('owner_id', db.auth.currentUser!.id);
+      final last = await query.order('created_at', ascending: false).limit(1).maybeSingle();
+      if (last == null) return;
+      await db.from('ours_canvas_strokes').delete().eq('id', last['id']);
+      await _load();
+    } catch (error) {
+      _message(error.toString());
+    }
+  }
+
+  Future<void> _clearBoard() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _p,
+        title: Text(_t(context, 'مسح اللوحة؟', 'Clear canvas?')),
+        content: Text(_t(
+          context,
+          scope == 'personal' ? 'سيتم حذف رسومات مرسمك الشخصي.' : 'سيتم حذف جميع الرسومات من اللوحة المشتركة للحسابين.',
+          scope == 'personal' ? 'This removes the drawings in your personal studio.' : 'This removes every drawing from the shared canvas for both accounts.',
+        )),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(_t(context, 'إلغاء', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(_t(context, 'مسح', 'Clear'))),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      var query = db.from('ours_canvas_strokes').delete().eq('space_id', widget.spaceId).eq('scope', scope);
+      if (scope == 'personal') query = query.eq('owner_id', db.auth.currentUser!.id);
+      await query;
+      if (mounted) setState(() => points = []);
+      await _load();
+    } catch (error) {
       _message(error.toString());
     }
   }
@@ -172,27 +218,34 @@ class _StudioState extends State<_StudioView> {
             },
           ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (final selectedColor in [
-              _l,
-              _g,
-              Colors.white,
-              Colors.redAccent,
-              Colors.lightBlueAccent,
-              Colors.greenAccent,
-            ])
-              IconButton(
-                tooltip: selectedColor.toString(),
-                onPressed: () => setState(() => color = selectedColor),
-                icon: Icon(
-                  Icons.circle,
-                  color: selectedColor,
-                  size: color == selectedColor ? 27 : 22,
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final selectedColor in [_l, _g, Colors.white, Colors.redAccent, Colors.lightBlueAccent, Colors.greenAccent, Colors.orangeAccent, Colors.pinkAccent])
+                IconButton(
+                  tooltip: selectedColor.toString(),
+                  onPressed: () => setState(() { color = selectedColor; erasing = false; }),
+                  icon: Icon(Icons.circle, color: selectedColor, size: color == selectedColor && !erasing ? 27 : 22),
                 ),
+              IconButton(
+                tooltip: _t(context, 'الممحاة', 'Eraser'),
+                onPressed: () => setState(() => erasing = !erasing),
+                color: erasing ? _g : _l,
+                icon: const Icon(Icons.auto_fix_high_rounded),
               ),
-          ],
+              IconButton(
+                tooltip: _t(context, 'تراجع عن آخر خط', 'Undo last stroke'),
+                onPressed: rows.isEmpty ? null : _undoLastStroke,
+                icon: const Icon(Icons.undo_rounded, color: _l),
+              ),
+              IconButton(
+                tooltip: _t(context, 'مسح اللوحة', 'Clear canvas'),
+                onPressed: rows.isEmpty ? null : _clearBoard,
+                icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent),
+              ),
+            ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -222,7 +275,7 @@ class _StudioState extends State<_StudioView> {
                 canvasSize = Size(constraints.maxWidth, constraints.maxHeight);
                 return Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF171522),
+                    color: canvasBackground,
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: loading
@@ -303,17 +356,23 @@ class _CanvasPainter extends CustomPainter {
   }
 
   void _draw(Canvas canvas, List<Offset> points, Color color, double width) {
-    if (points.length < 2) return;
+    if (points.isEmpty) return;
     final paint = Paint()
       ..color = color
       ..strokeWidth = width
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
-    for (final point in points.skip(1)) {
-      path.lineTo(point.dx, point.dy);
+    if (points.length == 1) {
+      canvas.drawCircle(points.first, width / 2, paint..style = PaintingStyle.fill);
+      return;
     }
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (var i = 1; i < points.length - 1; i++) {
+      final midpoint = Offset((points[i].dx + points[i + 1].dx) / 2, (points[i].dy + points[i + 1].dy) / 2);
+      path.quadraticBezierTo(points[i].dx, points[i].dy, midpoint.dx, midpoint.dy);
+    }
+    path.lineTo(points.last.dx, points.last.dy);
     canvas.drawPath(path, paint);
   }
 
@@ -592,11 +651,6 @@ class _WatchState extends State<_WatchView> {
   }
 }
 
-class _SpotifyView extends StatefulWidget{const _SpotifyView();@override State<_SpotifyView> createState()=>_SpotifyState();}
-class _SpotifyState extends State<_SpotifyView>{final q=TextEditingController();Future<void> _search()async{if(q.text.trim().isEmpty)return;final u=Uri.https('open.spotify.com','/search/'+Uri.encodeComponent(q.text.trim()));await launchUrl(u,mode:LaunchMode.externalApplication);}
- @override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.all(18),children:[const _Header(icon:Icons.headphones,title:'موسيقانا',subtitle:'Spotify · عربي وأجنبي'),const SizedBox(height:16),TextField(controller:q,onSubmitted:(_)=>_search(),decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:_t(c,'ابحث عن أغنية أو فنان','Search songs or artists'))),const SizedBox(height:12),FilledButton.icon(onPressed:_search,icon:const Icon(Icons.open_in_new),label:Text(_t(c,'البحث في Spotify','Search Spotify'))),const SizedBox(height:12),Text(_t(c,'التشغيل الكامل داخل OURS يتطلب Spotify Developer Client ID وOAuth وصلاحيات تشغيل معتمدة. لم يتم تفعيل التشغيل المدمج بعد.','Full in-app playback requires Spotify Developer Client ID, OAuth and approved playback permissions. Embedded playback is not enabled yet.'),style:const TextStyle(color:_l,fontSize:11))]);
- @override void dispose(){q.dispose();super.dispose();}
-}
 class _ReportView extends StatefulWidget{const _ReportView();@override State<_ReportView> createState()=>_ReportState();}
 class _ReportState extends State<_ReportView>{final db=Supabase.instance.client;Map<String,dynamic>? data;bool loading=true;String? error;
  @override void initState(){super.initState();_load();}
