@@ -369,7 +369,7 @@ class _StudioState extends State<_StudioView> {
               for (final selectedColor in [_l, _g, Colors.white, const Color(0xFFFF6B6B), const Color(0xFFFF9F43), const Color(0xFFFFD166), const Color(0xFF9BE564), const Color(0xFF36D6A8), const Color(0xFF45C4E8), const Color(0xFF5B8DEF), const Color(0xFF9B7BFF), const Color(0xFFE879F9), const Color(0xFFFF8FC7), const Color(0xFFB7C5D3), const Color(0xFF8D6E63), const Color(0xFF222222)])
                 IconButton(
                   tooltip: selectedColor.toString(),
-                  onPressed: () => setState(() { color = selectedColor; erasing = false; }),
+                  onPressed: () => setState(() { color = selectedColor; erasing = false; marker = false; toolMode = 'pen'; }),
                   icon: Icon(Icons.circle, color: selectedColor, size: color == selectedColor && !erasing ? 27 : 22),
                 ),
               IconButton(
@@ -475,7 +475,7 @@ class _StudioState extends State<_StudioView> {
                             },
                             onPanEnd: (_) {gestureStart=null;_save();},
                             child: CustomPaint(
-                              painter: _CanvasPainter(rows, points, color.withValues(alpha: marker ? opacity * 0.42 : opacity), marker ? strokeWidth * 2.2 : strokeWidth, showGrid),
+                              painter: _CanvasPainter(rows, points, erasing ? canvasBackground : color.withValues(alpha: marker ? opacity * 0.42 : opacity), erasing ? 28 : marker ? strokeWidth * 2.2 : strokeWidth, showGrid),
                               child: const SizedBox.expand(),
                             ),
                           ),
