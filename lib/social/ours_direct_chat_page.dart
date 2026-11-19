@@ -401,7 +401,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){_show(t('تعذر اختيار الفيديو: $e','Could not select video: $e'));}
  }
   Future<String> _signedSticker(String path){
-   if(widget.spaceId!=null&&path.startsWith('\${widget.spaceId}/'))return db.storage.from('ours-stickers').createSignedUrl(path,900);
+   if(widget.spaceId!=null&&path.startsWith('${widget.spaceId}/'))return db.storage.from('ours-stickers').createSignedUrl(path,900);
    return _signed(path);
   }
   Future<void> _createSharedSticker()async{
@@ -416,7 +416,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     controller.dispose();if(pack==null||pack.isEmpty)return;
     final mime=_mime(file.name);if(mime.isEmpty)throw Exception('Unsupported image type');
     final safe=file.name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
-    final path='\${widget.spaceId}/\${uid}/\${DateTime.now().microsecondsSinceEpoch}_\${safe}';
+    final path='${widget.spaceId}/${uid}/${DateTime.now().microsecondsSinceEpoch}_${safe}';
     await db.storage.from('ours-stickers').uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
     try{
      await db.from('duo_stickers').insert({'space_id':widget.spaceId,'created_by':uid,'sticker_type':'image','content':'OURS sticker','storage_path':path,'pack_name':pack,'display_name':file.name,'is_animated':file.name.toLowerCase().endsWith('.gif')});
@@ -766,7 +766,7 @@ class _OursAiPageState extends State<OursAiPage>{
   ])));
   if(action==null)return;final p=await SharedPreferences.getInstance();
   if(action=='clear'){final old=wallpaperPath;await p.remove('ours_ai_wallpaper');if(mounted)setState(()=>wallpaperPath=null);if(old!=null){try{final file=File(old);if(await file.exists())await file.delete();}catch(_){}}}
-  else{try{final f=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);if(f==null)return;final dir=await getApplicationDocumentsDirectory(),target=File('\${dir.path}/ours_ai_wallpaper.jpg');await File(f.path).copy(target.path);await p.setString('ours_ai_wallpaper',target.path);if(mounted)setState(()=>wallpaperPath=target.path);}catch(_){_notice(t('تعذر تطبيق الخلفية','Could not apply wallpaper'));}}
+  else{try{final f=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);if(f==null)return;final dir=await getApplicationDocumentsDirectory(),target=File('${dir.path}/ours_ai_wallpaper.jpg');await File(f.path).copy(target.path);await p.setString('ours_ai_wallpaper',target.path);if(mounted)setState(()=>wallpaperPath=target.path);}catch(_){_notice(t('تعذر تطبيق الخلفية','Could not apply wallpaper'));}}
  }
  Future<List<Map<String,String>>> _context() async{
   final rows=await db.from('duo_messages').select('body,sender_id').eq('space_id',widget.spaceId).eq('message_type','text').isFilter('deleted_at',null).order('created_at',ascending:false).limit(20);
@@ -924,7 +924,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   }else{
    try{
     final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);if(f==null)return;
-    final dir=await getApplicationDocumentsDirectory(),target=File('\${dir.path}/ours_self_wallpaper.jpg');
+    final dir=await getApplicationDocumentsDirectory(),target=File('${dir.path}/ours_self_wallpaper.jpg');
     await File(f.path).copy(target.path);await prefs.setString('ours_self_wallpaper',target.path);
     if(mounted)setState(()=>wallpaperPath=target.path);
    }catch(_){_notice(t('تعذر تطبيق الخلفية','Could not apply wallpaper'));}
@@ -1016,7 +1016,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  Future<void> _startRecording()async{
   final r=recorder??=AudioRecorder();
   try{if(!await r.hasPermission()){_notice(t('اسمح باستخدام الميكروفون أولًا','Allow microphone access first'));return;}
-   final dir=await getTemporaryDirectory(),path='\${dir.path}/ours_self_\${DateTime.now().microsecondsSinceEpoch}.m4a';
+   final dir=await getTemporaryDirectory(),path='${dir.path}/ours_self_${DateTime.now().microsecondsSinceEpoch}.m4a';
    await r.start(const RecordConfig(encoder:AudioEncoder.aacLc,bitRate:96000,sampleRate:44100,numChannels:1,echoCancel:true,noiseSuppress:true),path:path);
    if(mounted)setState((){recordingPath=path;recording=true;});
   }catch(_){_notice(t('تعذر بدء التسجيل','Could not start recording'));}
@@ -1024,7 +1024,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  Future<void> _stopRecording({bool send=true})async{
   final r=recorder;if(r==null||!recording)return;
   String? path;
-  try{path=await r.stop();if(send&&path!=null){final file=File(path);if(await file.exists())await _uploadSelf(await file.readAsBytes(),'voice_\${DateTime.now().millisecondsSinceEpoch}.m4a','audio');}}
+  try{path=await r.stop();if(send&&path!=null){final file=File(path);if(await file.exists())await _uploadSelf(await file.readAsBytes(),'voice_${DateTime.now().millisecondsSinceEpoch}.m4a','audio');}}
   catch(_){_notice(t('تعذر إرسال التسجيل','Could not send recording'));}
   finally{if(path!=null){try{final file=File(path);if(await file.exists())await file.delete();}catch(_){}}
    if(mounted)setState((){recording=false;recordingPath=null;});}
@@ -1115,7 +1115,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
          if(row['reply_to']!=null&&rows.any((r)=>r['id'].toString()==row['reply_to'].toString()))
           Builder(builder:(ctx){final original=rows.firstWhere((r)=>r['id'].toString()==row['reply_to'].toString());return InkWell(onTap:()=>_jumpSelfMessage(original['id'].toString()),child:Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.4),borderRadius:BorderRadius.circular(8)),child:Text((original['body']??original['file_name']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))));}),
          if(type=='image'||type=='sticker')FutureBuilder<String>(future:_signedSelf(body),builder:(c,s)=>s.hasData?GestureDetector(onTap:()=>_openSelfImage(body),child:ClipRRect(borderRadius:BorderRadius.circular(12),child:Image.network(s.data!,width:225,height:220,fit:BoxFit.cover))):SizedBox(width:180,height:130,child:Center(child:CircularProgressIndicator(color:skin.accent)))),
-         else if(type=='file')InkWell(onTap:()=>_openSelfFile(body),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text((row['file_name']??body.split('/').last).toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white)),Text('\${((row['file_size'] as num?)?.toInt()??0)/1024>1024?(((row['file_size'] as num?)?.toInt()??0)/1048576).toStringAsFixed(1)+' MB':(((row['file_size'] as num?)?.toInt()??0)/1024).toStringAsFixed(0)+' KB'} · \${(row['mime_type']??'').toString()}',style:TextStyle(color:skin.accent,fontSize:10))]))])),
+         else if(type=='file')InkWell(onTap:()=>_openSelfFile(body),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text((row['file_name']??body.split('/').last).toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white)),Text('${((row['file_size'] as num?)?.toInt()??0)/1024>1024?(((row['file_size'] as num?)?.toInt()??0)/1048576).toStringAsFixed(1)+' MB':(((row['file_size'] as num?)?.toInt()??0)/1024).toStringAsFixed(0)+' KB'} · ${(row['mime_type']??'').toString()}',style:TextStyle(color:skin.accent,fontSize:10))]))])),
          else if(type=='audio')_DirectAudioBubble(path:body,skin:skin,signed:_signedSelf,ar:ar),
          else SelectableText(body,style:const TextStyle(color:Colors.white,height:1.5)),
          const SizedBox(height:5),Row(mainAxisSize:MainAxisSize.min,children:[if(row['pinned']==true)Icon(Icons.push_pin_rounded,color:skin.accent,size:12),Text(_selfTime(row['created_at']),style:TextStyle(color:skin.accent,fontSize:10))])
