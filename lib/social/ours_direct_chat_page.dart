@@ -160,7 +160,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final found=_skins.where((s)=>s.id==id);
   final savedWallpaper=p.getString('ours_direct_wallpaper_'+widget.conversationId);
   final savedOpacity=p.getDouble('ours_direct_wallpaper_opacity_'+widget.conversationId)??.22;
-  if(mounted)setState(()=>{skin=found.isEmpty?_skins.first:found.first,wallpaperPath=savedWallpaper,wallpaperOpacity=savedOpacity.clamp(.08,.45)});
+  if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=savedWallpaper;wallpaperOpacity=savedOpacity.clamp(.08,.45).toDouble();});
  }
  Future<void> _chooseSkin() async{
   final selected=await showModalBottomSheet<_ChatSkin>(
@@ -288,7 +288,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     await File(picked.path).copy(target.path);
     await prefs.setString('ours_direct_wallpaper_'+widget.conversationId,target.path);
     await prefs.setDouble('ours_direct_wallpaper_opacity_'+widget.conversationId,opacity);
-    if(mounted)setState(()=>{wallpaperPath=target.path,wallpaperOpacity=opacity});
+    if(mounted)setState((){wallpaperPath=target.path;wallpaperOpacity=opacity;});
    }catch(e){_show(t('تعذر تطبيق الخلفية. حاول اختيار صورة أخرى.','Could not apply wallpaper. Try another image.'));}
   }
  }
