@@ -154,6 +154,16 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final old=urls[path];if(old!=null)return old;final f=db.storage.from(_bucket).createSignedUrl(path,900);urls[path]=f;
   f.then((_){Future<void>.delayed(const Duration(minutes:10),(){if(identical(urls[path],f)){urls.remove(path);if(mounted)setState((){});}});},onError:(_){if(identical(urls[path],f))urls.remove(path);});return f;
  }
+ Future<void> _openLimitedMedia(Map<String,dynamic> m) async{
+  try{
+   final result=await db.rpc('ours_consume_limited_media',params:{'p_message_id':m['id']});
+   final url=result?.toString()??'';if(url.isEmpty){_show(t('انتهت المشاهدات المسموحة','Allowed views have been used'));return;}
+   final p=(m['view_once_storage_path']??m['body']??'').toString();final isVideo=p.toLowerCase().endsWith('.mp4');
+   if(isVideo){await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication);}
+   else if(mounted){await showDialog<void>(context:context,builder:(_)=>Dialog(backgroundColor:Colors.transparent,child:InteractiveViewer(child:Image.network(url,fit:BoxFit.contain))));}
+   final idx=messages.indexWhere((x)=>x['id']==m['id']);if(idx>=0&&mounted)setState(()=>messages[idx]['view_count']=((messages[idx]['view_count']??0) as num).toInt()+1);
+  }catch(e){_show(t('تعذر فتح الوسائط المحدودة: $e','Unable to open limited media: $e'));}
+ }
  Future<void> _openFile(String path) async{
   try{final url=await _signed(path);if(!await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication))_show(t('تعذر فتح الملف','Could not open file'));}
   catch(e){_show(t('تعذر فتح الملف: $e','Could not open file: $e'));}
@@ -185,17 +195,19 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       const SizedBox(height:7),Text(t('رسائل وصور وملفات وتسجيلات صوتية في مكان واحد.','Messages, photos, files and voice notes in one place.'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))
      ])))
      :ListView.builder(controller:scroll,padding:const EdgeInsets.all(12),itemCount:messages.length,itemBuilder:(ctx,i){
-      final m=messages[i];final mine=m['sender_id']==me;final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';
+      final m=messages[i];final mine=m['sender_id']==me;final type=m['message_type']?.toString()??'text';final path=(m['body']=='[viewed]'?m['view_once_storage_path']:m['body'])?.toString()??'';
       return Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
        constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(10),
        decoration:BoxDecoration(color:mine?skin.mine:skin.partner,borderRadius:BorderRadius.circular(17),border:Border.all(color:skin.accent.withValues(alpha:.16))),
        child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-        if(type=='image')FutureBuilder<String>(future:_signed(path),builder:(c,s){
+        if(type=='view_once'||type=='view_twice')InkWell(onTap:()=>_openLimitedMedia(m),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.45),borderRadius:BorderRadius.circular(13)),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(path.toLowerCase().endsWith('.mp4')?Icons.movie_outlined:Icons.visibility_outlined,color:skin.accent,size:28),const SizedBox(width:8),Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(type=='view_once'?t('وسائط لمرة واحدة','View once'):t('وسائط لمرتين','View twice'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w600)),Text((m['view_count']??0).toString()+'/'+(m['max_views']??1).toString(),style:TextStyle(color:skin.accent,fontSize:10))])])))
+        else if(type=='image')FutureBuilder<String>(future:_signed(path),builder:(c,s){
          if(s.hasError)return Text(t('تعذر تحميل الصورة','Could not load image'),style:TextStyle(color:skin.accent));
          if(!s.hasData)return SizedBox(width:190,height:125,child:Center(child:CircularProgressIndicator(color:skin.accent)));
          return GestureDetector(onTap:()=>showDialog<void>(context:context,builder:(_)=>Dialog(backgroundColor:Colors.transparent,child:InteractiveViewer(child:Image.network(s.data!,fit:BoxFit.contain)))),
           child:ClipRRect(borderRadius:BorderRadius.circular(11),child:Image.network(s.data!,width:230,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Text(t('تعذر عرض الصورة','Image unavailable')))));
         })
+        else if(type=='video')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.movie_outlined,color:skin.accent,size:30),const SizedBox(width:8),Text(t('مقطع فيديو','Video'))]))
         else if(type=='file')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[
          Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),
          Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(path.split('/').last.replaceFirst(RegExp(r'^\d+_'),''),maxLines:2,overflow:TextOverflow.ellipsis),Text(t('اضغط لفتح الملف','Tap to open file'),style:TextStyle(color:skin.accent,fontSize:10))]))
@@ -247,18 +259,18 @@ class _OursConversationDetailsPageState extends State<OursConversationDetailsPag
  final db=Supabase.instance.client;late TabController tabs;late Future<List<Map<String,dynamic>>> future;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
  @override void initState(){super.initState();tabs=TabController(length:3,vsync:this);future=_load();}
- Future<List<Map<String,dynamic>>> _load()async{final r=await db.from('duo_direct_messages').select('id,body,message_type,created_at,sender_id,media_view_mode,media_views_used').eq('conversation_id',widget.conversationId).order('created_at',ascending:false);return List<Map<String,dynamic>>.from(r);}
+ Future<List<Map<String,dynamic>>> _load()async{final r=await db.from('duo_direct_messages').select('id,body,message_type,created_at,sender_id,view_once_storage_path,max_views,view_count').eq('conversation_id',widget.conversationId).order('created_at',ascending:false);return List<Map<String,dynamic>>.from(r);}
  Future<String> _signed(String path)=>db.storage.from(_bucket).createSignedUrl(path,300);
- Future<void> _open(Map<String,dynamic> m)async{final path=m['body']?.toString()??'';try{final url=await _signed(path);await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication);}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تعذر فتح الملف','Unable to open item'))));}}
+ Future<void> _open(Map<String,dynamic> m)async{final path=(m['body']=='[viewed]'?m['view_once_storage_path']:m['body'])?.toString()??'';try{final limited=m['message_type']=='view_once'||m['message_type']=='view_twice';final result=limited?await db.rpc('ours_consume_limited_media',params:{'p_message_id':m['id']}):await _signed(path);final url=result?.toString()??'';if(url.isEmpty)throw Exception('View limit reached');await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication);}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تعذر فتح العنصر أو انتهت المشاهدات','Unable to open item or view limit reached'))));}}
  bool _isVideo(String p)=>p.toLowerCase().endsWith('.mp4')||p.toLowerCase().endsWith('.mov');
  @override void dispose(){tabs.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_navy,appBar:AppBar(backgroundColor:_navy,title:Text(t('معلومات المحادثة','Conversation info')),bottom:TabBar(controller:tabs,indicatorColor:_gold,labelColor:_gold,unselectedLabelColor:_lavender,tabs:[Tab(text:t('الوسائط','Media')),Tab(text:t('الملفات','Files')),Tab(text:t('الصوتيات','Audio'))])),
  body:FutureBuilder<List<Map<String,dynamic>>>(future:future,builder:(c,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:_gold));if(s.hasError)return Center(child:Text(t('تعذر تحميل المحتوى','Could not load items')));final rows=s.data??[];
- final media=rows.where((m)=>m['message_type']=='image'||(m['message_type']=='file'&&_isVideo(m['body']?.toString()??''))).toList();final files=rows.where((m)=>m['message_type']=='file'&&!_isVideo(m['body']?.toString()??'')).toList();final audio=rows.where((m)=>m['message_type']=='audio').toList();
+ final media=rows.where((m)=>m['message_type']=='image'||m['message_type']=='video'||m['message_type']=='view_once'||m['message_type']=='view_twice').toList();final files=rows.where((m)=>m['message_type']=='file').toList();final audio=rows.where((m)=>m['message_type']=='audio').toList();
  return Column(children:[Padding(padding:const EdgeInsets.fromLTRB(16,18,16,14),child:Column(children:[CircleAvatar(radius:36,backgroundColor:const Color(0xFF29213D),child:Icon(Icons.person_rounded,color:_gold,size:38)),const SizedBox(height:10),Text(widget.partnerName,style:const TextStyle(fontSize:19,fontWeight:FontWeight.w700)),Text(t('محادثة خاصة','Private chat'),style:TextStyle(color:_lavender,fontSize:12))])),Expanded(child:TabBarView(controller:tabs,children:[_list(media,t('لا توجد وسائط بعد','No media yet'),Icons.photo_library_outlined),_list(files,t('لا توجد ملفات','No files'),Icons.folder_outlined),_list(audio,t('لا توجد صوتيات','No audio'),Icons.mic_none_rounded)]))]);
  }),
  );
- Widget _list(List<Map<String,dynamic>> rows,String empty,IconData icon)=>rows.isEmpty?Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(icon,color:_lavender,size:45),const SizedBox(height:8),Text(empty,style:TextStyle(color:_lavender))])):ListView.builder(padding:const EdgeInsets.all(12),itemCount:rows.length,itemBuilder:(c,i){final m=rows[i];final p=m['body']?.toString()??'';final type=m['message_type'];final video=type=='file'&&_isVideo(p);return Card(color:const Color(0xFF211D30),child:ListTile(leading:Icon(type=='image'?Icons.image_outlined:video?Icons.movie_outlined:type=='audio'?Icons.audiotrack:Icons.insert_drive_file_outlined,color:_gold),title:Text(video?t('مقطع فيديو','Video'):p.split('/').last.replaceFirst(RegExp(r'^\d+_'),''),maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(DateFormat(ar?'d MMM yyyy':'MMM d, yyyy').format(DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal()??DateTime.now()),style:const TextStyle(color:_lavender,fontSize:11)),onTap:()=>_open(m)));});
+ Widget _list(List<Map<String,dynamic>> rows,String empty,IconData icon)=>rows.isEmpty?Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(icon,color:_lavender,size:45),const SizedBox(height:8),Text(empty,style:TextStyle(color:_lavender))])):ListView.builder(padding:const EdgeInsets.all(12),itemCount:rows.length,itemBuilder:(c,i){final m=rows[i];final p=m['body']?.toString()??'';final type=m['message_type'];final video=type=='video'||((type=='view_once'||type=='view_twice')&&_isVideo((m['view_once_storage_path']??p).toString()));return Card(color:const Color(0xFF211D30),child:ListTile(leading:Icon(type=='image'||type=='view_once'||type=='view_twice'?Icons.image_outlined:video?Icons.movie_outlined:type=='audio'?Icons.audiotrack:Icons.insert_drive_file_outlined,color:_gold),title:Text(video?t('مقطع فيديو','Video'):p.split('/').last.replaceFirst(RegExp(r'^\d+_'),''),maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(DateFormat(ar?'d MMM yyyy':'MMM d, yyyy').format(DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal()??DateTime.now()),style:const TextStyle(color:_lavender,fontSize:11)),onTap:()=>_open(m)));});
 }
 class OursAiPage extends StatefulWidget{
  final String conversationId;const OursAiPage({super.key,required this.conversationId});
