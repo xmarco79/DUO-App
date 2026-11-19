@@ -14,6 +14,7 @@ import 'package:record/record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 import 'ours_profile_page.dart';
 
 const _navy=Color(0xFF10101C),_gold=Color(0xFFD9BC86),_lavender=Color(0xFFB9A2D5),_bucket='ours-direct-media';
@@ -243,12 +244,18 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    await _upload(bytes,name,mode=='normal'?'image':mode=='once'?'view_once':'view_twice',maxViews:mode=='twice'?2:1);
   }catch(e){_show(t('تعذر اختيار الصورة: $e','Could not select image: $e'));}
  }
+ Future<bool> _previewVideoFile(String path) async{
+  final controller=VideoPlayerController.file(File(path));
+  try{await controller.initialize();}catch(_){await controller.dispose();return false;}
+  final confirmed=await showDialog<bool>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('معاينة الفيديو','Video preview')),content:Column(mainAxisSize:MainAxisSize.min,children:[if(controller.value.isInitialized)AspectRatio(aspectRatio:controller.value.aspectRatio,child:VideoPlayer(controller)),const SizedBox(height:10),Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>setModal(()=>controller.value.isPlaying?controller.pause():controller.play()),icon:Icon(controller.value.isPlaying?Icons.pause:Icons.play_arrow,color:skin.accent)),IconButton(onPressed:()=>setModal(()=>controller.seekTo(Duration.zero)),icon:Icon(Icons.replay,color:skin.accent))]),Text(t('يمكنك مشاهدة المقطع قبل إرساله.','Preview the clip before sending.'),style:TextStyle(color:skin.accent,fontSize:12),textAlign:TextAlign.center)]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(t('إرسال','Send')))])));
+  await controller.dispose();return confirmed==true;
+ }
  Future<void> _pickVideo() async{
   try{
    final f=await picker.pickVideo(source:ImageSource.gallery,maxDuration:const Duration(minutes:2));if(f==null)return;
    final ext=f.name.split('.').last.toLowerCase();if(!['mp4','mov','webm'].contains(ext)){_show(t('صيغة الفيديو غير مدعومة','Unsupported video format'));return;}
-   final bytes=await f.readAsBytes();final mode=await _previewMedia(bytes:bytes,name:f.name,video:true);if(mode==null)return;
-   await _upload(bytes,f.name,'video');
+   if(!await _previewVideoFile(f.path))return;
+   await _upload(await f.readAsBytes(),f.name,'video');
   }catch(e){_show(t('تعذر اختيار الفيديو: $e','Could not select video: $e'));}
  }
  Future<void> _sendSticker() async{
