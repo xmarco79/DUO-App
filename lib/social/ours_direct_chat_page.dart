@@ -778,95 +778,249 @@ class OursSelfChatPage extends StatefulWidget{
  @override State<OursSelfChatPage> createState()=>_OursSelfChatPageState();
 }
 class _OursSelfChatPageState extends State<OursSelfChatPage>{
- final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController();
- List<Map<String,dynamic>> rows=[];bool loading=true,sending=false;
+ final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController(),picker=ImagePicker();
+ final Map<String,Future<String>> urls={};final List<Map<String,dynamic>> rows=[];
+ RealtimeChannel? channel;AudioRecorder? recorder;String? recordingPath,wallpaperPath;
+ Map<String,dynamic>? replyTo;_ChatSkin skin=_skins.first;
+ bool loading=true,sending=false,uploading=false,recording=false;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;
- @override void initState(){super.initState();_load();}
- Future<void> _load()async{try{final data=await db.from('ours_self_messages').select().order('created_at');if(mounted)setState(()=>rows=List<Map<String,dynamic>>.from(data));}catch(e){_notice(t('تعذر تحميل الرسائل المحفوظة. تحقق من الاتصال.','Could not load saved messages. Check your connection.'));}finally{if(mounted)setState(()=>loading=false);}}
- Future<void> _noteActions(Map<String,dynamic> row)async{
-  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:_navy,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-   ListTile(leading:const Icon(Icons.push_pin_outlined,color:_gold),title:Text(t('تثبيت / إلغاء التثبيت','Pin / unpin')),onTap:()=>Navigator.pop(ctx,'pin')),
-   ListTile(leading:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent),title:Text(t('حذف الرسالة','Delete note')),onTap:()=>Navigator.pop(ctx,'delete'))
+ String get uid=>db.auth.currentUser!.id;
+ @override void initState(){super.initState();_loadSelfSkin();_load();_listen();}
+ Future<void> _loadSelfSkin()async{
+  final p=await SharedPreferences.getInstance();
+  final id=p.getString('ours_self_skin')??'ours';
+  final found=_skins.where((x)=>x.id==id);
+  if(mounted)setState(()=>skin=found.isEmpty?_skins.first:found.first);
+  wallpaperPath=p.getString('ours_self_wallpaper');
+ }
+ Future<void> _chooseTheme()async{
+  final selected=await showModalBottomSheet<String>(context:context,backgroundColor:_navy,showDragHandle:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.62,child:ListView(padding:const EdgeInsets.all(14),children:[
+   Padding(padding:const EdgeInsets.all(8),child:Text(t('ثيم المحادثة','Chat theme'),style:const TextStyle(color:_gold,fontWeight:FontWeight.w900,fontSize:18))),
+   ..._skins.map((x)=>ListTile(leading:CircleAvatar(backgroundColor:x.accent,child:Icon(x.symbol,color:x.bg)),title:Text(ar?x.titleAr:x.titleEn,style:const TextStyle(color:Colors.white)),subtitle:Text(ar?x.detailAr:x.detailEn,style:const TextStyle(color:_lavender,fontSize:11)),onTap:()=>Navigator.pop(ctx,x.id)))
+  ]))));
+  if(selected==null)return;
+  final p=await SharedPreferences.getInstance();await p.setString('ours_self_skin',selected);
+  if(mounted)setState(()=>skin=_skins.firstWhere((x)=>x.id==selected,orElse:()=>_skins.first));
+ }
+ Future<void> _chooseWallpaper()async{
+  final action=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   ListTile(leading:Icon(Icons.photo_library_outlined,color:skin.accent),title:Text(t('اختيار خلفية','Choose wallpaper')),onTap:()=>Navigator.pop(ctx,'choose')),
+   ListTile(leading:Icon(Icons.layers_clear_outlined,color:skin.accent),title:Text(t('إزالة الخلفية','Remove wallpaper')),onTap:()=>Navigator.pop(ctx,'clear'))
   ])));
-  if(choice=='pin')await _togglePin(row);if(choice=='delete')await _delete(row);
+  if(action==null)return;
+  final prefs=await SharedPreferences.getInstance();
+  if(action=='clear'){
+   final old=wallpaperPath;await prefs.remove('ours_self_wallpaper');
+   if(mounted)setState(()=>wallpaperPath=null);
+   if(old!=null){try{final file=File(old);if(await file.exists())await file.delete();}catch(_){}}
+  }else{
+   try{
+    final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);if(f==null)return;
+    final dir=await getApplicationDocumentsDirectory(),target=File('\${dir.path}/ours_self_wallpaper.jpg');
+    await File(f.path).copy(target.path);await prefs.setString('ours_self_wallpaper',target.path);
+    if(mounted)setState(()=>wallpaperPath=target.path);
+   }catch(_){_notice(t('تعذر تطبيق الخلفية','Could not apply wallpaper'));}
+  }
+ }
+ Future<void> _load()async{
+  try{
+   final data=await db.from('ours_self_messages').select().order('created_at');
+   if(mounted)setState(()=>rows..clear()..addAll(List<Map<String,dynamic>>.from(data)));
+  }catch(_){_notice(t('تعذر تحميل الرسائل المحفوظة. تحقق من الاتصال.','Could not load saved messages. Check your connection.'));}
+  finally{if(mounted)setState(()=>loading=false);}
+ }
+ void _listen(){
+  final filter=PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'user_id',value:uid);
+  channel=db.channel('ours-self-$uid')
+   .onPostgresChanges(event:PostgresChangeEvent.insert,schema:'public',table:'ours_self_messages',filter:filter,callback:(p){
+    final row=Map<String,dynamic>.from(p.newRecord);
+    if(!mounted||rows.any((r)=>r['id'].toString()==row['id'].toString()))return;
+    setState(()=>rows.add(row));
+   })
+   .onPostgresChanges(event:PostgresChangeEvent.update,schema:'public',table:'ours_self_messages',filter:filter,callback:(p){
+    final row=Map<String,dynamic>.from(p.newRecord),index=rows.indexWhere((r)=>r['id'].toString()==row['id'].toString());
+    if(mounted&&index>=0)setState(()=>rows[index]=row);
+   })
+   .onPostgresChanges(event:PostgresChangeEvent.delete,schema:'public',table:'ours_self_messages',callback:(p){
+    final id=p.oldRecord['id']?.toString();if(!mounted||id==null)return;
+    setState(()=>rows.removeWhere((r)=>r['id'].toString()==id));
+   }).subscribe();
  }
  void _notice(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
- Future<void> _send()async{final text=input.text.trim();if(text.isEmpty||sending)return;setState(()=>sending=true);try{final row=await db.from('ours_self_messages').insert({'user_id':db.auth.currentUser!.id,'body':text}).select().single();if(mounted)setState(()=>rows.add(Map<String,dynamic>.from(row)));input.clear();}catch(e){_notice(t('تعذر حفظ الرسالة. حاول مجددًا.','Could not save note. Try again.'));}finally{if(mounted)setState(()=>sending=false);}}
- Future<void> _togglePin(Map<String,dynamic> row)async{try{final v=!(row['pinned']==true);await db.from('ours_self_messages').update({'pinned':v}).eq('id',row['id']);if(mounted)setState(()=>row['pinned']=v);}catch(e){_notice(e.toString());}}
- Future<void> _delete(Map<String,dynamic> row)async{try{await db.from('ours_self_messages').delete().eq('id',row['id']);if(mounted)setState(()=>rows.removeWhere((r)=>r['id']==row['id']));}catch(e){_notice(e.toString());}}
- @override void dispose(){input.dispose();scroll.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>Scaffold(
-  backgroundColor:_navy,
-  appBar:AppBar(
-   backgroundColor:_navy,
-   centerTitle:true,
-   title:Column(mainAxisSize:MainAxisSize.min,children:[
-    Text(t('مراسلة نفسي','Saved messages'),style:const TextStyle(color:_gold,fontSize:16,fontWeight:FontWeight.w800)),
-    Text(t('مساحة لا يراها غيرك','Private to you'),style:const TextStyle(color:_lavender,fontSize:10))
-   ]),
-  ),
-  body:Column(children:[
-   Expanded(
-    child:loading
-     ?const Center(child:CircularProgressIndicator(color:_gold))
-     :rows.isEmpty
-      ?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
-        const Icon(Icons.bookmark_add_outlined,color:_gold,size:46),
-        const SizedBox(height:12),
-        Text(t('ابدأ أول رسالة لنفسك','Write your first note'),style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w700)),
-        const SizedBox(height:6),
-        Text(t('احفظ أفكارك ورسائلك المهمة هنا.','Keep ideas and important messages here.'),style:const TextStyle(color:_lavender),textAlign:TextAlign.center)
-       ])))
-      :ListView.builder(
-       controller:scroll,
-       padding:const EdgeInsets.fromLTRB(14,14,14,18),
-       itemCount:rows.length,
-       itemBuilder:(c,i){
-         final row=rows[rows.length-1-i];
-         final date=DateTime.tryParse(row['created_at']?.toString()??'')?.toLocal();
-         final time=date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);
-         return Align(alignment:AlignmentDirectional.centerEnd,child:GestureDetector(onLongPress:()=>_noteActions(row),child:Container(
-          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.84),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.fromLTRB(14,11,14,8),
-          decoration:BoxDecoration(color:const Color(0xFF342B4C),borderRadius:BorderRadius.circular(18),border:Border.all(color:_gold.withValues(alpha:.15))),
-          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-           SelectableText(row['body'].toString(),style:const TextStyle(color:Colors.white,height:1.5)),
-           const SizedBox(height:5),
-           Row(mainAxisSize:MainAxisSize.min,children:[if(row['pinned']==true)const Icon(Icons.push_pin_rounded,color:_gold,size:13),Text(time,style:const TextStyle(color:_lavender,fontSize:10))]),
-          ])),
-         )));
-        },
-      ),
-   ),
-   SafeArea(
-    top:false,
-    child:Container(
-     padding:const EdgeInsets.fromLTRB(10,8,10,12),
-     decoration:const BoxDecoration(border:Border(top:BorderSide(color:Color(0x3329293D)))),
-     child:Row(children:[
-      Expanded(child:TextField(
-       controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,
-       onSubmitted:(_)=>_send(),
-       decoration:InputDecoration(
-        hintText:t('اكتب لنفسك…','Write a note…'),
-        filled:true,fillColor:const Color(0xFF211D30),
-        border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),
-        contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:12),
-       ),
-      )),
-      const SizedBox(width:7),
-      IconButton.filled(
-       onPressed:sending?null:_send,
-       style:IconButton.styleFrom(backgroundColor:_gold,foregroundColor:_navy),
-       icon:sending?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),
-      ),
-     ]),
-    ),
-   ),
+ Future<void> _send()async{
+  final text=input.text.trim();if(text.isEmpty||sending)return;setState(()=>sending=true);
+  try{
+   final row=await db.from('ours_self_messages').insert({'user_id':uid,'body':text,'message_type':'text','reply_to':replyTo?['id']}).select().single();
+   if(mounted&&!rows.any((r)=>r['id'].toString()==row['id'].toString()))setState(()=>rows.add(Map<String,dynamic>.from(row)));
+   input.clear();if(mounted)setState(()=>replyTo=null);_bottom();
+  }catch(_){_notice(t('تعذر حفظ الرسالة. حاول مجددًا.','Could not save message. Try again.'));}
+  finally{if(mounted)setState(()=>sending=false);}
+ }
+ String _selfMime(String name){
+  const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
+  return types[name.split('.').last.toLowerCase()]??'';
+ }
+ Future<void> _uploadSelf(Uint8List bytes,String name,String type)async{
+  if(bytes.isEmpty)return;if(bytes.length>20*1024*1024){_notice(t('الحد الأقصى 20 ميجابايت','Maximum size is 20 MB'));return;}
+  final mime=_selfMime(name);if(mime.isEmpty){_notice(t('نوع الملف غير مدعوم','Unsupported file type'));return;}
+  setState(()=>uploading=true);
+  final safe=name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
+  final path='self/'+uid+'/'+DateTime.now().microsecondsSinceEpoch.toString()+'_'+safe;
+  try{
+   await db.storage.from('ours-direct-media').uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
+   try{
+    final row=await db.from('ours_self_messages').insert({'user_id':uid,'body':path,'message_type':type,'file_name':name,'file_size':bytes.length,'mime_type':mime,'reply_to':replyTo?['id']}).select().single();
+    if(mounted&&!rows.any((r)=>r['id'].toString()==row['id'].toString()))setState(()=>rows.add(Map<String,dynamic>.from(row)));
+    if(mounted)setState(()=>replyTo=null);_bottom();
+   }catch(_){await db.storage.from('ours-direct-media').remove([path]);rethrow;}
+  }catch(_){_notice(t('تعذر رفع المرفق. حاول مجددًا.','Could not upload attachment. Try again.'));}
+  finally{if(mounted)setState(()=>uploading=false);}
+ }
+ Future<void> _pickImage({bool sticker=false})async{
+  try{final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:94,maxWidth:2400,maxHeight:2400);if(f==null)return;
+   final ext=f.name.split('.').last.toLowerCase(),name=['png','webp','gif'].contains(ext)?f.name:'self_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
+   await _uploadSelf(await f.readAsBytes(),name,sticker?'sticker':'image');
+  }catch(_){_notice(t('تعذر اختيار الصورة','Could not select image'));}
+ }
+ Future<void> _pickFile()async{
+  try{final result=await FilePicker.platform.pickFiles(withData:true);if(result==null||result.files.isEmpty)return;
+   final f=result.files.single,bytes=f.bytes??(f.path==null?null:await File(f.path!).readAsBytes());
+   if(bytes==null)throw Exception('file');await _uploadSelf(bytes,f.name,'file');
+  }catch(_){_notice(t('تعذر اختيار الملف','Could not select file'));}
+ }
+ Future<void> _showAttachments()async{
+  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   ListTile(leading:Icon(Icons.image_outlined,color:skin.accent),title:Text(t('صورة','Photo')),onTap:()=>Navigator.pop(ctx,'image')),
+   ListTile(leading:Icon(Icons.sticky_note_2_outlined,color:skin.accent),title:Text(t('ملصق من المعرض','Sticker from gallery')),onTap:()=>Navigator.pop(ctx,'sticker')),
+   ListTile(leading:Icon(Icons.insert_drive_file_outlined,color:skin.accent),title:Text(t('ملف','File')),onTap:()=>Navigator.pop(ctx,'file'))
+  ])));
+  if(choice=='image')await _pickImage();if(choice=='sticker')await _pickImage(sticker:true);if(choice=='file')await _pickFile();
+ }
+ Future<void> _startRecording()async{
+  final r=recorder??=AudioRecorder();
+  try{if(!await r.hasPermission()){_notice(t('اسمح باستخدام الميكروفون أولًا','Allow microphone access first'));return;}
+   final dir=await getTemporaryDirectory(),path='\${dir.path}/ours_self_\${DateTime.now().microsecondsSinceEpoch}.m4a';
+   await r.start(const RecordConfig(encoder:AudioEncoder.aacLc,bitRate:96000,sampleRate:44100,numChannels:1,echoCancel:true,noiseSuppress:true),path:path);
+   if(mounted)setState(()=>{recordingPath=path,recording=true});
+  }catch(_){_notice(t('تعذر بدء التسجيل','Could not start recording'));}
+ }
+ Future<void> _stopRecording({bool send=true})async{
+  final r=recorder;if(r==null||!recording)return;
+  String? path;
+  try{path=await r.stop();if(send&&path!=null){final file=File(path);if(await file.exists())await _uploadSelf(await file.readAsBytes(),'voice_\${DateTime.now().millisecondsSinceEpoch}.m4a','audio');}}
+  catch(_){_notice(t('تعذر إرسال التسجيل','Could not send recording'));}
+  finally{if(path!=null){try{final file=File(path);if(await file.exists())await file.delete();}catch(_){}}
+   if(mounted)setState(()=>{recording=false,recordingPath=null});}
+ }
+ Future<String> _signedSelf(String path){
+  final old=urls[path];if(old!=null)return old;
+  final future=db.storage.from('ours-direct-media').createSignedUrl(path,900);urls[path]=future;return future;
+ }
+ Future<void> _openSelfImage(String path)async{
+  try{final url=await _signedSelf(path);if(!mounted)return;
+   await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>Dialog(backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
+    Expanded(child:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:Image.network(url,fit:BoxFit.contain)))),
+    Padding(padding:const EdgeInsets.all(14),child:TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close'),style:const TextStyle(color:Colors.white))))
+   ])))));
+  }catch(_){_notice(t('تعذر فتح الصورة','Could not open image'));}
+ }
+ Future<void> _openSelfFile(String path)async{
+  try{final url=await _signedSelf(path);if(!await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication))_notice(t('تعذر فتح الملف','Could not open file'));}
+  catch(_){_notice(t('تعذر فتح الملف','Could not open file'));}
+ }
+ Future<void> _noteActions(Map<String,dynamic> row)async{
+  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   ListTile(leading:Icon(Icons.reply,color:skin.accent),title:Text(t('رد','Reply')),onTap:()=>Navigator.pop(ctx,'reply')),
+   ListTile(leading:Icon(Icons.push_pin_outlined,color:skin.accent),title:Text(t('تثبيت / إلغاء التثبيت','Pin / unpin')),onTap:()=>Navigator.pop(ctx,'pin')),
+   ListTile(leading:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent),title:Text(t('حذف الرسالة','Delete note')),onTap:()=>Navigator.pop(ctx,'delete'))
+  ])));
+  if(choice=='reply'){setState(()=>replyTo=row);return;}
+  if(choice=='pin')await _togglePin(row);if(choice=='delete')await _delete(row);
+ }
+ Future<void> _togglePin(Map<String,dynamic> row)async{
+  try{final value=!(row['pinned']==true);await db.from('ours_self_messages').update({'pinned':value}).eq('id',row['id']);if(mounted)setState(()=>row['pinned']=value);}
+  catch(_){_notice(t('تعذر تحديث التثبيت','Could not update pin'));}
+ }
+ Future<void> _delete(Map<String,dynamic> row)async{
+  try{
+   await db.from('ours_self_messages').delete().eq('id',row['id']);
+   final type=row['message_type']?.toString()??'text',path=row['body']?.toString()??'';
+   if(['image','file','audio','sticker'].contains(type)){try{await db.storage.from('ours-direct-media').remove([path]);}catch(_){}}
+   if(mounted)setState(()=>rows.removeWhere((r)=>r['id'].toString()==row['id'].toString()));
+  }catch(_){_notice(t('تعذر حذف الرسالة','Could not delete message'));}
+ }
+ void _jumpSelfMessage(String id){
+  final index=rows.indexWhere((r)=>r['id'].toString()==id);if(index<0||!scroll.hasClients)return;
+  scroll.animateTo((index*150.0).clamp(0.0,scroll.position.maxScrollExtent),duration:const Duration(milliseconds:320),curve:Curves.easeOutCubic);
+ }
+ Future<void> _searchSelf()async{
+  final controller=TextEditingController();
+  final query=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('البحث في رسائلك','Search saved messages')),content:TextField(controller:controller,autofocus:true,decoration:InputDecoration(hintText:t('اكتب كلمة للبحث','Search for a word'))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:Text(t('بحث','Search')))]));
+  controller.dispose();if(query==null||query.isEmpty)return;
+  final found=rows.where((r)=>(r['body']??'').toString().toLowerCase().contains(query.toLowerCase())||(r['file_name']??'').toString().toLowerCase().contains(query.toLowerCase())).toList();
+  if(!mounted)return;
+  await showModalBottomSheet<void>(context:context,backgroundColor:skin.bg,isScrollControlled:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.6,child:ListView(children:found.map((r)=>ListTile(title:Text((r['file_name']??r['body']).toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(_selfTime(r['created_at'])),onTap:(){Navigator.pop(ctx);_jumpSelfMessage(r['id'].toString());})).toList()))));
+ }
+ String _selfTime(dynamic value){final date=DateTime.tryParse(value?.toString()??'')?.toLocal();return date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);}
+ String _selfDate(DateTime date){final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);if(day==today)return t('اليوم','Today');if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');return DateFormat(ar?'d MMMM y':'MMM d, y').format(day);}
+ void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
+ @override void dispose(){if(channel!=null)db.removeChannel(channel!);recorder?.dispose();input.dispose();scroll.dispose();super.dispose();}
+ @override Widget build(BuildContext context){
+  return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,centerTitle:true,title:Column(mainAxisSize:MainAxisSize.min,children:[
+   Text(t('مراسلة نفسي','Saved messages'),style:TextStyle(color:skin.accent,fontSize:16,fontWeight:FontWeight.w800)),
+   Text(t('مساحة لا يراها غيرك','Private to you'),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:10))
+  ]),actions:[
+   IconButton(onPressed:_searchSelf,icon:Icon(Icons.search,color:skin.accent)),
+   IconButton(onPressed:_chooseTheme,icon:Icon(Icons.palette_outlined,color:skin.accent)),
+   IconButton(onPressed:_chooseWallpaper,icon:Icon(Icons.wallpaper_outlined,color:skin.accent))
   ]),
- );
+  body:Stack(children:[
+   Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
+   if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Opacity(opacity:.24,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())))),
+   Column(children:[
+    Expanded(child:loading?Center(child:CircularProgressIndicator(color:skin.accent)):rows.isEmpty
+     ?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Icon(Icons.bookmark_add_outlined,color:skin.accent,size:46),const SizedBox(height:12),
+      Text(t('ابدأ أول رسالة لنفسك','Write your first note'),style:const TextStyle(color:Colors.white,fontSize:17,fontWeight:FontWeight.w700)),
+      const SizedBox(height:6),Text(t('احفظ أفكارك ورسائلك وصورك وملفاتك هنا.','Keep your ideas, messages, photos and files here.'),style:TextStyle(color:skin.accent),textAlign:TextAlign.center)
+     ])))
+     :ListView.builder(controller:scroll,padding:const EdgeInsets.fromLTRB(14,14,14,18),itemCount:rows.length,itemBuilder:(c,i){
+      final row=rows[rows.length-1-i],type=(row['message_type']??'text').toString(),body=(row['body']??'').toString();
+      final date=DateTime.tryParse(row['created_at']?.toString()??'')?.toLocal();
+      final previous=i+1<rows.length?DateTime.tryParse(rows[rows.length-2-i]['created_at']?.toString()??'')?.toLocal():null;
+      final showDate=date!=null&&(previous==null||DateUtils.dateOnly(date)!=DateUtils.dateOnly(previous));
+      return Column(children:[
+       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_selfDate(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
+       Align(alignment:AlignmentDirectional.centerEnd,child:GestureDetector(onLongPress:()=>_noteActions(row),child:Container(
+        constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.84),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.fromLTRB(13,10,13,8),
+        decoration:BoxDecoration(color:skin.mine,borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.2))),
+        child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+         if(row['reply_to']!=null&&rows.any((r)=>r['id'].toString()==row['reply_to'].toString()))
+          Builder(builder:(ctx){final original=rows.firstWhere((r)=>r['id'].toString()==row['reply_to'].toString());return InkWell(onTap:()=>_jumpSelfMessage(original['id'].toString()),child:Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.4),borderRadius:BorderRadius.circular(8)),child:Text((original['body']??original['file_name']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))));}),
+         if(type=='image'||type=='sticker')FutureBuilder<String>(future:_signedSelf(body),builder:(c,s)=>s.hasData?GestureDetector(onTap:()=>_openSelfImage(body),child:ClipRRect(borderRadius:BorderRadius.circular(12),child:Image.network(s.data!,width:225,height:220,fit:BoxFit.cover))):SizedBox(width:180,height:130,child:Center(child:CircularProgressIndicator(color:skin.accent)))),
+         else if(type=='file')InkWell(onTap:()=>_openSelfFile(body),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text((row['file_name']??body.split('/').last).toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white)),Text('\${((row['file_size'] as num?)?.toInt()??0)/1024>1024?(((row['file_size'] as num?)?.toInt()??0)/1048576).toStringAsFixed(1)+' MB':(((row['file_size'] as num?)?.toInt()??0)/1024).toStringAsFixed(0)+' KB'} · \${(row['mime_type']??'').toString()}',style:TextStyle(color:skin.accent,fontSize:10))]))])),
+         else if(type=='audio')_DirectAudioBubble(path:body,skin:skin,signed:_signedSelf,ar:ar),
+         else SelectableText(body,style:const TextStyle(color:Colors.white,height:1.5)),
+         const SizedBox(height:5),Row(mainAxisSize:MainAxisSize.min,children:[if(row['pinned']==true)Icon(Icons.push_pin_rounded,color:skin.accent,size:12),Text(_selfTime(row['created_at']),style:TextStyle(color:skin.accent,fontSize:10))])
+        ]))
+       )))
+      ]);
+     })),
+    SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(8,8,8,10),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.2)))),child:Column(mainAxisSize:MainAxisSize.min,children:[
+     if(replyTo!=null)Container(margin:const EdgeInsets.fromLTRB(10,0,10,6),padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(10)),child:Row(children:[Icon(Icons.reply,color:skin.accent,size:17),const SizedBox(width:7),Expanded(child:Text((replyTo!['file_name']??replyTo!['body']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))),IconButton(onPressed:()=>setState(()=>replyTo=null),icon:const Icon(Icons.close,size:16))])),
+     Row(children:[
+      IconButton(onPressed:uploading||sending?null:_showAttachments,icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(color:skin.accent,strokeWidth:2)):Icon(Icons.add_circle_outline,color:skin.accent)),
+      Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اكتب لنفسك…','Write a note…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:11)))),
+      if(recording)IconButton(onPressed:()=>_stopRecording(send:false),icon:Icon(Icons.delete_outline,color:skin.accent)),
+      IconButton(onPressed:recording?()=>_stopRecording():_startRecording,icon:Icon(recording?Icons.send_rounded:Icons.mic_none_rounded,color:skin.accent)),
+      IconButton.filled(onPressed:sending||uploading?null:_send,style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
+     ])
+    ])))
+   ])
+  ]));
+ }
 }
-
 
 Future<ui.Image> _decodeUiImage(Uint8List bytes){final completer=Completer<ui.Image>();ui.decodeImageFromList(bytes,completer.complete);return completer.future;}
 class _ImageMarkupDialog extends StatefulWidget{
