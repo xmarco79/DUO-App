@@ -420,11 +420,18 @@ jobs:
         run: |
           set -euo pipefail
           APK="build/app/outputs/flutter-apk/app-release.apk"
-          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "Android SDK root: $SDK_ROOT"
+          echo "Available build-tools:"
+          ls -la "$SDK_ROOT/build-tools" || true
+          APKSIGNER="$(find "$SDK_ROOT/build-tools" -name apksigner -print | sort -V | tail -n 1)"
           KEYSTORE="$HOME/.android/debug.keystore"
           test -s "$APK"
-          test -s "$KEYSTORE"
+          test -n "$APKSIGNER"
           test -x "$APKSIGNER"
+          test -s "$KEYSTORE"
+          echo "Using apksigner: $APKSIGNER"
+          echo "Using debug keystore: $KEYSTORE"
           "$APKSIGNER" sign \
             --ks "$KEYSTORE" \
             --ks-key-alias androiddebugkey \
