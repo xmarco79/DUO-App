@@ -181,7 +181,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    .onPostgresChanges(event:PostgresChangeEvent.insert,schema:'public',table:'duo_direct_messages',filter:filter,callback:(p){
     final row=Map<String,dynamic>.from(p.newRecord);if(!mounted||hiddenIds.contains(row['id'].toString())||messages.any((m)=>m['id']==row['id']))return;setState(()=>messages.add(row));_bottom();
    })
-   .onPostgresChanges(event:PostgresChangeEvent.delete,schema:'public',table:'duo_direct_messages',filter:filter,callback:(p){
+   .onPostgresChanges(event:PostgresChangeEvent.delete,schema:'public',table:'duo_direct_messages',callback:(p){
     final id=p.oldRecord['id']?.toString();if(!mounted||id==null)return;setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));
    })
    .onPostgresChanges(event:PostgresChangeEvent.update,schema:'public',table:'duo_direct_messages',filter:filter,callback:(p){
