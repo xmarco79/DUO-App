@@ -253,7 +253,7 @@ class _OursMediaPreviewPageState extends State<OursMediaPreviewPage>{
  @override void initState(){super.initState();previewBytes=widget.bytes;previewName=widget.name;}
  Future<void> _editImage()async{
   final edited=await Navigator.push<_EditedMedia>(context,MaterialPageRoute(builder:(_)=>OursImageEditPage(bytes:previewBytes,accent:widget.accent)));
-  if(edited!=null&&mounted)setState(()=>previewBytes=edited.bytes,previewName=edited.name);
+  if(edited!=null&&mounted)setState((){previewBytes=edited.bytes;previewName=edited.name;});
  }
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF10101C),appBar:AppBar(backgroundColor:const Color(0xFF10101C),title:Text(t('معاينة قبل الإرسال','Preview before sending')),actions:[if(widget.kind=='image')IconButton(onPressed:_editImage,tooltip:t('تعديل الصورة','Edit image'),icon:Icon(Icons.edit_outlined,color:widget.accent))]),
  body:SafeArea(child:Column(children:[
@@ -289,7 +289,7 @@ class _OursImageEditPageState extends State<OursImageEditPage>{
    final image=await render.toImage(pixelRatio:2.0);
    final data=await image.toByteData(format:ui.ImageByteFormat.png);image.dispose();
    if(data==null)throw Exception('Image export failed');
-   if(mounted)Navigator.pop(context,_EditedMedia(data.buffer.asUint8List(),'edited_'+DateTime.now().millisecondsSinceEpoch.toString()+'.png'));
+   if(mounted)Navigator.pop(context,_EditedMedia(data.buffer.asUint8List(data.offsetInBytes,data.lengthInBytes),'edited_'+DateTime.now().millisecondsSinceEpoch.toString()+'.png'));
   }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تعذر حفظ التعديلات','Could not export edits'))));}
  }
  void _start(Offset p){final stroke=_EditStroke(drawColor,4,[p]);strokes.add(stroke);active=stroke;setState((){});}
@@ -298,10 +298,10 @@ class _OursImageEditPageState extends State<OursImageEditPage>{
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF10101C),appBar:AppBar(backgroundColor:const Color(0xFF10101C),title:Text(t('محرر الصور','Photo editor')),actions:[IconButton(onPressed:_export,tooltip:t('حفظ','Save'),icon:Icon(Icons.check_rounded,color:widget.accent))]),
  body:SafeArea(child:Column(children:[
   Expanded(child:Padding(padding:const EdgeInsets.all(12),child:RepaintBoundary(key:boundaryKey,child:ClipRRect(borderRadius:BorderRadius.circular(18),child:Stack(children:[
-   Positioned.fill(child:InteractiveViewer(minScale:1,maxScale:4,child:ColorFiltered(colorFilter:ColorFilter.matrix(matrices[filter]),child:Image.memory(widget.bytes,fit:BoxFit.cover,width:double.infinity,height:double.infinity))))),
+   Positioned.fill(child:InteractiveViewer(minScale:1,maxScale:4,child:ColorFiltered(colorFilter:ColorFilter.matrix(matrices[filter]),child:Image.memory(widget.bytes,fit:BoxFit.cover))))),
    Positioned.fill(child:GestureDetector(behavior:HitTestBehavior.translucent,onPanStart:drawing?((d)=>_start(d.localPosition)):null,onPanUpdate:drawing?((d)=>_move(d.localPosition)):null,onPanEnd:drawing?((d)=>_finish()):null,child:CustomPaint(painter:_DrawingPainter(strokes)))),
   ]))))),
-  SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),child:Row(children:[for(int i=0;i<matrices.length;i++)Padding(padding:const EdgeInsets.symmetric(horizontal:4),child:ChoiceChip(label:Text(['Original','Warm','Cool','Mono','Vivid','Sepia'][i]),selected:filter==i,selectedColor:widget.accent.withValues(alpha:.3),onSelected:(_)=>setState(()=>filter=i)))])),
+  SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),child:Row(children:[for(int i=0;i<matrices.length;i++)Padding(padding:const EdgeInsets.symmetric(horizontal:4),child:ChoiceChip(label:Text(ar?['أصلية','دافئة','باردة','أبيض وأسود','حيوية','سيبيا'][i]:['Original','Warm','Cool','Mono','Vivid','Sepia'][i]),selected:filter==i,selectedColor:widget.accent.withValues(alpha:.3),onSelected:(_)=>setState(()=>filter=i)))])),
   Row(mainAxisAlignment:MainAxisAlignment.center,children:[
    IconButton(onPressed:()=>setState(()=>drawing=!drawing),tooltip:t('الرسم','Draw'),icon:Icon(drawing?Icons.draw:Icons.brush_outlined,color:drawing?widget.accent:Colors.white70)),
    IconButton(onPressed:strokes.isEmpty?null:()=>setState(()=>strokes.clear()),tooltip:t('مسح الرسم','Clear drawing'),icon:Icon(Icons.delete_outline,color:widget.accent)),
