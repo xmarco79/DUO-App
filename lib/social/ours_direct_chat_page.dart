@@ -131,7 +131,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  final Map<String,Future<String>> urls={};final List<Map<String,dynamic>> messages=[];
  final Set<String> hiddenIds={};
  Map<String,dynamic>? replyTo;
- RealtimeChannel? channel;AudioRecorder? recorder;String? recordingPath;
+ RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
+ Timer? typingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId;
  bool loading=true,sending=false,recording=false,uploading=false;String? localPartnerName;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
@@ -146,7 +147,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   while(days.contains(day)){count++;day=day.subtract(const Duration(days:1));}
   return count >= 3 ? count : 0;
  }
- @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();}
+ @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();_startLiveStatus();}
  Future<void> _changeLocalNickname() async{
   final prefs=await SharedPreferences.getInstance();final key='ours_partner_alias_${uid}_${widget.partnerId}';
   final controller=TextEditingController(text:prefs.getString(key)??widget.partnerName);
@@ -191,6 +192,61 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    )),
   );
   if(selected==null)return;setState(()=>skin=selected);final p=await SharedPreferences.getInstance();await p.setString('ours_direct_skin_'+widget.conversationId,selected.id);
+ }
+ Future<void> _startLiveStatus() async{
+  try{
+   await db.rpc('touch_ours_presence');
+   await _loadPartnerLastSeen();
+   liveChannel=db.channel('ours-direct:${widget.conversationId}:live');
+   liveChannel!
+    .onPresenceSync((_){
+     final state=liveChannel?.presenceState()??{};
+     final online=state.values.expand((items)=>items).any((presence)=>presence.payload['user_id']?.toString()==widget.partnerId);
+     if(mounted)setState(()=>partnerOnline=online);
+     if(!online)_loadPartnerLastSeen();
+    })
+    .onBroadcast(event:'typing',callback:(payload){
+     final raw=payload['payload']??payload;
+     final data=raw is Map?Map<String,dynamic>.from(raw):<String,dynamic>{};
+     if(data['user_id']?.toString()==widget.partnerId&&mounted)setState(()=>partnerTyping=data['typing']==true);
+    })
+    .subscribe((status,error)async{
+     if(status==RealtimeSubscribeStatus.subscribed){
+      await liveChannel?.track({'user_id':uid,'online_at':DateTime.now().toIso8601String()});
+      await db.rpc('touch_ours_presence');
+     }
+    });
+  }catch(_){}
+ }
+ Future<void> _loadPartnerLastSeen() async{
+  try{
+   final profile=await db.from('duo_profiles').select('last_seen_at').eq('user_id',widget.partnerId).maybeSingle();
+   final seen=DateTime.tryParse(profile?['last_seen_at']?.toString()??'')?.toLocal();
+   if(mounted)setState(()=>partnerLastSeen=seen);
+  }catch(_){}
+ }
+ void _handleTyping(String value){
+  final live=liveChannel;if(live==null)return;
+  if(value.trim().isNotEmpty&&!typingSent){
+   typingSent=true;
+   unawaited(live.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':true}));
+  }
+  typingTimer?.cancel();
+  typingTimer=Timer(const Duration(milliseconds:1300),(){
+   typingSent=false;
+   unawaited(live.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}));
+  });
+ }
+ String _presenceLabel(){
+  if(partnerTyping)return t('يكتب الآن…','Typing…');
+  if(partnerOnline)return t('متصل الآن','Online now');
+  if(partnerLastSeen==null)return t('غير متصل','Offline');
+  final now=DateTime.now(),seen=partnerLastSeen!;
+  final elapsed=now.difference(seen);
+  if(elapsed.inMinutes<1)return t('آخر ظهور للتو','Last seen just now');
+  if(elapsed.inMinutes<60)return t('آخر ظهور منذ ${elapsed.inMinutes} دقيقة','Last seen ${elapsed.inMinutes}m ago');
+  if(elapsed.inHours<24)return t('آخر ظهور منذ ${elapsed.inHours} ساعة','Last seen ${elapsed.inHours}h ago');
+  return t('آخر ظهور ${DateFormat('d MMM', 'ar').format(seen)}','Last seen ${DateFormat('MMM d').format(seen)}');
  }
  Future<void> _load() async{
   try{
@@ -456,7 +512,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد عناصر بعد','Nothing shared yet'))):ListView(children:found.map((m)=>ListTile(leading:Icon(kind=='media'?Icons.image_outlined:Icons.insert_drive_file_outlined,color:skin.accent),title:Text((m['body']??'').toString().split('/').last,maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])),onTap:(){Navigator.pop(ctx);_openLibraryItem(m);})).toList()))
   ]))));
  }
-   @override void dispose(){input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
+   @override void dispose(){typingTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}));if(liveChannel!=null){unawaited(liveChannel!.untrack());db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
  @override Widget build(BuildContext context){
   final me=db.auth.currentUser!.id;
   return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,centerTitle:true,
@@ -466,7 +522,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     child:Column(mainAxisSize:MainAxisSize.min,children:[
      Text(localPartnerName??widget.partnerName,style:const TextStyle(fontSize:16)),
      Row(mainAxisSize:MainAxisSize.min,children:[
-      Text(t('اضغط لعرض الملف الشخصي','Tap to view profile'),style:TextStyle(color:skin.accent,fontSize:10)),
+      Text(_presenceLabel(),style:TextStyle(color:partnerOnline?const Color(0xFF70D9A0):skin.accent,fontSize:10)),
+      const SizedBox(width:7),
+      Text(t('· الملف الشخصي','· Profile'),style:TextStyle(color:skin.accent,fontSize:10)),
       if(_streakCount()>0)Padding(padding:const EdgeInsetsDirectional.only(start:6),child:Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:const Color(0xFFB85A34).withValues(alpha:.16),borderRadius:BorderRadius.circular(10)),child:Text('🔥 ${_streakCount()}',style:const TextStyle(color:Color(0xFFFFB06A),fontSize:10,fontWeight:FontWeight.w800))))
      ])
     ]),
@@ -522,7 +580,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
           })
           else if(type=='file')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[
            Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),
-           Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(path.split('/').last.replaceFirst(RegExp(r'^\\d+_'),''),maxLines:2,overflow:TextOverflow.ellipsis),Text(t('اضغط لفتح الملف','Tap to open file'),style:TextStyle(color:skin.accent,fontSize:10))]))
+           Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(path.split('/').last.replaceFirst(RegExp(r'^\d+_'),''),maxLines:2,overflow:TextOverflow.ellipsis),Text(t('اضغط لفتح الملف','Tap to open file'),style:TextStyle(color:skin.accent,fontSize:10))]))
           ]))
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
           else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
@@ -541,10 +599,11 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       Expanded(child:Text(t('جارٍ تسجيل الرسالة الصوتية…','Recording voice message…'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))),
       IconButton(onPressed:sending?null:_sendRecording,icon:Icon(Icons.send,color:skin.accent))
      ]):Column(mainAxisSize:MainAxisSize.min,children:[
+      if(partnerTyping)Padding(padding:const EdgeInsetsDirectional.fromSTEB(16,0,16,6),child:Align(alignment:AlignmentDirectional.centerStart,child:Text(t('يكتب الآن…','Typing…'),style:TextStyle(color:skin.accent,fontSize:11,fontStyle:FontStyle.italic)))),
       if(replyTo!=null)Container(margin:const EdgeInsets.fromLTRB(12,0,12,6),padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(12)),child:Row(children:[Icon(Icons.reply,color:skin.accent,size:18),const SizedBox(width:8),Expanded(child:Text((replyTo!['body']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:12))),IconButton(onPressed:()=>setState(()=>replyTo=null),icon:const Icon(Icons.close,size:17))])),
       Row(children:[
       IconButton(onPressed:uploading||sending?null:_showAttachments,tooltip:t('إرفاق صورة أو ملف أو ملصق','Attach photo, file or sticker'),icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.add_circle_outline_rounded,color:skin.accent)),
-      Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onSubmitted:(_)=>_sendText(),decoration:InputDecoration(hintText:t('اكتب رسالة…','Write a message…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:11)))),
+      Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onChanged:_handleTyping,onSubmitted:(_)=>_sendText(),decoration:InputDecoration(hintText:t('اكتب رسالة…','Write a message…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:11)))),
       IconButton(onPressed:uploading||sending?null:_startRecording,icon:Icon(Icons.mic_none_rounded,color:skin.accent)),
       IconButton.filled(onPressed:sending||uploading?null:_sendText,style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
      ])])))
