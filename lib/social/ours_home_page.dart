@@ -1006,11 +1006,30 @@ class _WatchState extends State<_WatchView> {
 }
 
 class _ReportView extends StatefulWidget{const _ReportView();@override State<_ReportView> createState()=>_ReportState();}
-class _ReportState extends State<_ReportView>{final db=Supabase.instance.client;Map<String,dynamic>? data;bool loading=true;String? error;
+class _ReportState extends State<_ReportView>{
+ final db=Supabase.instance.client;Map<String,dynamic>? data;bool loading=true;String? error;String firstName='naif',secondName='zoi';
  @override void initState(){super.initState();_load();}
- Future<void> _load()async{try{final r=await db.rpc('generate_ours_weekly_report');if(mounted)setState(() { data=Map<String,dynamic>.from(r as Map); loading=false; });}catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}}
+ Future<void> _load()async{
+  try{
+   final report=await db.rpc('generate_ours_weekly_report');
+   final profiles=await db.from('duo_profiles').select('user_id,display_name,username');
+   final rows=List<Map<String,dynamic>>.from(profiles);
+   final idA='b771a6d1-3180-4f50-b81c-66924665151a',idB='01d9c50a-98fe-4998-ae79-c48fd5ac3fd3';
+   String label(String id,String fallback){final row=rows.where((r)=>r['user_id'].toString()==id);if(row.isEmpty)return fallback;final x=row.first;final display=(x['display_name']??'').toString().trim();final username=(x['username']??'').toString().trim();return display.isNotEmpty?display:username.isNotEmpty?'@$username':fallback;}
+   if(mounted)setState(()=>data=Map<String,dynamic>.from(report as Map));
+   if(mounted)setState(()=>firstName=label(idA,'naif'));
+   if(mounted)setState(()=>secondName=label(idB,'zoi'));
+  }catch(e){if(mounted)setState(()=>error=e.toString());}
+  finally{if(mounted)setState(()=>loading=false);}
+ }
+ Future<void> _refresh()async{if(!mounted)return;setState(()=>loading=true);error=null;await _load();}
  Widget _card(BuildContext c,String name,Map<String,dynamic> stats){final labels={'messages':_t(c,'الرسائل','Messages'),'media':_t(c,'الوسائط','Media'),'drawings':_t(c,'الرسومات','Drawings'),'watch_sessions':_t(c,'جلسات المشاهدة','Watch sessions')};return Card(color:_p,child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(name,style:const TextStyle(color:_g,fontWeight:FontWeight.bold,fontSize:17)),const SizedBox(height:10),for(final entry in labels.entries)Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text(entry.value,style:const TextStyle(color:_l)),Text((stats[entry.key]??0).toString(),style:const TextStyle(fontWeight:FontWeight.bold))]))])));}
- @override Widget build(BuildContext c){if(loading)return const Center(child:CircularProgressIndicator());if(error!=null)return Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Text(_t(c,'التقرير يحتاج تحديث قاعدة البيانات','Report requires database migration'),style:const TextStyle(color:_l)),TextButton(onPressed:()=>setState(() { loading=true; error=null; _load(); }),child:Text(_t(c,'إعادة المحاولة','Retry')))]));final n=Map<String,dynamic>.from(data!['naif'] as Map? ?? {}),z=Map<String,dynamic>.from(data!['zoi'] as Map? ?? {}),s=Map<String,dynamic>.from(data!['shared'] as Map? ?? {});return ListView(padding:const EdgeInsets.all(18),children:[const _Header(icon:Icons.insights,title:'تقرير OURS',subtitle:'ملخص الأسبوع المكتمل للحسابين'),if(data?['week_start']!=null)Padding(padding:const EdgeInsets.only(top:8,bottom:12),child:Text(data!['week_start'].toString()+' — '+data!['week_end'].toString(),textAlign:TextAlign.center,style:const TextStyle(color:_l))),_card(c,'naif',n),_card(c,'zoi',z),_card(c,_t(c,'النشاط المشترك','Shared activity'),s),Text(_t(c,'يُحدّث التقرير عند فتح هذه الصفحة. يظهر التقرير نفسه للحسابين بعد إنشائه.','The report refreshes when this page is opened. Both accounts see the same report.'),style:const TextStyle(color:_l,fontSize:11))]);}
+ @override Widget build(BuildContext c){
+  if(loading)return const Center(child:CircularProgressIndicator());
+  if(error!=null)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.cloud_off_outlined,color:_g,size:36),const SizedBox(height:10),Text(_t(c,'تعذر تحديث التقرير. قد تحتاج قاعدة البيانات إلى migration أو تحقق من الاتصال.','Could not update report. Check database migration and connection.'),style:const TextStyle(color:_l),textAlign:TextAlign.center),TextButton.icon(onPressed:_refresh,icon:const Icon(Icons.refresh),label:Text(_t(c,'إعادة المحاولة','Retry')))])));
+  final n=Map<String,dynamic>.from(data?['naif'] as Map? ?? {}),z=Map<String,dynamic>.from(data?['zoi'] as Map? ?? {}),s=Map<String,dynamic>.from(data?['shared'] as Map? ?? {});
+  return ListView(padding:const EdgeInsets.all(18),children:[Row(children:[const Expanded(child:_Header(icon:Icons.insights,title:'تقرير OURS',subtitle:'ملخص الأسبوع المكتمل للحسابين')),IconButton(onPressed:_refresh,tooltip:_t(c,'تحديث','Refresh'),icon:const Icon(Icons.refresh,color:_g))]),if(data?['week_start']!=null)Padding(padding:const EdgeInsets.only(top:8,bottom:12),child:Text(data!['week_start'].toString()+' — '+data!['week_end'].toString(),textAlign:TextAlign.center,style:const TextStyle(color:_l))),_card(c,firstName,n),_card(c,secondName,z),_card(c,_t(c,'النشاط المشترك','Shared activity'),s),Text(_t(c,'يُحدّث التقرير عند فتح هذه الصفحة أو الضغط على تحديث.','Report updates when this page opens or you refresh.'),style:const TextStyle(color:_l,fontSize:11))]);
+ }
 }
 
 class _Header extends StatelessWidget{final IconData icon;final String title,subtitle;const _Header({required this.icon,required this.title,required this.subtitle});@override Widget build(BuildContext c)=>Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:_p,borderRadius:BorderRadius.circular(18)),child:Row(children:[Icon(icon,color:_g,size:30),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),Text(subtitle,style:const TextStyle(color:_l,fontSize:12))]))]));}
