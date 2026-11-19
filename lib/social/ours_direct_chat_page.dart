@@ -350,7 +350,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   catch(e){_show(t('تعذر إرسال الرسالة. حاول مرة أخرى.','Could not send message. Please try again.'));}finally{if(mounted)setState(()=>sending=false);}
  }
  String _mime(String name){
-  const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','mp4':'video/mp4','mov':'video/quicktime','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
+  const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','mp4':'video/mp4','mov':'video/quicktime','webm':'video/webm','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
   return types[name.split('.').last.toLowerCase()]??'';
  }
  Future<void> _upload(Uint8List bytes,String name,String type,{int? maxViews}) async{
@@ -418,9 +418,11 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(chosen==null)return;
   if(chosen=='__add__'){
    try{
-    final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:95,maxWidth:1600,maxHeight:1600);
-    if(f==null)return;
-    await _upload(await f.readAsBytes(),'sticker_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+f.name.split('.').last.toLowerCase(),'sticker');
+    final result=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['png','jpg','jpeg','webp','gif'],withData:true);
+    if(result==null||result.files.isEmpty)return;
+    final file=result.files.single,bytes=file.bytes??(file.path==null?null:await File(file.path!).readAsBytes());
+    if(bytes==null)throw Exception('Sticker data unavailable');
+    await _upload(bytes,'sticker_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+file.name.split('.').last.toLowerCase(),'sticker');
    }catch(e){_show(t('تعذر إضافة الملصق: $e','Could not add sticker: $e'));}
    return;
   }
