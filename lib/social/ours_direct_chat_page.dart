@@ -754,7 +754,7 @@ class _OursAiPageState extends State<OursAiPage>{
  Future<void> _chooseTheme()async{
   final selected=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.62,child:ListView(padding:const EdgeInsets.all(14),children:[
    Padding(padding:const EdgeInsets.all(8),child:Text(t('ثيم OURS AI','OURS AI theme'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900,fontSize:18))),
-   ..._skins.map((x)=>ListTile(leading:CircleAvatar(backgroundColor:x.accent,child:Icon(x.symbol,color:x.bg)),title:Text(ar?x.titleAr:x.titleEn,style:const TextStyle(color:Colors.white)),subtitle:Text(ar?x.detailAr:x.detailEn,style:const TextStyle(color:_lavender,fontSize:11)),onTap:()=>Navigator.pop(ctx,x.id)))
+   ..._skins.map((x)=>ListTile(leading:CircleAvatar(backgroundColor:x.accent,child:Icon(Icons.palette_rounded,color:x.bg)),title:Text(ar?x.ar:x.en,style:const TextStyle(color:Colors.white)),subtitle:Text(ar?x.id:x.id,style:const TextStyle(color:_lavender,fontSize:11)),onTap:()=>Navigator.pop(ctx,x.id)))
   ]))));
   if(selected==null)return;final p=await SharedPreferences.getInstance();await p.setString('ours_ai_skin',selected);
   if(mounted)setState(()=>skin=_skins.firstWhere((x)=>x.id==selected,orElse:()=>_skins.first));
@@ -831,7 +831,7 @@ class _OursAiPageState extends State<OursAiPage>{
      final showDate=date!=null&&(previous==null||DateUtils.dateOnly(date)!=DateUtils.dateOnly(previous));
      return Column(children:[
       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:9),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_dateLabel(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
-      Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:IntrinsicWidth(child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(13),decoration:BoxDecoration(gradient:LinearGradient(colors:mine?skin.mineGradient:skin.partnerGradient),borderRadius:BorderRadius.circular(17)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+      Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:IntrinsicWidth(child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(13),decoration:BoxDecoration(gradient:LinearGradient(colors:mine?[skin.mine,skin.mine.withValues(alpha:.86)]:[skin.partner,skin.bg]),borderRadius:BorderRadius.circular(17)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
        SelectableText(m['content']??'',style:const TextStyle(height:1.5,color:Colors.white)),
        const SizedBox(height:5),Align(alignment:AlignmentDirectional.centerEnd,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)))
       ]))))
@@ -904,7 +904,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  Future<void> _chooseTheme()async{
   final selected=await showModalBottomSheet<String>(context:context,backgroundColor:_navy,showDragHandle:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.62,child:ListView(padding:const EdgeInsets.all(14),children:[
    Padding(padding:const EdgeInsets.all(8),child:Text(t('ثيم المحادثة','Chat theme'),style:const TextStyle(color:_gold,fontWeight:FontWeight.w900,fontSize:18))),
-   ..._skins.map((x)=>ListTile(leading:CircleAvatar(backgroundColor:x.accent,child:Icon(x.symbol,color:x.bg)),title:Text(ar?x.titleAr:x.titleEn,style:const TextStyle(color:Colors.white)),subtitle:Text(ar?x.detailAr:x.detailEn,style:const TextStyle(color:_lavender,fontSize:11)),onTap:()=>Navigator.pop(ctx,x.id)))
+   ..._skins.map((x)=>ListTile(leading:CircleAvatar(backgroundColor:x.accent,child:Icon(Icons.palette_rounded,color:x.bg)),title:Text(ar?x.ar:x.en,style:const TextStyle(color:Colors.white)),subtitle:Text(ar?x.id:x.id,style:const TextStyle(color:_lavender,fontSize:11)),onTap:()=>Navigator.pop(ctx,x.id)))
   ]))));
   if(selected==null)return;
   final p=await SharedPreferences.getInstance();await p.setString('ours_self_skin',selected);
