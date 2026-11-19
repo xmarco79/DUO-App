@@ -8,7 +8,7 @@ import 'ours_profile_page.dart';
 import 'ours_music_page.dart';
 import '../notifications/ours_notifications.dart';
 
-const _p=Color(0xFF29213D), _l=Color(0xFFB9A2D5), _g=Color(0xFFD9BC86);
+const _p=Color(0xFF29213D), _l=Color(0xFFB9A2D5), _g=Color(0xFFD9BC86), _gold=_g, _navy=Color(0xFF10101C), _lavender=_l;
 String _t(BuildContext c,String a,String e)=>Localizations.localeOf(c).languageCode=='ar'?a:e;
 
 class OursSocialHomePage extends StatefulWidget {
