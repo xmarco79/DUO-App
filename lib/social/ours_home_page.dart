@@ -18,25 +18,27 @@ class OursSocialHomePage extends StatefulWidget {
  @override State<OursSocialHomePage> createState()=>_OursSocialHomePageState();
 }
 class _OursSocialHomePageState extends State<OursSocialHomePage>{
- final db=Supabase.instance.client; int tab=0; String? spaceId,error,conversationId,partnerId,partnerName,partnerAlias; bool loading=true;
+ final db=Supabase.instance.client; int tab=0; String? spaceId,error,conversationId,partnerId,partnerName,partnerAlias,partnerAvatarUrl; bool loading=true;
  @override void initState(){super.initState();_load();}
  Future<void> _load() async {try{
   final raw=await db.rpc('ensure_ours_pair_space'); final m=Map<String,dynamic>.from(raw as Map);
   final me=db.auth.currentUser!.id;
-  String? foundConversation=m['conversation_id']?.toString(),foundPartner,foundName;
+  String? foundConversation=m['conversation_id']?.toString(),foundPartner,foundName,foundAvatar;
   if(foundConversation!=null&&foundConversation.isNotEmpty){
    final members=await db.from('duo_conversation_members').select('user_id').eq('conversation_id',foundConversation);
    final others=members.where((row)=>row['user_id'].toString()!=me).toList();
    if(others.isNotEmpty){
     foundPartner=others.first['user_id'].toString();
-    final profile=await db.from('duo_profiles').select('username,display_name').eq('user_id',foundPartner).maybeSingle();
+    final profile=await db.from('duo_profiles').select('username,display_name,avatar_path').eq('user_id',foundPartner).maybeSingle();
     final display=profile?['display_name']?.toString().trim()??'';
     foundName=display.isNotEmpty?display:(profile?['username']?.toString()??'zoi');
+    final avatar=profile?['avatar_path']?.toString();
+    if(avatar!=null&&avatar.isNotEmpty){try{foundAvatar=db.storage.from('ours-avatars').getPublicUrl(avatar);}catch(_){}}
    }
   }
   final prefs=await SharedPreferences.getInstance();
   final alias=foundPartner==null?null:prefs.getString('ours_partner_alias_${me}_$foundPartner');
-  if(mounted)setState(() { spaceId=m['space_id'].toString(); conversationId=foundConversation; partnerId=foundPartner; partnerName=foundName; partnerAlias=alias; loading=false; });
+  if(mounted)setState(() { spaceId=m['space_id'].toString(); conversationId=foundConversation; partnerId=foundPartner; partnerName=foundName; partnerAlias=alias; partnerAvatarUrl=foundAvatar; loading=false; });
  }catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}}
  String get _partnerLabel=>partnerAlias?.trim().isNotEmpty==true?partnerAlias!.trim():(partnerName??'zoi');
  Future<void> _editPartnerAlias() async{
@@ -59,7 +61,7 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
   return Scaffold(appBar:AppBar(title:const Text('OURS',style:TextStyle(color:_g,letterSpacing:5)),actions:[if(spaceId!=null) OursNotificationBell(spaceId:spaceId,onOpenMessage:_openChat),IconButton(onPressed:widget.onProfileTap,icon:const Icon(Icons.tune,color:_l))]),
    body:loading?const Center(child:CircularProgressIndicator(color:_g)):error!=null?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Text(_t(context,'تعذر تجهيز مساحتنا','Could not load space')),Text(error!,style:const TextStyle(color:_l)),TextButton(onPressed:()=>setState(() { loading=true; error=null; _load(); }),child:Text(_t(context,'إعادة المحاولة','Retry')))])):
    IndexedStack(index:tab,children:[
-    _SpaceView(partnerName:_partnerLabel,username:partnerName??'zoi',onChat:_openChat,onPartnerProfile:partnerId==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:partnerId!))),onEditAlias:_editPartnerAlias,onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(spaceId:spaceId!)))),
+    _SpaceView(partnerName:_partnerLabel,username:partnerName??'zoi',avatarUrl:partnerAvatarUrl,onChat:_openChat,onPartnerProfile:partnerId==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:partnerId!))),onEditAlias:_editPartnerAlias,onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(spaceId:spaceId!)))),
     _StudioView(spaceId:spaceId!),
     _WatchView(spaceId:spaceId!,active:tab==2),
     const OursMusicPage(),
@@ -69,15 +71,15 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
  }
 }
 class _SpaceView extends StatelessWidget{
- final String partnerName,username;
+ final String partnerName,username;final String? avatarUrl;
  final VoidCallback onChat,onSelf,onAi,onEditAlias;
  final VoidCallback? onPartnerProfile;
- const _SpaceView({required this.partnerName,required this.username,required this.onChat,required this.onSelf,required this.onAi,required this.onEditAlias,this.onPartnerProfile});
+ const _SpaceView({required this.partnerName,required this.username,this.avatarUrl,required this.onChat,required this.onSelf,required this.onAi,required this.onEditAlias,this.onPartnerProfile});
  @override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.fromLTRB(18,18,18,26),children:[
   InkWell(onTap:onPartnerProfile,borderRadius:BorderRadius.circular(25),child:Container(
    padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF3A2C50),Color(0xFF171725),Color(0xFF18343A)]),borderRadius:BorderRadius.circular(25),border:Border.all(color:_g.withValues(alpha:.35)),boxShadow:[BoxShadow(color:_g.withValues(alpha:.08),blurRadius:24)]),
    child:Row(children:[
-    Container(width:66,height:66,decoration:BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[_g.withValues(alpha:.35),_l.withValues(alpha:.2)]),border:Border.all(color:_g,width:1.4)),child:const Icon(Icons.person_rounded,color:Colors.white,size:34)),
+    Container(width:66,height:66,decoration:BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[_g.withValues(alpha:.35),_l.withValues(alpha:.2)]),border:Border.all(color:_g,width:1.4)),child:avatarUrl==null?const Icon(Icons.person_rounded,color:Colors.white,size:34):ClipOval(child:Image.network(avatarUrl,fit:BoxFit.cover,width:66,height:66,errorBuilder:(_,__,___)=>const Icon(Icons.person_rounded,color:Colors.white,size:34)))),
     const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      Text(partnerName,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:19),maxLines:1,overflow:TextOverflow.ellipsis),
      const SizedBox(height:3),Text('@$username',style:const TextStyle(color:_l,fontSize:12)),
