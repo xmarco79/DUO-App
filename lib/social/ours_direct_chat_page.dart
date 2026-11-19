@@ -234,7 +234,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){_show(t('تعذر رفع المرفق: $e','Could not upload attachment: $e'));}finally{if(mounted)setState(()=>uploading=false);}
  }
  Future<String?> _previewMedia({required Uint8List bytes,required String name,required bool video}) async{
-  final isImage=!video;String mode='normal';bool accepted=false;
+  final isImage=!video;String mode='normal';
   return await showDialog<String>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('معاينة قبل الإرسال','Preview before sending')),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
    if(isImage)ClipRRect(borderRadius:BorderRadius.circular(14),child:Image.memory(bytes,height:230,fit:BoxFit.contain))
    else Container(height:170,width:260,decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Icon(Icons.video_file_rounded,color:skin.accent,size:70)),
