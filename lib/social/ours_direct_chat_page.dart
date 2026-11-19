@@ -210,27 +210,34 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    catch(_){await db.storage.from(_bucket).remove([path]);rethrow;}
   }catch(e){_show(t('تعذر رفع المرفق: $e','Could not upload attachment: $e'));}finally{if(mounted)setState(()=>uploading=false);}
  }
+ Future<String?> _previewMedia({required Uint8List bytes,required String name,required bool video}) async{
+  final isImage=!video;String mode='normal';bool accepted=false;
+  return await showDialog<String>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('معاينة قبل الإرسال','Preview before sending')),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   if(isImage)ClipRRect(borderRadius:BorderRadius.circular(14),child:Image.memory(bytes,height:230,fit:BoxFit.contain))
+   else Container(height:170,width:260,decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Icon(Icons.video_file_rounded,color:skin.accent,size:70)),
+   const SizedBox(height:12),Text(name,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent)),
+   if(isImage)Padding(padding:const EdgeInsets.only(top:10),child:Wrap(spacing:6,children:[
+    ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setModal(()=>mode='normal')),
+    ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setModal(()=>mode='once')),
+    ChoiceChip(label:Text(t('مرتين','Twice')),selected:mode=='twice',onSelected:(_)=>setModal(()=>mode='twice')),
+   ])),
+   const SizedBox(height:8),Text(t('لن يتم إرسال الملف حتى تضغط إرسال.','The media is not sent until you tap Send.'),style:TextStyle(color:skin.accent,fontSize:12),textAlign:TextAlign.center)
+  ])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,null),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,mode),child:Text(t('إرسال','Send')))])));
+ }
  Future<void> _pickImageWithMode() async{
-  final mode=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,
-   builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    ListTile(leading:const Icon(Icons.image_outlined,color:_gold),title:Text(t('إرسال صورة عادية','Send a normal photo')),subtitle:Text(t('تبقى الصورة ظاهرة في المحادثة','Stays visible in the chat')),onTap:()=>Navigator.pop(ctx,'normal')),
-    ListTile(leading:const Icon(Icons.looks_one_outlined,color:_gold),title:Text(t('مشاهدة مرة واحدة','View once')),subtitle:Text(t('تُفتح مرة واحدة ثم تختفي','Opens once, then disappears')),onTap:()=>Navigator.pop(ctx,'once')),
-    ListTile(leading:const Icon(Icons.looks_two_outlined,color:_gold),title:Text(t('مشاهدة مرتين','View twice')),subtitle:Text(t('يمكن فتحها مرتين فقط','Can be opened twice only')),onTap:()=>Navigator.pop(ctx,'twice')),
-   ])));
-  if(mode==null)return;
   try{
-   final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:86,maxWidth:1600,maxHeight:1600);if(f==null)return;
+   final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);if(f==null)return;
+   final bytes=await f.readAsBytes();final mode=await _previewMedia(bytes:bytes,name:f.name,video:false);if(mode==null)return;
    final ext=f.name.split('.').last.toLowerCase();final name=['png','webp'].contains(ext)?f.name:'photo_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
-   await _upload(await f.readAsBytes(),name,mode=='normal'?'image':mode=='once'?'view_once':'view_twice',maxViews:mode=='twice'?2:1);
+   await _upload(bytes,name,mode=='normal'?'image':mode=='once'?'view_once':'view_twice',maxViews:mode=='twice'?2:1);
   }catch(e){_show(t('تعذر اختيار الصورة: $e','Could not select image: $e'));}
  }
  Future<void> _pickVideo() async{
   try{
-   final f=await picker.pickVideo(source:ImageSource.gallery,maxDuration:const Duration(minutes:2));
-   if(f==null)return;
-   final ext=f.name.split('.').last.toLowerCase();
-   if(!['mp4','mov','webm'].contains(ext)){_show(t('صيغة الفيديو غير مدعومة','Unsupported video format'));return;}
-   await _upload(await f.readAsBytes(),f.name,'video');
+   final f=await picker.pickVideo(source:ImageSource.gallery,maxDuration:const Duration(minutes:2));if(f==null)return;
+   final ext=f.name.split('.').last.toLowerCase();if(!['mp4','mov','webm'].contains(ext)){_show(t('صيغة الفيديو غير مدعومة','Unsupported video format'));return;}
+   final bytes=await f.readAsBytes();final mode=await _previewMedia(bytes:bytes,name:f.name,video:true);if(mode==null)return;
+   await _upload(bytes,f.name,'video');
   }catch(e){_show(t('تعذر اختيار الفيديو: $e','Could not select video: $e'));}
  }
  Future<void> _sendSticker() async{
