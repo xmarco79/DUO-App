@@ -360,7 +360,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final path=widget.conversationId+'/'+uid+'/'+DateTime.now().microsecondsSinceEpoch.toString()+'_'+safe;
   try{
    await db.storage.from(_bucket).uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
-   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':type,'max_views':maxViews??1});}
+   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':type,'max_views':maxViews??1,'file_name':name,'file_size':bytes.length,'mime_type':mime});}
    catch(_){await db.storage.from(_bucket).remove([path]);rethrow;}
   }catch(e){_show(t('تعذر رفع المرفق. تحقق من الاتصال.','Could not upload the attachment. Check your connection.'));}finally{if(mounted)setState(()=>uploading=false);}
  }
@@ -513,7 +513,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    ListTile(leading:const Icon(Icons.delete_outline,color:Colors.orangeAccent),title:Text(t('حذف لديك','Delete for you')),onTap:()=>Navigator.pop(ctx,'local')),
   ])));
   if(choice==null)return;final id=message['id'].toString();
-  if(choice=='copy'){await Clipboard.setData(ClipboardData(text:type=='text'?body:body.split('/').last));_show(t('تم النسخ','Copied'));return;}
+  if(choice=='copy'){await Clipboard.setData(ClipboardData(text:type=='text'?body:(message['file_name']??body.split('/').last).toString()));_show(t('تم النسخ','Copied'));return;}
   if(choice=='reply'){setState(()=>replyTo=message);return;}
   try{
    if(choice=='local'){
@@ -582,7 +582,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final found=messages.where((m)=>types.contains(m['message_type'])).toList();
   await showModalBottomSheet<void>(context:context,isScrollControlled:true,backgroundColor:const Color(0xFF211D30),builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.65,child:Column(children:[
    Padding(padding:const EdgeInsets.all(16),child:Text(kind=='media'?t('الوسائط المرسلة','Shared media'):t('الملفات','Files'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold))),
-   Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد عناصر بعد','Nothing shared yet'))):ListView(children:found.map((m)=>ListTile(leading:Icon(kind=='media'?Icons.image_outlined:Icons.insert_drive_file_outlined,color:skin.accent),title:Text((m['body']??'').toString().split('/').last,maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])),onTap:(){Navigator.pop(ctx);_openLibraryItem(m);})).toList()))
+   Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد عناصر بعد','Nothing shared yet'))):ListView(children:found.map((m)=>ListTile(leading:Icon(kind=='media'?Icons.image_outlined:Icons.insert_drive_file_outlined,color:skin.accent),title:Text((m['file_name']??(m['body']??'').toString().split('/').last).toString(),maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])),onTap:(){Navigator.pop(ctx);_openLibraryItem(m);})).toList()))
   ]))));
  }
    @override void dispose(){typingTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));if(liveChannel!=null){unawaited(liveChannel!.untrack().then<void>((_){}));db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
@@ -655,7 +655,11 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
           })
           else if(type=='file')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[
            Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),
-           Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(path.split('/').last.replaceFirst(RegExp(r'^\d+_'),''),maxLines:2,overflow:TextOverflow.ellipsis),Text(t('اضغط لفتح الملف','Tap to open file'),style:TextStyle(color:skin.accent,fontSize:10))]))
+           Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text((m['file_name']??path.split('/').last.replaceFirst(RegExp(r'^\d+_'),'' )).toString(),maxLines:2,overflow:TextOverflow.ellipsis),
+            Text('${((m['file_size'] as num?)?.toInt()??0)/1024>=1024?(((m['file_size'] as num?)?.toInt()??0)/1048576).toStringAsFixed(1)+' MB':(((m['file_size'] as num?)?.toInt()??0)/1024).toStringAsFixed(0)+' KB'} · ${(m['mime_type']??'').toString().split('/').last}',style:TextStyle(color:skin.accent,fontSize:10)),
+            Text(t('اضغط لفتح الملف','Tap to open file'),style:TextStyle(color:skin.accent,fontSize:10))
+           ]))
           ]))
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
           else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
