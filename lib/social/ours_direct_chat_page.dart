@@ -306,13 +306,19 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Future<void> _showAttachments() async{
   final choice=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,
    builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    ListTile(leading:Icon(Icons.image_outlined,color:skin.accent),title:Text(t('إرسال صورة','Send photo')),subtitle:Text(t('عادية أو مشاهدة مؤقتة','Normal or temporary')),onTap:()=>Navigator.pop(ctx,'image')),
-    ListTile(leading:Icon(Icons.video_library_outlined,color:skin.accent),title:Text(t('مقطع فيديو','Video')),onTap:()=>Navigator.pop(ctx,'video')),
+    ListTile(leading:Icon(Icons.photo_library_outlined,color:skin.accent),title:Text(t('الوسائط','Media')),subtitle:Text(t('صور ومقاطع فيديو','Photos and videos')),onTap:()=>Navigator.pop(ctx,'media')),
     ListTile(leading:Icon(Icons.insert_drive_file_outlined,color:skin.accent),title:Text(t('ملف','File')),onTap:()=>Navigator.pop(ctx,'file')),
     ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:skin.accent),title:Text(t('ملصقات القطط','Cat stickers')),onTap:()=>Navigator.pop(ctx,'sticker')),
    ])));
   if(choice==null)return;
-  switch(choice){case 'image':await _pickImageWithMode();break;case 'video':await _pickVideo();break;case 'file':await _pickFile();break;case 'sticker':await _sendSticker();break;}
+  switch(choice){case 'media':await _pickMedia();break;case 'image':await _pickImageWithMode();break;case 'video':await _pickVideo();break;case 'file':await _pickFile();break;case 'sticker':await _sendSticker();break;}
+ }
+ Future<void> _pickMedia()async{
+  final kind=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   ListTile(leading:Icon(Icons.image_outlined,color:skin.accent),title:Text(t('صور','Photos')),onTap:()=>Navigator.pop(ctx,'image')),
+   ListTile(leading:Icon(Icons.video_library_outlined,color:skin.accent),title:Text(t('مقاطع فيديو','Videos')),onTap:()=>Navigator.pop(ctx,'video')),
+  ])));
+  if(kind=='image')await _pickImageWithMode();else if(kind=='video')await _pickVideo();
  }
  Future<void> _pickFile() async{
   try{final r=await FilePicker.platform.pickFiles(withData:true);if(r==null||r.files.isEmpty)return;final f=r.files.single;
