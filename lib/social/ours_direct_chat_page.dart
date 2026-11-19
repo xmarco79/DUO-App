@@ -381,20 +381,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     ]),
    ),
    actions:[
-    IconButton(tooltip:t('الثيم','Theme'),onPressed:_chooseSkin,icon:Icon(Icons.palette_outlined,color:skin.accent)),
-    PopupMenuButton<String>(tooltip:t('المزيد','More'),icon:Icon(Icons.more_vert,color:skin.accent),onSelected:(v){
-     if(v=='profile')Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:widget.partnerId)));
-     if(v=='nickname')_changeLocalNickname();
-     if(v=='search')_searchMessages();if(v=='media')_showChatLibrary('media');if(v=='files')_showChatLibrary('files');
-    },itemBuilder:(_)=>[
-     PopupMenuItem(value:'profile',child:Text(t('الملف الشخصي','Profile'))),
-     PopupMenuItem(value:'nickname',child:Text(t('تخصيص الاسم عندك فقط','Set your private nickname'))),
-     PopupMenuItem(value:'search',child:Text(t('البحث عن الرسائل','Search messages'))),
-     PopupMenuItem(value:'media',child:Text(t('الوسائط المرسلة','Shared media'))),
-     PopupMenuItem(value:'files',child:Text(t('الملفات','Files'))),
-    ]),
     IconButton(tooltip:t('اتصال صوتي','Voice call'),onPressed:()=>_callInfo(false),icon:Icon(Icons.call_outlined,color:skin.accent)),
-    IconButton(tooltip:t('اتصال مرئي','Video call'),onPressed:()=>_callInfo(true),icon:Icon(Icons.videocam_outlined,color:skin.accent))
+    IconButton(tooltip:t('اتصال مرئي','Video call'),onPressed:()=>_callInfo(true),icon:Icon(Icons.videocam_outlined,color:skin.accent)),
+    IconButton(tooltip:t('تفاصيل المحادثة','Chat details'),icon:Icon(Icons.more_horiz,color:skin.accent),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>_ChatDetailsPage(partnerId:widget.partnerId,partnerName:localPartnerName??widget.partnerName,skin:skin,profile:()=>OursProfilePage(userId:widget.partnerId),nickname:_changeLocalNickname,search:_searchMessages,media:()=>_showChatLibrary('media'),files:()=>_showChatLibrary('files'),themes:_chooseSkin))))
    ]),
    body:Stack(children:[
     Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
@@ -694,3 +683,15 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   ]),
  );
 }
+
+
+class _ChatDetailsPage extends StatelessWidget{
+ final String partnerId,partnerName;final _ChatSkin skin;final Widget Function() profile;final VoidCallback nickname,search,media,files;final Future<void> Function() themes;
+ const _ChatDetailsPage({required this.partnerId,required this.partnerName,required this.skin,required this.profile,required this.nickname,required this.search,required this.media,required this.files,required this.themes});
+ @override Widget build(BuildContext context){final ar=Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
+ return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,title:Text(t('تفاصيل المحادثة','Chat details'))),body:ListView(padding:const EdgeInsets.all(18),children:[
+ Card(color:skin.partner,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22)),child:Padding(padding:const EdgeInsets.all(20),child:Column(children:[CircleAvatar(radius:38,backgroundColor:skin.accent.withValues(alpha:.18),child:Icon(Icons.person_rounded,size:38,color:skin.accent)),const SizedBox(height:10),Text(partnerName,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:19)),const SizedBox(height:10),FilledButton.tonal(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>profile())),child:Text(t('عرض الملف الشخصي','View profile')))]))),
+ const SizedBox(height:18),GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:2,childAspectRatio:1.25,crossAxisSpacing:12,mainAxisSpacing:12,children:[_ChatDetailTile(icon:Icons.photo_library_outlined,title:t('الوسائط','Media'),subtitle:t('صور ومقاطع الفيديو','Photos and videos'),accent:skin.accent,onTap:media),_ChatDetailTile(icon:Icons.folder_outlined,title:t('الملفات','Files'),subtitle:t('المستندات والمرفقات','Documents and attachments'),accent:skin.accent,onTap:files),_ChatDetailTile(icon:Icons.search_rounded,title:t('بحث الرسائل','Search messages'),subtitle:t('ابحث داخل المحادثة','Search conversation'),accent:skin.accent,onTap:search),_ChatDetailTile(icon:Icons.person_outline,title:t('اسم خاص','Private nickname'),subtitle:t('يظهر لك فقط','Only visible to you'),accent:skin.accent,onTap:nickname),_ChatDetailTile(icon:Icons.palette_outlined,title:t('الثيمات','Themes'),subtitle:t('غيّر أجواء المحادثة','Change chat atmosphere'),accent:skin.accent,onTap:themes)]),
+ ]) );}
+}
+class _ChatDetailTile extends StatelessWidget{final IconData icon;final String title,subtitle;final Color accent;final VoidCallback onTap;const _ChatDetailTile({required this.icon,required this.title,required this.subtitle,required this.accent,required this.onTap});@override Widget build(BuildContext c)=>InkWell(onTap:onTap,borderRadius:BorderRadius.circular(18),child:Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(0xFF211D30),borderRadius:BorderRadius.circular(18),border:Border.all(color:accent.withValues(alpha:.2))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.center,children:[Icon(icon,color:accent,size:26),const SizedBox(height:10),Text(title,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),const SizedBox(height:4),Text(subtitle,style:TextStyle(color:accent,fontSize:11))])));}
