@@ -463,6 +463,7 @@ jobs:
           echo "$BADGING" | grep -F "package: name='com.ours.ours'"
           VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose "$APK")"
           echo "$VERIFY_OUTPUT"
+          # V1 is informational here; the supported Android baseline is validated with V2/V3.
           echo "V1 signature status is informational; Android API 24+ compatibility is verified through V2/V3."
           echo "$VERIFY_OUTPUT" | grep -F "Verified using v2 scheme (APK Signature Scheme v2): true"
           echo "$VERIFY_OUTPUT" | grep -F "Verified using v3 scheme (APK Signature Scheme v3): true"
