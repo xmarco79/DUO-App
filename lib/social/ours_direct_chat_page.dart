@@ -90,7 +90,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final selected=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF171523),showDragHandle:true,builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[
    Text(t('ملصقات OURS','OURS stickers'),style:const TextStyle(color:_gold,fontSize:18,fontWeight:FontWeight.w700)),
    const SizedBox(height:8),GridView.count(shrinkWrap:true,crossAxisCount:5,physics:const NeverScrollableScrollPhysics(),children:[for(final sticker in stickers)InkWell(onTap:()=>Navigator.pop(ctx,sticker),borderRadius:BorderRadius.circular(12),child:Center(child:Text(sticker,style:const TextStyle(fontSize:34))))])
-  ])))));
+  ]))));
   if(selected!=null)await _sendSticker(selected);
  }
  Future<void> _sendText() async{
@@ -298,7 +298,7 @@ class _OursImageEditPageState extends State<OursImageEditPage>{
   [0.92,0,0,0,0,0,1.02,0,0,0,0,0,1.12,0,8,0,0,0,1,0],
   [0.3,0.59,0.11,0,0,0.3,0.59,0.11,0,0,0.3,0.59,0.11,0,0,0,0,0,1,0],
   [1.2,0,0,0,-8,0,1.2,0,0,-8,0,0,1.2,0,-8,0,0,0,1,0],
-  [00.393,0.769,0.189,0,0,00.349,0.686,0.168,0,0,0.272,0.534,0.131,0,0,0,0,0,1,0],
+  [0.393,0.769,0.189,0,0,0.349,0.686,0.168,0,0,0.272,0.534,0.131,0,0,0,0,0,1,0],
  ];
  Future<void> _export()async{
   try{
@@ -313,20 +313,77 @@ class _OursImageEditPageState extends State<OursImageEditPage>{
  void _start(Offset p){final stroke=_EditStroke(drawColor,4,[p]);strokes.add(stroke);active=stroke;setState((){});}
  void _move(Offset p){if(active==null)return;active!.points.add(p);setState((){});}
  void _finish(){active=null;}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF10101C),appBar:AppBar(backgroundColor:const Color(0xFF10101C),title:Text(t('محرر الصور','Photo editor')),actions:[IconButton(onPressed:_export,tooltip:t('حفظ','Save'),icon:Icon(Icons.check_rounded,color:widget.accent))]),
- body:SafeArea(child:Column(children:[
-  Expanded(child:Padding(padding:const EdgeInsets.all(12),child:RepaintBoundary(key:boundaryKey,child:ClipRRect(borderRadius:BorderRadius.circular(18),child:Stack(children:[
-   Positioned.fill(child:InteractiveViewer(minScale:1,maxScale:4,child:ColorFiltered(colorFilter:ColorFilter.matrix(matrices[filter]),child:Image.memory(widget.bytes,fit:BoxFit.cover))))),
-   Positioned.fill(child:GestureDetector(behavior:HitTestBehavior.translucent,onPanStart:drawing?((d)=>_start(d.localPosition)):null,onPanUpdate:drawing?((d)=>_move(d.localPosition)):null,onPanEnd:drawing?((d)=>_finish()):null,child:CustomPaint(painter:_DrawingPainter(strokes)))),
-  ]))))),
-  SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),child:Row(children:[for(int i=0;i<matrices.length;i++)Padding(padding:const EdgeInsets.symmetric(horizontal:4),child:ChoiceChip(label:Text(ar?['أصلية','دافئة','باردة','أبيض وأسود','حيوية','سيبيا'][i]:['Original','Warm','Cool','Mono','Vivid','Sepia'][i]),selected:filter==i,selectedColor:widget.accent.withValues(alpha:0.3),onSelected:(_)=>setState(()=>filter=i)))])),
-  Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-   IconButton(onPressed:()=>setState(()=>drawing=!drawing),tooltip:t('الرسم','Draw'),icon:Icon(drawing?Icons.draw:Icons.brush_outlined,color:drawing?widget.accent:Colors.white70)),
-   IconButton(onPressed:strokes.isEmpty?null:()=>setState(()=>strokes.clear()),tooltip:t('مسح الرسم','Clear drawing'),icon:Icon(Icons.delete_outline,color:widget.accent)),
-   for(final color in [Colors.white,Colors.redAccent,Colors.amber,Colors.lightBlueAccent,Colors.greenAccent,Colors.pinkAccent])GestureDetector(onTap:()=>setState(()=>drawColor=color),child:Container(width:22,height:22,margin:const EdgeInsets.all(5),decoration:BoxDecoration(color:color,shape:BoxShape.circle,border:Border.all(color:drawColor==color?widget.accent:Colors.white24,width:drawColor==color?3:1))))
-  ]),
-  Padding(padding:const EdgeInsets.only(bottom:10),child:Text(t('اسحب للتقصيص والتكبير، فعّل الرسم لإضافة خطوط.','Pinch and pan to crop/zoom; enable drawing for strokes.'),style:const TextStyle(color:Colors.white54,fontSize:11)))
- ])));
+ @override Widget build(BuildContext context){
+ return Scaffold(
+  backgroundColor:const Color(0xFF10101C),
+  appBar:AppBar(
+   backgroundColor:const Color(0xFF10101C),
+   title:Text(t('محرر الصور','Photo editor')),
+   actions:[IconButton(onPressed:_export,tooltip:t('حفظ','Save'),icon:Icon(Icons.check_rounded,color:widget.accent))],
+  ),
+  body:SafeArea(child:Column(children:[
+   _previewCanvas(),
+   _filterStrip(),
+   _toolRow(),
+   Padding(padding:const EdgeInsets.only(bottom:10),child:Text(t('اسحب للتقصيص والتكبير، فعّل الرسم لإضافة خطوط.','Pinch and pan to crop/zoom; enable drawing for strokes.'),style:const TextStyle(color:Colors.white54,fontSize:11))),
+  ])),
+ );
+}
+Widget _previewCanvas()=>Expanded(
+ child:Padding(
+  padding:const EdgeInsets.all(12),
+  child:RepaintBoundary(
+   key:boundaryKey,
+   child:ClipRRect(
+    borderRadius:BorderRadius.circular(18),
+    child:Stack(children:[
+     Positioned.fill(child:InteractiveViewer(
+      minScale:1,maxScale:4,
+      child:ColorFiltered(colorFilter:ColorFilter.matrix(matrices[filter]),child:Image.memory(widget.bytes,fit:BoxFit.cover)),
+     )),
+     Positioned.fill(child:GestureDetector(
+      behavior:HitTestBehavior.translucent,
+      onPanStart:drawing?((d)=>_start(d.localPosition)):null,
+      onPanUpdate:drawing?((d)=>_move(d.localPosition)):null,
+      onPanEnd:drawing?((d)=>_finish()):null,
+      child:CustomPaint(painter:_DrawingPainter(strokes)),
+     )),
+    ]),
+   ),
+  ),
+ ),
+);
+Widget _filterStrip()=>SingleChildScrollView(
+ scrollDirection:Axis.horizontal,
+ padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),
+ child:Row(children:List.generate(matrices.length,(i)=>_filterChip(i))),
+);
+Widget _filterChip(int i){
+ const en=['Original','Warm','Cool','Mono','Vivid','Sepia'];
+ const arNames=['أصلية','دافئة','باردة','أبيض وأسود','حيوية','سيبيا'];
+ return Padding(
+  padding:const EdgeInsets.symmetric(horizontal:4),
+  child:ChoiceChip(
+   label:Text(ar?arNames[i]:en[i]),
+   selected:filter==i,
+   selectedColor:widget.accent.withValues(alpha:.3),
+   onSelected:(_)=>setState(()=>filter=i),
+  ),
+ );
+}
+Widget _toolRow()=>Row(
+ mainAxisAlignment:MainAxisAlignment.center,
+ children:[
+  IconButton(onPressed:()=>setState(()=>drawing=!drawing),tooltip:t('الرسم','Draw'),icon:Icon(drawing?Icons.draw:Icons.brush_outlined,color:drawing?widget.accent:Colors.white70)),
+  IconButton(onPressed:strokes.isEmpty?null:()=>setState(()=>strokes.clear()),tooltip:t('مسح الرسم','Clear drawing'),icon:Icon(Icons.delete_outline,color:widget.accent)),
+  for(final color in [Colors.white,Colors.redAccent,Colors.amber,Colors.lightBlueAccent,Colors.greenAccent,Colors.pinkAccent])
+   GestureDetector(
+    onTap:()=>setState(()=>drawColor=color),
+    child:Container(width:22,height:22,margin:const EdgeInsets.all(5),decoration:BoxDecoration(color:color,shape:BoxShape.circle,border:Border.all(color:drawColor==color?widget.accent:Colors.white24,width:drawColor==color?3:1))),
+   ),
+ ],
+);
+
 }
 class _DrawingPainter extends CustomPainter{
  final List<_EditStroke> strokes;_DrawingPainter(this.strokes);
