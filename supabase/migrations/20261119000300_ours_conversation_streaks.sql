@@ -14,7 +14,7 @@ using(exists(select 1 from public.duo_conversation_members cm where cm.conversat
 create or replace function public.ours_update_direct_streak()
 returns trigger language plpgsql security definer set search_path=pg_catalog,public
 as $$
-declare v_day date:=timezone('UTC',now())::date;
+declare v_day date:=timezone('Asia/Riyadh',now())::date;
 begin
  if not exists(select 1 from public.duo_conversation_members cm where cm.conversation_id=new.conversation_id and cm.user_id=new.sender_id) then return new; end if;
  insert into public.duo_direct_streaks(conversation_id,current_days,longest_days,last_activity_date)
