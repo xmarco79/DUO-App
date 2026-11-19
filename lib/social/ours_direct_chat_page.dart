@@ -176,9 +176,16 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){if(mounted){setState(()=>loading=false);_show(t('تعذر تحميل المحادثة: $e','Could not load conversation: $e'));}}
  }
  void _listen(){
-  channel=db.channel('ours-direct-'+widget.conversationId).onPostgresChanges(event:PostgresChangeEvent.insert,schema:'public',table:'duo_direct_messages',
-   filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'conversation_id',value:widget.conversationId),callback:(p){
+  final filter=PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'conversation_id',value:widget.conversationId);
+  channel=db.channel('ours-direct-'+widget.conversationId)
+   .onPostgresChanges(event:PostgresChangeEvent.insert,schema:'public',table:'duo_direct_messages',filter:filter,callback:(p){
     final row=Map<String,dynamic>.from(p.newRecord);if(!mounted||hiddenIds.contains(row['id'].toString())||messages.any((m)=>m['id']==row['id']))return;setState(()=>messages.add(row));_bottom();
+   })
+   .onPostgresChanges(event:PostgresChangeEvent.delete,schema:'public',table:'duo_direct_messages',filter:filter,callback:(p){
+    final id=p.oldRecord['id']?.toString();if(!mounted||id==null)return;setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));
+   })
+   .onPostgresChanges(event:PostgresChangeEvent.update,schema:'public',table:'duo_direct_messages',filter:filter,callback:(p){
+    final row=Map<String,dynamic>.from(p.newRecord);if(!mounted)return;final index=messages.indexWhere((m)=>m['id'].toString()==row['id'].toString());if(index>=0)setState(()=>messages[index]=row);
    }).subscribe();
  }
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
