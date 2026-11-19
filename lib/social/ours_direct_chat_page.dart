@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -247,16 +248,72 @@ class OursMediaPreviewPage extends StatefulWidget{
  @override State<OursMediaPreviewPage> createState()=>_OursMediaPreviewPageState();
 }
 class _OursMediaPreviewPageState extends State<OursMediaPreviewPage>{
- String viewMode='normal';bool hd=true;
+ String viewMode='normal';late Uint8List previewBytes;late String previewName;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF10101C),appBar:AppBar(backgroundColor:const Color(0xFF10101C),title:Text(t('معاينة قبل الإرسال','Preview before sending')),actions:[IconButton(onPressed:()=>setState(()=>hd=!hd),tooltip:'HD',icon:Icon(Icons.high_quality,color:hd?widget.accent:Colors.white54))]),
+ @override void initState(){super.initState();previewBytes=widget.bytes;previewName=widget.name;}
+ Future<void> _editImage()async{
+  final edited=await Navigator.push<_EditedMedia>(context,MaterialPageRoute(builder:(_)=>OursImageEditPage(bytes:previewBytes,accent:widget.accent)));
+  if(edited!=null&&mounted)setState(()=>previewBytes=edited.bytes,previewName=edited.name);
+ }
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF10101C),appBar:AppBar(backgroundColor:const Color(0xFF10101C),title:Text(t('معاينة قبل الإرسال','Preview before sending')),actions:[if(widget.kind=='image')IconButton(onPressed:_editImage,tooltip:t('تعديل الصورة','Edit image'),icon:Icon(Icons.edit_outlined,color:widget.accent))]),
  body:SafeArea(child:Column(children:[
-  Expanded(child:Center(child:Padding(padding:const EdgeInsets.all(16),child:widget.kind=='image'?ClipRRect(borderRadius:BorderRadius.circular(20),child:Image.memory(widget.bytes,fit:BoxFit.contain)):Container(width:280,height:300,decoration:BoxDecoration(color:const Color(0xFF211D30),borderRadius:BorderRadius.circular(22),border:Border.all(color:widget.accent.withValues(alpha:.4))),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(Icons.movie_outlined,size:72,color:widget.accent),const SizedBox(height:12),Padding(padding:const EdgeInsets.all(12),child:Text(widget.name,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white)))]))))),
-  Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:Row(children:[Text(t('المشاهدة','Viewing'),style:TextStyle(color:widget.accent,fontWeight:FontWeight.w600)),const Spacer(),Text('HD '+(hd?t('مفعّل','on'):t('غير مفعّل','off')),style:TextStyle(color:widget.accent,fontSize:12))])),
+  Expanded(child:Center(child:Padding(padding:const EdgeInsets.all(16),child:widget.kind=='image'?ClipRRect(borderRadius:BorderRadius.circular(20),child:Image.memory(previewBytes,fit:BoxFit.contain)):Container(width:280,height:300,decoration:BoxDecoration(color:const Color(0xFF211D30),borderRadius:BorderRadius.circular(22),border:Border.all(color:widget.accent.withValues(alpha:.4))),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(Icons.movie_outlined,size:72,color:widget.accent),const SizedBox(height:12),Padding(padding:const EdgeInsets.all(12),child:Text(previewName,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white)))]))))),
+  Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:Row(children:[Text(t('المشاهدة','Viewing'),style:TextStyle(color:widget.accent,fontWeight:FontWeight.w600)),const Spacer(),Text(t('جودة عالية','High quality'),style:TextStyle(color:widget.accent,fontSize:12))])),
   Padding(padding:const EdgeInsets.all(12),child:Wrap(spacing:8,runSpacing:8,children:[_modeChip('normal',t('عادي','Normal')),_modeChip('once',t('لمرة واحدة','Once')),_modeChip('twice',t('لمرتين','Twice'))])),
-  Padding(padding:const EdgeInsets.fromLTRB(16,4,16,14),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(context),child:Text(t('إلغاء','Cancel')))),const SizedBox(width:12),Expanded(child:FilledButton.icon(onPressed:()=>Navigator.pop(context,_MediaDraft(bytes:widget.bytes,name:widget.name,kind:widget.kind,viewMode:viewMode)),icon:const Icon(Icons.send_rounded),label:Text(t('إرسال','Send'))))]))
+  Padding(padding:const EdgeInsets.fromLTRB(16,4,16,14),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(context),child:Text(t('إلغاء','Cancel')))),const SizedBox(width:12),Expanded(child:FilledButton.icon(onPressed:()=>Navigator.pop(context,_MediaDraft(bytes:previewBytes,name:previewName,kind:widget.kind,viewMode:viewMode)),icon:const Icon(Icons.send_rounded),label:Text(t('إرسال','Send'))))]))
  ])));
  Widget _modeChip(String value,String label)=>ChoiceChip(label:Text(label),selected:viewMode==value,selectedColor:widget.accent.withValues(alpha:.25),backgroundColor:const Color(0xFF29213D),labelStyle:TextStyle(color:viewMode==value?widget.accent:Colors.white),onSelected:(_)=>setState(()=>viewMode=value));
+}
+class _EditedMedia{final Uint8List bytes;final String name;const _EditedMedia(this.bytes,this.name);}
+class _EditStroke{final Color color;final double width;final List<Offset> points;_EditStroke(this.color,this.width,this.points);}
+class OursImageEditPage extends StatefulWidget{
+ final Uint8List bytes;final Color accent;const OursImageEditPage({super.key,required this.bytes,required this.accent});
+ @override State<OursImageEditPage> createState()=>_OursImageEditPageState();
+}
+class _OursImageEditPageState extends State<OursImageEditPage>{
+ final boundaryKey=GlobalKey();final strokes=<_EditStroke>[];_EditStroke? active;
+ int filter=0;bool drawing=false;Color drawColor=Colors.white;
+ bool get ar=>Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
+ static const matrices=<List<double>>[
+  [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0],
+  [1.08,0,0,0,7,0,1.02,0,0,2,0,0,.92,0,0,0,0,0,1,0],
+  [.92,0,0,0,0,0,1.02,0,0,0,0,0,1.12,0,8,0,0,0,1,0],
+  [.3,.59,.11,0,0,.3,.59,.11,0,0,.3,.59,.11,0,0,0,0,0,1,0],
+  [1.2,0,0,0,-8,0,1.2,0,0,-8,0,0,1.2,0,-8,0,0,0,1,0],
+  [.393,.769,.189,0,0,.349,.686,.168,0,0,.272,.534,.131,0,0,0,0,0,1,0],
+ ];
+ Future<void> _export()async{
+  try{
+   final render=boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+   if(render==null)throw Exception('Preview not ready');
+   final image=await render.toImage(pixelRatio:2.0);
+   final data=await image.toByteData(format:ui.ImageByteFormat.png);image.dispose();
+   if(data==null)throw Exception('Image export failed');
+   if(mounted)Navigator.pop(context,_EditedMedia(data.buffer.asUint8List(),'edited_'+DateTime.now().millisecondsSinceEpoch.toString()+'.png'));
+  }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تعذر حفظ التعديلات','Could not export edits'))));}
+ }
+ void _start(Offset p){final stroke=_EditStroke(drawColor,4,[p]);strokes.add(stroke);active=stroke;setState((){});}
+ void _move(Offset p){if(active==null)return;active!.points.add(p);setState((){});}
+ void _finish(){active=null;}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF10101C),appBar:AppBar(backgroundColor:const Color(0xFF10101C),title:Text(t('محرر الصور','Photo editor')),actions:[IconButton(onPressed:_export,tooltip:t('حفظ','Save'),icon:Icon(Icons.check_rounded,color:widget.accent))]),
+ body:SafeArea(child:Column(children:[
+  Expanded(child:Padding(padding:const EdgeInsets.all(12),child:RepaintBoundary(key:boundaryKey,child:ClipRRect(borderRadius:BorderRadius.circular(18),child:Stack(children:[
+   Positioned.fill(child:InteractiveViewer(minScale:1,maxScale:4,child:ColorFiltered(colorFilter:ColorFilter.matrix(matrices[filter]),child:Image.memory(widget.bytes,fit:BoxFit.cover,width:double.infinity,height:double.infinity))))),
+   Positioned.fill(child:GestureDetector(behavior:HitTestBehavior.translucent,onPanStart:drawing?((d)=>_start(d.localPosition)):null,onPanUpdate:drawing?((d)=>_move(d.localPosition)):null,onPanEnd:drawing?((d)=>_finish()):null,child:CustomPaint(painter:_DrawingPainter(strokes)))),
+  ]))))),
+  SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),child:Row(children:[for(int i=0;i<matrices.length;i++)Padding(padding:const EdgeInsets.symmetric(horizontal:4),child:ChoiceChip(label:Text(['Original','Warm','Cool','Mono','Vivid','Sepia'][i]),selected:filter==i,selectedColor:widget.accent.withValues(alpha:.3),onSelected:(_)=>setState(()=>filter=i)))])),
+  Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+   IconButton(onPressed:()=>setState(()=>drawing=!drawing),tooltip:t('الرسم','Draw'),icon:Icon(drawing?Icons.draw:Icons.brush_outlined,color:drawing?widget.accent:Colors.white70)),
+   IconButton(onPressed:strokes.isEmpty?null:()=>setState(()=>strokes.clear()),tooltip:t('مسح الرسم','Clear drawing'),icon:Icon(Icons.delete_outline,color:widget.accent)),
+   for(final color in [Colors.white,Colors.redAccent,Colors.amber,Colors.lightBlueAccent,Colors.greenAccent,Colors.pinkAccent])GestureDetector(onTap:()=>setState(()=>drawColor=color),child:Container(width:22,height:22,margin:const EdgeInsets.all(5),decoration:BoxDecoration(color:color,shape:BoxShape.circle,border:Border.all(color:drawColor==color?widget.accent:Colors.white24,width:drawColor==color?3:1))))
+  ]),
+  Padding(padding:const EdgeInsets.only(bottom:10),child:Text(t('اسحب للتقصيص والتكبير، فعّل الرسم لإضافة خطوط.','Pinch and pan to crop/zoom; enable drawing for strokes.'),style:const TextStyle(color:Colors.white54,fontSize:11)))
+ ])));
+}
+class _DrawingPainter extends CustomPainter{
+ final List<_EditStroke> strokes;_DrawingPainter(this.strokes);
+ @override void paint(Canvas canvas,Size size){for(final stroke in strokes){if(stroke.points.length<2)continue;final p=Paint()..color=stroke.color..strokeWidth=stroke.width..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round;final path=Path()..moveTo(stroke.points.first.dx,stroke.points.first.dy);for(final point in stroke.points.skip(1)){path.lineTo(point.dx,point.dy);}canvas.drawPath(path,p);}}
+ @override bool shouldRepaint(covariant _DrawingPainter oldDelegate)=>oldDelegate.strokes!=strokes;
 }
 class OursConversationDetailsPage extends StatefulWidget{
  final String conversationId,partnerName;const OursConversationDetailsPage({super.key,required this.conversationId,required this.partnerName});
