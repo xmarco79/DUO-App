@@ -219,10 +219,18 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){_show(t('تعذر اختيار الفيديو: $e','Could not select video: $e'));}
  }
  Future<void> _sendSticker() async{
-  const stickers=['😻','😽','😺','😸','😹','😿','🙀','😾','🐱','🐈','🐈‍⬛','🐾','😼','😹💗','🥺🐱','🐱💤','🐱🎀','🐱✨','🐱🍓','🐱🫶','🐱💢','🐱🤍','🐱☕','🐱🌙'];
-  final chosen=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,
-   builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.all(16),child:Wrap(spacing:12,runSpacing:12,children:[
-    for(final sticker in stickers) InkWell(onTap:()=>Navigator.pop(ctx,sticker),child:Container(width:58,height:58,alignment:Alignment.center,decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(16)),child:Text(sticker,style:const TextStyle(fontSize:30))))
+  const stickers=[
+   ('ours_cat_love','حب'),('ours_cat_happy','سعادة'),('ours_cat_cry','بكاء'),
+   ('ours_cat_sleep','نعاس'),('ours_cat_shock','صدمة'),('ours_cat_angry','زعل'),
+   ('ours_cat_wink','غمزة'),('ours_cat_blush','خجل'),('ours_cat_chef','الشيف'),
+   ('ours_cat_party','احتفال'),('ours_cat_hug','حضن'),('ours_cat_cool','كشخة'),
+  ];
+  final chosen=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF211D30),showDragHandle:true,isScrollControlled:true,
+   builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.58,child:Column(children:[
+    Padding(padding:const EdgeInsets.all(14),child:Text(t('ملصقات قطط OURS','OURS Cat Stickers'),style:const TextStyle(color:_gold,fontSize:17,fontWeight:FontWeight.w800))),
+    Expanded(child:GridView.builder(padding:const EdgeInsets.fromLTRB(14,0,14,16),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,childAspectRatio:.9,crossAxisSpacing:10,mainAxisSpacing:10),itemCount:stickers.length,itemBuilder:(ctx,i){
+     final sticker=stickers[i];return InkWell(borderRadius:BorderRadius.circular(16),onTap:()=>Navigator.pop(ctx,sticker.$1),child:Container(decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(16),border:Border.all(color:skin.accent.withValues(alpha:.2))),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[_OursCatSticker(stickerId:sticker.$1,size:70),const SizedBox(height:4),Text(sticker.$2,style:TextStyle(color:skin.accent,fontSize:11,fontWeight:FontWeight.w700))])));
+    }))
    ]))));
   if(chosen==null)return;
   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':chosen,'message_type':'sticker'});}
@@ -375,7 +383,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
        decoration:BoxDecoration(color:mine?skin.mine:skin.partner,borderRadius:BorderRadius.circular(17),border:Border.all(color:skin.accent.withValues(alpha:.16))),
        child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
         if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString())) Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.45),borderRadius:BorderRadius.circular(8)),child:Text(messages.firstWhere((r)=>r['id'].toString()==m['reply_to'].toString())['body'].toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))),
-        if(type=='sticker')Center(child:Text(path,style:const TextStyle(fontSize:42)))
+        if(type=='sticker')Center(child:_OursCatSticker(stickerId:path,size:82))
         else if(type=='view_once'||type=='view_twice')
           (m['viewed_at']!=null || ((m['view_count'] as num?)?.toInt()??0)>=((m['max_views'] as num?)?.toInt()??1))
             ?Text(t('انتهت مشاهدات الصورة','No views left'),style:TextStyle(color:skin.accent,fontSize:12))
@@ -467,6 +475,65 @@ class _OursAiPageState extends State<OursAiPage>{
     IconButton(onPressed:sending?null:()=>_send(),icon:const Icon(Icons.send_rounded,color:_gold))
    ]))
   ])));
+}
+
+class _OursCatSticker extends StatelessWidget{
+ final String stickerId;final double size;
+ const _OursCatSticker({required this.stickerId,this.size=76});
+ @override Widget build(BuildContext context)=>CustomPaint(size:Size.square(size),painter:_OursCatStickerPainter(stickerId));
+}
+
+class _OursCatStickerPainter extends CustomPainter{
+ final String id;
+ const _OursCatStickerPainter(this.id);
+ @override void paint(Canvas canvas,Size size){
+  final w=size.width,h=size.height;
+  final fill=Paint()..color=id.contains('cool')?const Color(0xFFB9D9E8):id.contains('chef')?const Color(0xFFFFE2B5):const Color(0xFFFFD8E5);
+  final edge=Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=4..strokeJoin=StrokeJoin.round;
+  final earLeft=Path()..moveTo(w*.20,h*.43)..lineTo(w*.23,h*.08)..quadraticBezierTo(w*.45,h*.12,w*.47,h*.34)..close();
+  final earRight=Path()..moveTo(w*.53,h*.34)..quadraticBezierTo(w*.58,h*.12,w*.80,h*.08)..lineTo(w*.82,h*.43)..close();
+  canvas.drawPath(earLeft,fill);canvas.drawPath(earLeft,edge);canvas.drawPath(earRight,fill);canvas.drawPath(earRight,edge);
+  final head=Rect.fromCenter(center:Offset(w*.5,h*.52),width:w*.68,height:h*.64);
+  canvas.drawOval(head,fill);canvas.drawOval(head,edge);
+  final pink=Paint()..color=const Color(0xFFF29AB5);
+  canvas.drawCircle(Offset(w*.31,h*.27),w*.055,pink);canvas.drawCircle(Offset(w*.69,h*.27),w*.055,pink);
+  final eye=Paint()..color=const Color(0xFF33283B);
+  if(id.contains('sleep')) {
+   final p=Paint()..color=const Color(0xFF33283B)..style=PaintingStyle.stroke..strokeWidth=2.5..strokeCap=StrokeCap.round;
+   canvas.drawArc(Rect.fromCenter(center:Offset(w*.38,h*.48),width:w*.14,height:h*.08),0,math.pi,false,p);
+   canvas.drawArc(Rect.fromCenter(center:Offset(w*.62,h*.48),width:w*.14,height:h*.08),0,math.pi,false,p);
+  }else{
+   canvas.drawCircle(Offset(w*.38,h*.47),w*.035,eye);
+   canvas.drawCircle(Offset(w*.62,h*.47),w*.035,eye);
+   if(id.contains('wink')){canvas.drawLine(Offset(w*.55,h*.45),Offset(w*.69,h*.46),Paint()..color=const Color(0xFF33283B)..strokeWidth=2.5..strokeCap=StrokeCap.round);}
+  }
+  final nose=Path()..moveTo(w*.47,h*.56)..quadraticBezierTo(w*.5,h*.52,w*.53,h*.56)..quadraticBezierTo(w*.5,h*.60,w*.47,h*.56);
+  canvas.drawPath(nose,Paint()..color=const Color(0xFFB96B86));
+  final mouth=Paint()..color=const Color(0xFF5B3A4A)..style=PaintingStyle.stroke..strokeWidth=2..strokeCap=StrokeCap.round;
+  if(id.contains('shock')){canvas.drawCircle(Offset(w*.5,h*.65),w*.045,mouth..style=PaintingStyle.stroke);}
+  else{final smile=Path()..moveTo(w*.5,h*.59)..quadraticBezierTo(w*.43,h*.69,w*.37,h*.63)..moveTo(w*.5,h*.59)..quadraticBezierTo(w*.57,h*.69,w*.63,h*.63);canvas.drawPath(smile,mouth);}
+  final blush=Paint()..color=const Color(0xFFF39CB5).withValues(alpha:.72);
+  canvas.drawOval(Rect.fromCenter(center:Offset(w*.29,h*.60),width:w*.12,height:h*.06),blush);
+  canvas.drawOval(Rect.fromCenter(center:Offset(w*.71,h*.60),width:w*.12,height:h*.06),blush);
+  final whisker=Paint()..color=const Color(0xFF9B7483)..strokeWidth=1.4..strokeCap=StrokeCap.round;
+  for(var i=0;i<2;i++){
+   final y=h*(.58+i*.07);
+   canvas.drawLine(Offset(w*.19,y),Offset(w*.34,y+(i==0?-.025:.025)*h),whisker);
+   canvas.drawLine(Offset(w*.66,y+(i==0?-.025:.025)*h),Offset(w*.81,y),whisker);
+  }
+  if(id.contains('love')||id.contains('party')||id.contains('hug')){
+   final heart=Path()..moveTo(w*.76,h*.16)..cubicTo(w*.68,h*.08,w*.58,h*.17,w*.76,h*.31)..cubicTo(w*.94,h*.17,w*.84,h*.08,w*.76,h*.16)..close();
+   canvas.drawPath(heart,Paint()..color=id.contains('party')?const Color(0xFFFFC857):const Color(0xFFFF668C));
+  }
+  if(id.contains('cry')){
+   final tear=Paint()..color=const Color(0xFF75C9F3);
+   canvas.drawOval(Rect.fromCenter(center:Offset(w*.36,h*.56),width:w*.045,height:h*.11),tear);
+   canvas.drawOval(Rect.fromCenter(center:Offset(w*.64,h*.56),width:w*.045,height:h*.11),tear);
+  }
+  if(id.contains('angry')){canvas.drawLine(Offset(w*.31,h*.39),Offset(w*.44,h*.43),eye..strokeWidth=2.5);canvas.drawLine(Offset(w*.56,h*.43),Offset(w*.69,h*.39),eye..strokeWidth=2.5);}
+  if(id.contains('chef')){final hat=Paint()..color=Colors.white;canvas.drawOval(Rect.fromLTWH(w*.31,h*.02,w*.38,h*.14),hat);canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(w*.35,h*.10,w*.30,h*.10),const Radius.circular(5)),hat);}
+ }
+ @override bool shouldRepaint(covariant _OursCatStickerPainter old)=>old.id!=id;
 }
 
 class _DirectAudioBubble extends StatefulWidget{
