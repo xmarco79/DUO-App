@@ -79,7 +79,7 @@ class _SpaceView extends StatelessWidget{
   InkWell(onTap:onPartnerProfile,borderRadius:BorderRadius.circular(25),child:Container(
    padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF3A2C50),Color(0xFF171725),Color(0xFF18343A)]),borderRadius:BorderRadius.circular(25),border:Border.all(color:_g.withValues(alpha:.35)),boxShadow:[BoxShadow(color:_g.withValues(alpha:.08),blurRadius:24)]),
    child:Row(children:[
-    Container(width:66,height:66,decoration:BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[_g.withValues(alpha:.35),_l.withValues(alpha:.2)]),border:Border.all(color:_g,width:1.4)),child:avatarUrl==null?const Icon(Icons.person_rounded,color:Colors.white,size:34):ClipOval(child:Image.network(avatarUrl,fit:BoxFit.cover,width:66,height:66,errorBuilder:(_,__,___)=>const Icon(Icons.person_rounded,color:Colors.white,size:34)))),
+    Container(width:66,height:66,decoration:BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[_g.withValues(alpha:.35),_l.withValues(alpha:.2)]),border:Border.all(color:_g,width:1.4)),child:avatarUrl==null?const Icon(Icons.person_rounded,color:Colors.white,size:34):ClipOval(child:Image.network(avatarUrl!,fit:BoxFit.cover,width:66,height:66,errorBuilder:(_,__,___)=>const Icon(Icons.person_rounded,color:Colors.white,size:34)))),
     const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      Text(partnerName,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:19),maxLines:1,overflow:TextOverflow.ellipsis),
      const SizedBox(height:3),Text('@$username',style:const TextStyle(color:_l,fontSize:12)),
