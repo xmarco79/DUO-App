@@ -791,8 +791,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   final p=await SharedPreferences.getInstance();
   final id=p.getString('ours_self_skin')??'ours';
   final found=_skins.where((x)=>x.id==id);
-  if(mounted)setState(()=>skin=found.isEmpty?_skins.first:found.first);
-  wallpaperPath=p.getString('ours_self_wallpaper');
+  if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=p.getString('ours_self_wallpaper');});
  }
  Future<void> _chooseTheme()async{
   final selected=await showModalBottomSheet<String>(context:context,backgroundColor:_navy,showDragHandle:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.62,child:ListView(padding:const EdgeInsets.all(14),children:[
@@ -858,7 +857,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   finally{if(mounted)setState(()=>sending=false);}
  }
  String _selfMime(String name){
-  const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
+  const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
   return types[name.split('.').last.toLowerCase()]??'';
  }
  Future<void> _uploadSelf(Uint8List bytes,String name,String type)async{
@@ -879,7 +878,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  }
  Future<void> _pickImage({bool sticker=false})async{
   try{final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:94,maxWidth:2400,maxHeight:2400);if(f==null)return;
-   final ext=f.name.split('.').last.toLowerCase(),name=['png','webp','gif'].contains(ext)?f.name:'self_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
+   final ext=f.name.split('.').last.toLowerCase(),name=['png','webp'].contains(ext)?f.name:'self_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
    await _uploadSelf(await f.readAsBytes(),name,sticker?'sticker':'image');
   }catch(_){_notice(t('تعذر اختيار الصورة','Could not select image'));}
  }
@@ -902,7 +901,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   try{if(!await r.hasPermission()){_notice(t('اسمح باستخدام الميكروفون أولًا','Allow microphone access first'));return;}
    final dir=await getTemporaryDirectory(),path='\${dir.path}/ours_self_\${DateTime.now().microsecondsSinceEpoch}.m4a';
    await r.start(const RecordConfig(encoder:AudioEncoder.aacLc,bitRate:96000,sampleRate:44100,numChannels:1,echoCancel:true,noiseSuppress:true),path:path);
-   if(mounted)setState(()=>{recordingPath=path,recording=true});
+   if(mounted)setState((){recordingPath=path;recording=true;});
   }catch(_){_notice(t('تعذر بدء التسجيل','Could not start recording'));}
  }
  Future<void> _stopRecording({bool send=true})async{
@@ -911,7 +910,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   try{path=await r.stop();if(send&&path!=null){final file=File(path);if(await file.exists())await _uploadSelf(await file.readAsBytes(),'voice_\${DateTime.now().millisecondsSinceEpoch}.m4a','audio');}}
   catch(_){_notice(t('تعذر إرسال التسجيل','Could not send recording'));}
   finally{if(path!=null){try{final file=File(path);if(await file.exists())await file.delete();}catch(_){}}
-   if(mounted)setState(()=>{recording=false,recordingPath=null});}
+   if(mounted)setState((){recording=false;recordingPath=null;});}
  }
  Future<String> _signedSelf(String path){
   final old=urls[path];if(old!=null)return old;
@@ -964,7 +963,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  }
  String _selfTime(dynamic value){final date=DateTime.tryParse(value?.toString()??'')?.toLocal();return date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);}
  String _selfDate(DateTime date){final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);if(day==today)return t('اليوم','Today');if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');return DateFormat(ar?'d MMMM y':'MMM d, y').format(day);}
- void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
+ void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(0,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
  @override void dispose(){if(channel!=null)db.removeChannel(channel!);recorder?.dispose();input.dispose();scroll.dispose();super.dispose();}
  @override Widget build(BuildContext context){
   return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,centerTitle:true,title:Column(mainAxisSize:MainAxisSize.min,children:[
