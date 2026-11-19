@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'dart:ui' show ImageFilter;
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -112,6 +114,8 @@ class OursDirectChatPage extends StatefulWidget{
 class _OursDirectChatPageState extends State<OursDirectChatPage>{
  final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController(),picker=ImagePicker();
  final Map<String,Future<String>> urls={};final List<Map<String,dynamic>> messages=[];
+ final Set<String> hiddenIds={};
+ Map<String,dynamic>? replyTo;
  RealtimeChannel? channel;AudioRecorder? recorder;String? recordingPath;
  bool loading=true,sending=false,recording=false,uploading=false;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
@@ -156,42 +160,53 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(selected==null)return;setState(()=>skin=selected);final p=await SharedPreferences.getInstance();await p.setString('ours_direct_skin_'+widget.conversationId,selected.id);
  }
  Future<void> _load() async{
-  try{final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at');
-   if(!mounted)return;setState((){messages..clear()..addAll(List<Map<String,dynamic>>.from(rows));loading=false;});_bottom();
+  try{
+   final hidden=await db.from('ours_direct_message_hides').select('message_id').eq('user_id',uid);
+   hiddenIds..clear()..addAll(hidden.map((r)=>r['message_id'].toString()));
+   final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at');
+   if(!mounted)return;setState((){messages..clear()..addAll(List<Map<String,dynamic>>.from(rows).where((m)=>!hiddenIds.contains(m['id'].toString())));loading=false;});_bottom();
   }catch(e){if(mounted){setState(()=>loading=false);_show(t('تعذر تحميل المحادثة: $e','Could not load conversation: $e'));}}
  }
  void _listen(){
   channel=db.channel('ours-direct-'+widget.conversationId).onPostgresChanges(event:PostgresChangeEvent.insert,schema:'public',table:'duo_direct_messages',
    filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'conversation_id',value:widget.conversationId),callback:(p){
-    final row=Map<String,dynamic>.from(p.newRecord);if(!mounted||messages.any((m)=>m['id']==row['id']))return;setState(()=>messages.add(row));_bottom();
+    final row=Map<String,dynamic>.from(p.newRecord);if(!mounted||hiddenIds.contains(row['id'].toString())||messages.any((m)=>m['id']==row['id']))return;setState(()=>messages.add(row));_bottom();
    }).subscribe();
  }
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
  void _show(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
  Future<void> _sendText() async{
   final text=input.text.trim();if(text.isEmpty||sending)return;setState(()=>sending=true);
-  try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':text,'message_type':'text'});input.clear();}
+  try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':text,'message_type':'text','reply_to':replyTo?['id']});input.clear();if(mounted)setState(()=>replyTo=null);}
   catch(e){_show(t('تعذر إرسال الرسالة: $e','Could not send message: $e'));}finally{if(mounted)setState(()=>sending=false);}
  }
  String _mime(String name){
   const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','mp4':'video/mp4','mov':'video/quicktime','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
   return types[name.split('.').last.toLowerCase()]??'';
  }
- Future<void> _upload(Uint8List bytes,String name,String type) async{
+ Future<void> _upload(Uint8List bytes,String name,String type,{int? maxViews}) async{
   if(bytes.isEmpty)return;if(bytes.length>20*1024*1024){_show(t('الحد الأقصى 20 ميجابايت','Maximum size is 20 MB'));return;}
   final mime=_mime(name);if(mime.isEmpty){_show(t('نوع الملف غير مدعوم','Unsupported file type'));return;}setState(()=>uploading=true);
   final safe=name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
   final path=widget.conversationId+'/'+uid+'/'+DateTime.now().microsecondsSinceEpoch.toString()+'_'+safe;
   try{
    await db.storage.from(_bucket).uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
-   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':type});}
+   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':type,'max_views':maxViews??1});}
    catch(_){await db.storage.from(_bucket).remove([path]);rethrow;}
   }catch(e){_show(t('تعذر رفع المرفق: $e','Could not upload attachment: $e'));}finally{if(mounted)setState(()=>uploading=false);}
  }
- Future<void> _pickImage({bool viewOnce=false}) async{
-  try{final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:86,maxWidth:1600,maxHeight:1600);if(f==null)return;
+ Future<void> _pickImageWithMode() async{
+  final mode=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,
+   builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+    ListTile(leading:const Icon(Icons.image_outlined,color:_gold),title:Text(t('إرسال صورة عادية','Send a normal photo')),subtitle:Text(t('تبقى الصورة ظاهرة في المحادثة','Stays visible in the chat')),onTap:()=>Navigator.pop(ctx,'normal')),
+    ListTile(leading:const Icon(Icons.looks_one_outlined,color:_gold),title:Text(t('مشاهدة مرة واحدة','View once')),subtitle:Text(t('تُفتح مرة واحدة ثم تختفي','Opens once, then disappears')),onTap:()=>Navigator.pop(ctx,'once')),
+    ListTile(leading:const Icon(Icons.looks_two_outlined,color:_gold),title:Text(t('مشاهدة مرتين','View twice')),subtitle:Text(t('يمكن فتحها مرتين فقط','Can be opened twice only')),onTap:()=>Navigator.pop(ctx,'twice')),
+   ])));
+  if(mode==null)return;
+  try{
+   final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:86,maxWidth:1600,maxHeight:1600);if(f==null)return;
    final ext=f.name.split('.').last.toLowerCase();final name=['png','webp'].contains(ext)?f.name:'photo_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
-   await _upload(await f.readAsBytes(),name,viewOnce?'view_once':'image');
+   await _upload(await f.readAsBytes(),name,mode=='normal'?'image':mode=='once'?'view_once':'view_twice',maxViews:mode=='twice'?2:1);
   }catch(e){_show(t('تعذر اختيار الصورة: $e','Could not select image: $e'));}
  }
  Future<void> _pickVideo() async{
@@ -204,7 +219,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){_show(t('تعذر اختيار الفيديو: $e','Could not select video: $e'));}
  }
  Future<void> _sendSticker() async{
-  const stickers=['❤️','🥰','😂','😍','😘','🤍','✨','🌙','🫶','🥹','🎉','🌸','🐱','🧸','💌','🔥'];
+  const stickers=['😻','😽','😺','😸','😹','😿','🙀','😾','🐱','🐈','🐈‍⬛','🐾','😼','😹💗','🥺🐱','🐱💤','🐱🎀','🐱✨','🐱🍓','🐱🫶','🐱💢','🐱🤍','🐱☕','🐱🌙'];
   final chosen=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,
    builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.all(16),child:Wrap(spacing:12,runSpacing:12,children:[
     for(final sticker in stickers) InkWell(onTap:()=>Navigator.pop(ctx,sticker),child:Container(width:58,height:58,alignment:Alignment.center,decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(16)),child:Text(sticker,style:const TextStyle(fontSize:30))))
@@ -213,31 +228,32 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':chosen,'message_type':'sticker'});}
   catch(e){_show(t('تعذر إرسال الملصق: $e','Could not send sticker: $e'));}
  }
- Future<void> _consumeViewOnce(String messageId) async{
+ Future<void> _consumeTemporaryMedia(String messageId) async{
   try{
-   final path=await db.rpc('consume_ours_view_once',params:{'p_message_id':messageId}) as String?;
-   if(path==null||path.isEmpty){_show(t('تم فتح هذه الصورة مسبقًا','This photo has already been viewed'));return;}
+   final path=await db.rpc('consume_ours_temporary_media',params:{'p_message_id':messageId}) as String?;
+   if(path==null||path.isEmpty){_show(t('انتهت مرات مشاهدة هذه الصورة','This photo has no views left'));await _load();return;}
    final url=await _signed(path);
    await showDialog<void>(context:context,builder:(ctx)=>Dialog(backgroundColor:Colors.black,child:Column(mainAxisSize:MainAxisSize.min,children:[
-    Padding(padding:const EdgeInsets.all(10),child:Text(t('عرض لمرة واحدة','View once'),style:const TextStyle(color:Colors.white))),
+    Padding(padding:const EdgeInsets.all(10),child:Text(t('صورة مؤقتة','Temporary photo'),style:const TextStyle(color:Colors.white))),
     Flexible(child:Image.network(url,fit:BoxFit.contain)),
     TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close')))
    ])));
-   await db.storage.from(_bucket).remove([path]);
-   if(mounted)setState(()=>messages.firstWhere((m)=>m['id']==messageId)['body']='[viewed]');
-  }catch(e){_show(t('تعذر فتح الصورة: $e','Could not open one-time photo: $e'));}
+   final row=await db.from('duo_direct_messages').select('view_count,max_views').eq('id',messageId).maybeSingle();
+   final count=(row?['view_count'] as num?)?.toInt()??1,limit=(row?['max_views'] as num?)?.toInt()??1;
+   if(count>=limit){await db.storage.from(_bucket).remove([path]);}
+   if(mounted)await _load();
+  }catch(e){_show(t('تعذر فتح الصورة: $e','Could not open image: $e'));}
  }
  Future<void> _showAttachments() async{
   final choice=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,
    builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    ListTile(leading:Icon(Icons.image_outlined,color:skin.accent),title:Text(t('صورة','Photo')),onTap:()=>Navigator.pop(ctx,'image')),
-    ListTile(leading:Icon(Icons.timer_outlined,color:skin.accent),title:Text(t('صورة لمرة واحدة','View-once photo')),onTap:()=>Navigator.pop(ctx,'once')),
+    ListTile(leading:Icon(Icons.image_outlined,color:skin.accent),title:Text(t('إرسال صورة','Send photo')),subtitle:Text(t('عادية أو مشاهدة مؤقتة','Normal or temporary')),onTap:()=>Navigator.pop(ctx,'image')),
     ListTile(leading:Icon(Icons.video_library_outlined,color:skin.accent),title:Text(t('مقطع فيديو','Video')),onTap:()=>Navigator.pop(ctx,'video')),
     ListTile(leading:Icon(Icons.insert_drive_file_outlined,color:skin.accent),title:Text(t('ملف','File')),onTap:()=>Navigator.pop(ctx,'file')),
-    ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:skin.accent),title:Text(t('ملصق','Sticker')),onTap:()=>Navigator.pop(ctx,'sticker')),
+    ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:skin.accent),title:Text(t('ملصقات القطط','Cat stickers')),onTap:()=>Navigator.pop(ctx,'sticker')),
    ])));
   if(choice==null)return;
-  switch(choice){case 'image':await _pickImage();break;case 'once':await _pickImage(viewOnce:true);break;case 'video':await _pickVideo();break;case 'file':await _pickFile();break;case 'sticker':await _sendSticker();break;}
+  switch(choice){case 'image':await _pickImageWithMode();break;case 'video':await _pickVideo();break;case 'file':await _pickFile();break;case 'sticker':await _sendSticker();break;}
  }
  Future<void> _pickFile() async{
   try{final r=await FilePicker.platform.pickFiles(withData:true);if(r==null||r.files.isEmpty)return;final f=r.files.single;
@@ -278,6 +294,46 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    content:Text(t('تشغيل المكالمات يحتاج ربط خدمة اتصال آمنة وإعداد مفاتيحها على الخادم. لن نعرض اتصالًا وهميًا.','Real calls require a secure calling provider and server-side credentials. We will not simulate a fake call.')),
    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('حسنًا','OK')))]));
  }
+ Future<void> _messageActions(Map<String,dynamic> message,bool mine,String type,String body) async{
+  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF211D30),showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   ListTile(leading:const Icon(Icons.reply,color:_gold),title:Text(t('رد','Reply')),onTap:()=>Navigator.pop(ctx,'reply')),
+   ListTile(leading:const Icon(Icons.copy,color:_gold),title:Text(t('نسخ','Copy')),onTap:()=>Navigator.pop(ctx,'copy')),
+   if(mine)ListTile(leading:const Icon(Icons.delete_forever_outlined,color:Colors.redAccent),title:Text(t('حذف لدى الجميع','Delete for everyone')),onTap:()=>Navigator.pop(ctx,'everyone')),
+   ListTile(leading:const Icon(Icons.delete_outline,color:Colors.orangeAccent),title:Text(t('حذف لديك','Delete for you')),onTap:()=>Navigator.pop(ctx,'local')),
+  ])));
+  if(choice==null)return;final id=message['id'].toString();
+  if(choice=='copy'){await Clipboard.setData(ClipboardData(text:type=='text'?body:body.split('/').last));_show(t('تم النسخ','Copied'));return;}
+  if(choice=='reply'){setState(()=>replyTo=message);return;}
+  try{
+   if(choice=='local'){
+    await db.from('ours_direct_message_hides').insert({'message_id':id,'user_id':uid});
+    hiddenIds.add(id);if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));
+   }else{
+    await db.from('duo_direct_messages').delete().eq('id',id).eq('sender_id',uid);
+    if(['image','view_once','view_twice','video','audio','file'].contains(type)){try{await db.storage.from(_bucket).remove([body]);}catch(_){}}
+    if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));
+   }
+  }catch(e){_show(t('تعذر حذف الرسالة: $e','Could not delete message: $e'));}
+ }
+ Future<void> _searchMessages() async{
+  final controller=TextEditingController();
+  final query=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:const Color(0xFF211D30),title:Text(t('البحث في المحادثة','Search chat')),content:TextField(controller:controller,autofocus:true,decoration:InputDecoration(hintText:t('اكتب كلمة للبحث','Search for a word'))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:Text(t('بحث','Search')))]));
+  controller.dispose();if(query==null||query.isEmpty)return;
+  final found=messages.where((m)=>(m['message_type']=='text'||m['message_type']=='sticker')&&(m['body']??'').toString().toLowerCase().contains(query.toLowerCase())).toList();
+  if(!mounted)return;
+  await showModalBottomSheet<void>(context:context,isScrollControlled:true,backgroundColor:const Color(0xFF211D30),builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.65,child:Column(children:[
+   Padding(padding:const EdgeInsets.all(16),child:Text(t('نتائج البحث','Search results')+' ('+found.length.toString()+')',style:const TextStyle(color:_gold,fontWeight:FontWeight.bold))),
+   Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد نتائج','No results'))):ListView(children:found.map((m)=>ListTile(title:Text(m['body'].toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])))).toList()))
+  ]))));
+ }
+ Future<void> _showChatLibrary(String kind) async{
+  final types=kind=='media'?['image','view_once','view_twice','video']:['file','audio'];
+  final found=messages.where((m)=>types.contains(m['message_type'])).toList();
+  await showModalBottomSheet<void>(context:context,isScrollControlled:true,backgroundColor:const Color(0xFF211D30),builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.65,child:Column(children:[
+   Padding(padding:const EdgeInsets.all(16),child:Text(kind=='media'?t('الوسائط المرسلة','Shared media'):t('الملفات','Files'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold))),
+   Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد عناصر بعد','Nothing shared yet'))):ListView(children:found.map((m)=>ListTile(leading:Icon(kind=='media'?Icons.image_outlined:Icons.insert_drive_file_outlined,color:skin.accent),title:Text((m['body']??'').toString().split('/').last,maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])))).toList()))
+  ]))));
+ }
  Future<void> _openAi() async {
    final id = widget.spaceId;
    if (id == null || id.isEmpty) {
@@ -300,8 +356,15 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    ),
    actions:[
     IconButton(tooltip:t('الثيم','Theme'),onPressed:_chooseSkin,icon:Icon(Icons.palette_outlined,color:skin.accent)),
-    IconButton(tooltip:t('راسل نفسك','Message yourself'),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),icon:Icon(Icons.bookmark_border_rounded,color:skin.accent)),
-    if(widget.spaceId!=null) IconButton(tooltip:'OURS AI',onPressed:_openAi,icon:Icon(Icons.auto_awesome_outlined,color:skin.accent)),
+    PopupMenuButton<String>(tooltip:t('المزيد','More'),icon:Icon(Icons.more_vert,color:skin.accent),onSelected:(v){
+     if(v=='profile')Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:widget.partnerId)));
+     if(v=='search')_searchMessages();if(v=='media')_showChatLibrary('media');if(v=='files')_showChatLibrary('files');
+    },itemBuilder:(_)=>[
+     PopupMenuItem(value:'profile',child:Text(t('الملف الشخصي','Profile'))),
+     PopupMenuItem(value:'search',child:Text(t('البحث عن الرسائل','Search messages'))),
+     PopupMenuItem(value:'media',child:Text(t('الوسائط المرسلة','Shared media'))),
+     PopupMenuItem(value:'files',child:Text(t('الملفات','Files'))),
+    ]),
     IconButton(tooltip:t('اتصال صوتي','Voice call'),onPressed:()=>_callInfo(false),icon:Icon(Icons.call_outlined,color:skin.accent)),
     IconButton(tooltip:t('اتصال مرئي','Video call'),onPressed:()=>_callInfo(true),icon:Icon(Icons.videocam_outlined,color:skin.accent))
    ]),
@@ -315,16 +378,19 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      ])))
      :ListView.builder(controller:scroll,padding:const EdgeInsets.all(12),itemCount:messages.length,itemBuilder:(ctx,i){
       final m=messages[i];final mine=m['sender_id']==me;final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';
-      return Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
+      return GestureDetector(onLongPress:()=>_messageActions(m,mine,type,path),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
        constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(10),
        decoration:BoxDecoration(color:mine?skin.mine:skin.partner,borderRadius:BorderRadius.circular(17),border:Border.all(color:skin.accent.withValues(alpha:.16))),
        child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
         if(type=='sticker')Center(child:Text(path,style:const TextStyle(fontSize:42)))
-        else if(type=='view_once')m['viewed_at']!=null
-          ?Text(t('تم فتح الصورة لمرة واحدة','One-time photo viewed'),style:TextStyle(color:skin.accent,fontSize:12))
-          :mine
-            ?Text(t('أرسلت صورة لمرة واحدة','You sent a view-once photo'),style:TextStyle(color:skin.accent,fontSize:12))
-            :TextButton.icon(onPressed:()=>_consumeViewOnce(m['id'].toString()),icon:Icon(Icons.visibility_outlined,color:skin.accent),label:Text(t('عرض الصورة مرة واحدة','View photo once')))
+        else if(type=='view_once'||type=='view_twice')
+          (m['viewed_at']!=null || ((m['view_count'] as num?)?.toInt()??0)>=((m['max_views'] as num?)?.toInt()??1))
+            ?Text(t('انتهت مشاهدات الصورة','No views left'),style:TextStyle(color:skin.accent,fontSize:12))
+            :mine
+              ?Text(type=='view_twice'?t('أرسلت صورة لمشاهدتين','You sent a two-view photo'):t('أرسلت صورة لمرة واحدة','You sent a one-view photo'),style:TextStyle(color:skin.accent,fontSize:12))
+              :FutureBuilder<String>(future:_signed(path),builder:(c,s)=>s.hasData
+                ?Column(mainAxisSize:MainAxisSize.min,children:[ClipRRect(borderRadius:BorderRadius.circular(11),child:ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:13,sigmaY:13),child:Image.network(s.data!,width:210,height:130,fit:BoxFit.cover))),const SizedBox(height:7),TextButton.icon(onPressed:()=>_consumeTemporaryMedia(m['id'].toString()),icon:Icon(Icons.visibility_outlined,color:skin.accent),label:Text(type=='view_twice'?t('فتح الصورة · مشاهدتان','Open photo · two views'):t('فتح الصورة · مرة واحدة','Open photo · once')))])
+                :Text(t('صورة مؤقتة','Temporary photo'),style:TextStyle(color:skin.accent,fontSize:12)))
         else if(type=='video')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.play_circle_fill,color:skin.accent,size:36),const SizedBox(width:8),Text(t('مقطع فيديو · تشغيل','Video · Play'))]))
         else if(type=='image')FutureBuilder<String>(future:_signed(path),builder:(c,s){
          if(s.hasError)return Text(t('تعذر تحميل الصورة','Could not load image'),style:TextStyle(color:skin.accent));
@@ -339,20 +405,21 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
         else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
         else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
         const SizedBox(height:4),Align(alignment:AlignmentDirectional.centerEnd,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)))
-       ])));
+       ]))));
      })),
     SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(7,8,7,10),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.2)))),
      child:recording?Row(children:[
       IconButton(onPressed:_cancelRecording,icon:const Icon(Icons.delete_outline,color:Colors.redAccent)),
       Expanded(child:Text(t('جارٍ تسجيل الرسالة الصوتية…','Recording voice message…'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))),
       IconButton(onPressed:sending?null:_sendRecording,icon:Icon(Icons.send,color:skin.accent))
-     ]):Row(children:[
-      IconButton(onPressed:uploading||sending?null:_showAttachments,tooltip:t('المرفقات والملصقات','Attachments and stickers'),icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.add_circle_outline_rounded,color:skin.accent)),
-      Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onSubmitted:(_)=>_sendText(),
-       decoration:InputDecoration(hintText:t('اكتب رسالة…','Write a message…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:11)))),
+     ]):Column(mainAxisSize:MainAxisSize.min,children:[
+      if(replyTo!=null)Container(margin:const EdgeInsets.fromLTRB(12,0,12,6),padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(12)),child:Row(children:[Icon(Icons.reply,color:skin.accent,size:18),const SizedBox(width:8),Expanded(child:Text((replyTo!['body']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:12))),IconButton(onPressed:()=>setState(()=>replyTo=null),icon:const Icon(Icons.close,size:17))])),
+      Row(children:[
+      IconButton(onPressed:uploading||sending?null:_showAttachments,tooltip:t('إرفاق صورة أو ملف أو ملصق','Attach photo, file or sticker'),icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.add_circle_outline_rounded,color:skin.accent)),
+      Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onSubmitted:(_)=>_sendText(),decoration:InputDecoration(hintText:t('اكتب رسالة…','Write a message…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:11)))),
       IconButton(onPressed:uploading||sending?null:_startRecording,icon:Icon(Icons.mic_none_rounded,color:skin.accent)),
       IconButton.filled(onPressed:sending||uploading?null:_sendText,style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
-     ])))
+     ])])))
    ]),
   ]));
  }
