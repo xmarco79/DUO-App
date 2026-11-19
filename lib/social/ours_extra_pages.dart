@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -58,11 +59,46 @@ class _OursDrawingStudioPageState extends State<OursDrawingStudioPage>{
  bool shared=false,loading=false;List<Map<String,dynamic>> sessions=[];final db=Supabase.instance.client;
  @override void initState(){super.initState();if(widget.spaceId!=null)_load();}
  Future<void> _load()async{setState(()=>loading=true);try{sessions=List<Map<String,dynamic>>.from(await db.from('duo_studio_sessions').select('id,title').eq('space_id',widget.spaceId!).order('created_at',ascending:false));}catch(_){sessions=[];}if(mounted)setState(()=>loading=false);}
- Future<void> _create()async{final c=TextEditingController();final title=await showDialog<String>(context:context,builder:(d)=>AlertDialog(backgroundColor:_xpPurple,title:Text(_xpText(context,'مرسم مشترك','Shared studio')),content:TextField(controller:c,decoration:InputDecoration(hintText:_xpText(context,'اسم المرسم','Studio title'))),actions:[TextButton(onPressed:()=>Navigator.pop(d),child:Text(_xpText(context,'إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(d,c.text.trim()),child:Text(_xpText(context,'إنشاء','Create'))]));c.dispose();if(title==null||title.isEmpty)return;try{final r=await db.from('duo_studio_sessions').insert({'space_id':widget.spaceId,'created_by':db.auth.currentUser!.id,'title':title}).select('id,title').single();if(mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>OursSharedStudioPage(sessionId:r['id'].toString(),title:r['title'].toString())));await _load();}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Create error: $e')));}}
- Future<void> _savePrivate(Uint8List bytes)async{try{final root=await getApplicationDocumentsDirectory();final folder=Directory(root.path+'/ours_drawings');if(!await folder.exists())await folder.create(recursive:true);final f=File(folder.path+'/drawing_'+DateTime.now().millisecondsSinceEpoch.toString()+'.png');await f.writeAsBytes(bytes);if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_xpText(context,'حُفظ الرسم في ملفات التطبيق','Saved to app files'))));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Save error: $e')));}}
+ Future<void> _create() async {
+ final controller=TextEditingController();
+ final title=await showDialog<String>(context:context,builder:(d)=>AlertDialog(
+  backgroundColor:_xpPurple,title:Text(_xpText(context,'مرسم مشترك جديد','New shared studio')),
+  content:TextField(controller:controller,decoration:InputDecoration(hintText:_xpText(context,'اسم المرسم','Studio name'))),
+  actions:[
+   TextButton(onPressed:()=>Navigator.pop(d),child:Text(_xpText(context,'إلغاء','Cancel'))),
+   FilledButton(onPressed:()=>Navigator.pop(d,controller.text.trim()),child:Text(_xpText(context,'إنشاء','Create'))),
+  ],
+ ));
+ controller.dispose();
+ if(title==null||title.isEmpty||widget.spaceId==null)return;
+ try{
+  final row=await db.from('duo_studio_sessions').insert({'space_id':widget.spaceId,'created_by':db.auth.currentUser!.id,'title':title}).select('id,title').single();
+  if(mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>OursSharedStudioPage(sessionId:row['id'].toString(),title:row['title'].toString())));
+  await _load();
+ }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Create error: $e')));}
+}
+Future<void> _savePrivate(Uint8List bytes)async{try{final root=await getApplicationDocumentsDirectory();final folder=Directory(root.path+'/ours_drawings');if(!await folder.exists())await folder.create(recursive:true);final f=File(folder.path+'/drawing_'+DateTime.now().millisecondsSinceEpoch.toString()+'.png');await f.writeAsBytes(bytes);if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_xpText(context,'حُفظ الرسم في ملفات التطبيق','Saved to app files'))));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Save error: $e')));}}
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_xpNavy,appBar:AppBar(backgroundColor:_xpNavy,title:Text(_xpText(context,'مرسمنا','Our studio')),bottom:PreferredSize(preferredSize:const Size.fromHeight(45),child:Padding(padding:const EdgeInsets.all(8),child:SegmentedButton<bool>(segments:[ButtonSegment(value:false,label:Text(_xpText(context,'مرسمي الخاص','Private')),icon:const Icon(Icons.person_outline)),ButtonSegment(value:true,label:Text(_xpText(context,'مشترك','Shared')),icon:const Icon(Icons.people_outline))],selected:{shared},onSelectionChanged:(v)=>setState(()=>shared=v.first))))),body:shared?_shared():_private());
  Widget _private()=>_StudioCanvas(onSave:_savePrivate);
- Widget _shared(){if(widget.spaceId==null)return Center(child:Text(_xpText(context,'المساحة المشتركة غير جاهزة','Shared space not available'),style:const TextStyle(color:_xpLav)));if(loading)return const Center(child:CircularProgressIndicator(color:_xpGold));return Column(children:[Padding(padding:const EdgeInsets.all(10),child:FilledButton.icon(onPressed:_create,icon:const Icon(Icons.add),label:Text(_xpText(context,'إنشاء مرسم','Create studio')))),Expanded(child:sessions.isEmpty?Center(child:Text(_xpText(context,'لا توجد مراسم بعد','No studios yet'),style:const TextStyle(color:_xpLav))):ListView.builder(itemCount:sessions.length,itemBuilder:(c,i){final s=sessions[i];return Card(color:_xpPurple,child:ListTile(leading:const Icon(Icons.brush,color:_xpGold),title:Text(s['title'].toString(),style:const TextStyle(color:Colors.white)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursSharedStudioPage(sessionId:s['id'].toString(),title:s['title'].toString()))));}))]);}
+ Widget _shared() {
+ if(widget.spaceId==null)return Center(child:Text(_xpText(context,'المساحة المشتركة غير جاهزة','Shared space is not available'),style:const TextStyle(color:_xpLav)));
+ if(loading)return const Center(child:CircularProgressIndicator(color:_xpGold));
+ return Column(children:[
+  Padding(padding:const EdgeInsets.all(10),child:FilledButton.icon(onPressed:_create,icon:const Icon(Icons.add),label:Text(_xpText(context,'إنشاء مرسم','Create studio')))),
+  Expanded(child:sessions.isEmpty
+   ?Center(child:Text(_xpText(context,'لا توجد مراسم بعد','No shared studios yet'),style:const TextStyle(color:_xpLav)))
+   :ListView.builder(itemCount:sessions.length,itemBuilder:(context,index){
+    final session=sessions[index];
+    return Card(color:_xpPurple,child:ListTile(
+     leading:const Icon(Icons.brush,color:_xpGold),
+     title:Text(session['title'].toString(),style:const TextStyle(color:Colors.white)),
+     onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursSharedStudioPage(sessionId:session['id'].toString(),title:session['title'].toString()))),
+    ));
+   }),
+  ),
+ ]);
+}
+
 }
 class OursSharedStudioPage extends StatefulWidget{
  final String sessionId,title;const OursSharedStudioPage({super.key,required this.sessionId,required this.title});
@@ -92,7 +128,26 @@ class _StudioCanvasState extends State<_StudioCanvas>{
  void _move(Offset p){if(active==null)return;final size=_size();active!.points.add(Offset(p.dx/size.width,p.dy/size.height));setState((){});}
  Future<void> _finish()async{final s=active;active=null;if(s!=null&&widget.onStroke!=null)await widget.onStroke!(_serialize(s));}
  Future<void> _save()async{try{final r=boundary.currentContext?.findRenderObject() as RenderRepaintBoundary?;if(r==null)return;final img=await r.toImage(pixelRatio:2);final data=await img.toByteData(format:ui.ImageByteFormat.png);img.dispose();if(data!=null&&widget.onSave!=null)await widget.onSave!(data.buffer.asUint8List(data.offsetInBytes,data.lengthInBytes));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Export failed: $e')));}}
- @override Widget build(BuildContext context)=>Column(children:[Expanded(child:Padding(padding:const EdgeInsets.all(12),child:RepaintBoundary(key:boundary,child:Container(key:canvasKey,color:Colors.white,child:GestureDetector(onPanStart:(d)=>_start(d.localPosition),onPanUpdate:(d)=>_move(d.localPosition),onPanEnd:(_)=>_finish(),child:CustomPaint(painter:_StrokePainter(strokes),size:Size.infinite))))),Row(children:[for(final c in [Colors.deepPurple,Colors.pink,Colors.red,Colors.orange,Colors.amber,Colors.green,Colors.blue,Colors.black,Colors.white])IconButton(onPressed:()=>setState(()=>color=c),icon:Icon(Icons.circle,color:c,size:18)),IconButton(onPressed:strokes.isEmpty?null:()=>setState(()=>strokes.removeLast()),icon:const Icon(Icons.undo,color:_xpGold)),if(widget.showSave)IconButton(onPressed:_save,icon:const Icon(Icons.save_outlined,color:_xpGold))])]);
+ @override Widget build(BuildContext context){
+ return Column(children:[
+  Expanded(child:Padding(padding:const EdgeInsets.all(12),child:RepaintBoundary(
+   key:boundary,
+   child:Container(key:canvasKey,color:Colors.white,child:GestureDetector(
+    onPanStart:(d)=>_start(d.localPosition),
+    onPanUpdate:(d)=>_move(d.localPosition),
+    onPanEnd:(_)=>_finish(),
+    child:CustomPaint(painter:_StrokePainter(strokes),size:Size.infinite),
+   )),
+  ))),
+  Row(children:[
+   for(final c in [Colors.deepPurple,Colors.pink,Colors.red,Colors.orange,Colors.amber,Colors.green,Colors.blue,Colors.black,Colors.white])
+    IconButton(onPressed:()=>setState(()=>color=c),icon:Icon(Icons.circle,color:c,size:18)),
+   IconButton(onPressed:strokes.isEmpty?null:()=>setState(()=>strokes.removeLast()),icon:const Icon(Icons.undo,color:_xpGold)),
+   if(widget.showSave)IconButton(onPressed:_save,icon:const Icon(Icons.save_outlined,color:_xpGold)),
+  ]),
+ ]);
+}
+
 }
 class _StrokePainter extends CustomPainter{
  final List<_Stroke> strokes;_StrokePainter(this.strokes);
@@ -109,9 +164,61 @@ class _OursWatchTogetherPageState extends State<OursWatchTogetherPage>{
  @override void initState(){super.initState();_load();_subscribe();}
  Future<void> _load()async{if(widget.spaceId==null)return;setState(()=>loading=true);try{rooms=List<Map<String,dynamic>>.from(await db.from('duo_watch_rooms').select('id,title,video_url').eq('space_id',widget.spaceId!).order('created_at',ascending:false));}catch(_){}if(mounted)setState(()=>loading=false);}
  void _subscribe(){if(widget.spaceId==null)return;channel=db.channel('watchlist-'+widget.spaceId).onPostgresChanges(event:PostgresChangeEvent.all,schema:'public',table:'duo_watch_rooms',filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'space_id',value:widget.spaceId),callback:(_)=>_load()).subscribe();}
- Future<void> _create()async{final title=TextEditingController(),url=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(backgroundColor:_xpPurple,title:Text(_xpText(context,'جلسة مشاهدة','Watch room')),content:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:title,decoration:InputDecoration(hintText:_xpText(context,'اسم الجلسة','Title'))),TextField(controller:url,keyboardType:TextInputType.url,decoration:const InputDecoration(hintText:'HTTPS direct video URL'))]),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:Text(_xpText(context,'إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(d,true),child:Text(_xpText(context,'إنشاء','Create'))]));if(ok!=true){title.dispose();url.dispose();return;}final uri=Uri.tryParse(url.text.trim());if(uri==null||uri.scheme!='https'||!(uri.path.toLowerCase().endsWith('.mp4')||uri.path.toLowerCase().endsWith('.m3u8'))){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_xpText(context,'الرابط يجب أن يكون HTTPS مباشرًا لفيديو MP4 أو HLS.','Use a direct HTTPS MP4 or HLS URL.'))));title.dispose();url.dispose();return;}try{final r=await db.from('duo_watch_rooms').insert({'space_id':widget.spaceId,'created_by':db.auth.currentUser!.id,'updated_by':db.auth.currentUser!.id,'title':title.text.trim().isEmpty?'Watch together':title.text.trim(),'video_url':url.text.trim()}).select('id,title,video_url').single();if(mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>OursWatchRoomPage(room:r)));await _load();}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Room failed: $e')));}title.dispose();url.dispose();}
- @override void dispose(){if(channel!=null)db.removeChannel(channel!);super.dispose();}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_xpNavy,appBar:AppBar(backgroundColor:_xpNavy,title:Text(_xpText(context,'المشاهدة معًا','Watch together')),actions:[IconButton(onPressed:_load,icon:const Icon(Icons.refresh,color:_xpGold))]),body:widget.spaceId==null?Center(child:Text(_xpText(context,'المساحة المشتركة غير جاهزة','Shared space not ready'),style:const TextStyle(color:_xpLav))):loading?const Center(child:CircularProgressIndicator(color:_xpGold)):Column(children:[Padding(padding:const EdgeInsets.all(12),child:FilledButton.icon(onPressed:_create,icon:const Icon(Icons.add),label:Text(_xpText(context,'إنشاء جلسة','Create room')))),Expanded(child:rooms.isEmpty?Center(child:Text(_xpText(context,'لا توجد جلسات بعد','No rooms yet'),style:const TextStyle(color:_xpLav))):ListView.builder(itemCount:rooms.length,itemBuilder:(c,i){final r=rooms[i];return Card(color:_xpPurple,child:ListTile(leading:const Icon(Icons.movie,color:_xpGold),title:Text(r['title'].toString(),style:const TextStyle(color:Colors.white)),subtitle:Text(r['video_url'].toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:_xpLav)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursWatchRoomPage(room:r))));}))]));
+ Future<void> _create() async{
+ final titleController=TextEditingController();
+ final urlController=TextEditingController();
+ final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(
+  backgroundColor:_xpPurple,title:Text(_xpText(context,'جلسة مشاهدة','Watch room')),
+  content:Column(mainAxisSize:MainAxisSize.min,children:[
+   TextField(controller:titleController,decoration:InputDecoration(hintText:_xpText(context,'اسم الجلسة','Title'))),
+   TextField(controller:urlController,keyboardType:TextInputType.url,decoration:const InputDecoration(hintText:'HTTPS direct video URL')),
+  ]),
+  actions:[
+   TextButton(onPressed:()=>Navigator.pop(d,false),child:Text(_xpText(context,'إلغاء','Cancel'))),
+   FilledButton(onPressed:()=>Navigator.pop(d,true),child:Text(_xpText(context,'إنشاء','Create'))),
+  ],
+ ));
+ if(ok!=true){titleController.dispose();urlController.dispose();return;}
+ final uri=Uri.tryParse(urlController.text.trim());
+ if(uri==null||uri.scheme!='https'||!(uri.path.toLowerCase().endsWith('.mp4')||uri.path.toLowerCase().endsWith('.m3u8'))){
+  if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_xpText(context,'الرابط يجب أن يكون HTTPS مباشرًا لفيديو MP4 أو HLS.','Use a direct HTTPS MP4 or HLS URL.'))));
+  titleController.dispose();urlController.dispose();return;
+ }
+ try{
+  final row=await db.from('duo_watch_rooms').insert({
+   'space_id':widget.spaceId,'created_by':db.auth.currentUser!.id,'updated_by':db.auth.currentUser!.id,
+   'title':titleController.text.trim().isEmpty?'Watch together':titleController.text.trim(),'video_url':urlController.text.trim(),
+  }).select('id,title,video_url').single();
+  if(mounted)Navigator.push(context,MaterialPageRoute(builder:(_)=>OursWatchRoomPage(room:row)));
+  await _load();
+ }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Room failed: $e')));}
+ titleController.dispose();urlController.dispose();
+}
+@override void dispose(){if(channel!=null)db.removeChannel(channel!);super.dispose();}
+ @override Widget build(BuildContext context){
+ return Scaffold(
+  backgroundColor:_xpNavy,
+  appBar:AppBar(backgroundColor:_xpNavy,title:Text(_xpText(context,'المشاهدة معًا','Watch together')),actions:[IconButton(onPressed:_load,icon:const Icon(Icons.refresh,color:_xpGold))]),
+  body:widget.spaceId==null?Center(child:Text(_xpText(context,'المساحة المشتركة غير جاهزة','Shared space not ready'),style:const TextStyle(color:_xpLav)))
+   :loading?const Center(child:CircularProgressIndicator(color:_xpGold))
+   :Column(children:[
+    Padding(padding:const EdgeInsets.all(12),child:FilledButton.icon(onPressed:_create,icon:const Icon(Icons.add),label:Text(_xpText(context,'إنشاء جلسة','Create room')))),
+    Expanded(child:rooms.isEmpty
+     ?Center(child:Text(_xpText(context,'لا توجد جلسات بعد','No rooms yet'),style:const TextStyle(color:_xpLav)))
+     :ListView.builder(itemCount:rooms.length,itemBuilder:(context,index){
+      final room=rooms[index];
+      return Card(color:_xpPurple,child:ListTile(
+       leading:const Icon(Icons.movie,color:_xpGold),
+       title:Text(room['title'].toString(),style:const TextStyle(color:Colors.white)),
+       subtitle:Text(room['video_url'].toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:_xpLav)),
+       onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursWatchRoomPage(room:room))),
+      ));
+     }),
+    ),
+   ]),
+ );
+}
+
 }
 class OursWatchRoomPage extends StatefulWidget{
  final Map<String,dynamic> room;const OursWatchRoomPage({super.key,required this.room});
@@ -128,6 +235,26 @@ class _OursWatchRoomPageState extends State<OursWatchRoomPage>{
  Future<void> _toggle()async{final p=player;if(p==null)return;if(p.value.isPlaying)await p.pause();else await p.play();await _publish();}
  Future<void> _seek(double value)async{await player?.seekTo(Duration(milliseconds:value.round()));await _publish();}
  @override void dispose(){if(channel!=null)db.removeChannel(channel!);player?.removeListener(_changed);player?.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_xpNavy,appBar:AppBar(backgroundColor:_xpNavy,title:Text(widget.room['title'].toString())),body:loading?const Center(child:CircularProgressIndicator(color:_xpGold)):error!=null?Center(child:Text(error!,style:const TextStyle(color:_xpLav))):Column(children:[AspectRatio(aspectRatio:player!.value.aspectRatio,child:VideoPlayer(player!)),Row(children:[IconButton(onPressed:_toggle,icon:Icon(player!.value.isPlaying?Icons.pause:Icons.play_arrow,color:_xpGold,size:30)),Expanded(child:Slider(value:player!.value.position.inMilliseconds.toDouble().clamp(0,player!.value.duration.inMilliseconds.toDouble().clamp(1,999999999)).toDouble(),max:player!.value.duration.inMilliseconds.toDouble().clamp(1,999999999).toDouble(),activeColor:_xpGold,onChanged:_seek)),Text(_time(player!.value.position),style:const TextStyle(color:_xpLav))]),Padding(padding:const EdgeInsets.all(12),child:Text(_xpText(context,'يتم مزامنة التشغيل والتوقف والموقع الزمني. استخدم رابطًا مباشرًا.','Playback, pause and seek are synced. A direct video URL is required.'),style:const TextStyle(color:_xpLav,fontSize:12))]));
- String _time(Duration d)=>d.inMinutes.toString().padLeft(2,'0')+':'+(d.inSeconds%60).toString().padLeft(2,'0');
+ @override Widget build(BuildContext context){
+ final controller=player;
+ if(controller==null)return const SizedBox.shrink();
+ final durationMs=controller.value.duration.inMilliseconds.toDouble().clamp(1.0,999999999.0);
+ final positionMs=controller.value.position.inMilliseconds.toDouble().clamp(0.0,durationMs).toDouble();
+ return Scaffold(
+  backgroundColor:_xpNavy,
+  appBar:AppBar(backgroundColor:_xpNavy,title:Text(widget.room['title'].toString())),
+  body:loading?const Center(child:CircularProgressIndicator(color:_xpGold))
+   :error!=null?Center(child:Text(error!,style:const TextStyle(color:_xpLav)))
+   :Column(children:[
+    AspectRatio(aspectRatio:controller.value.aspectRatio,child:VideoPlayer(controller)),
+    Row(children:[
+     IconButton(onPressed:_toggle,icon:Icon(controller.value.isPlaying?Icons.pause:Icons.play_arrow,color:_xpGold,size:30)),
+     Expanded(child:Slider(value:positionMs,max:durationMs,activeColor:_xpGold,onChanged:_seek)),
+     Text(_time(controller.value.position),style:const TextStyle(color:_xpLav)),
+    ]),
+    Padding(padding:const EdgeInsets.all(12),child:Text(_xpText(context,'يتم مزامنة التشغيل والتوقف والموقع الزمني. استخدم رابطًا مباشرًا.','Playback, pause and seek sync. A direct video URL is required.'),style:const TextStyle(color:_xpLav,fontSize:12))),
+   ]),
+ );
+}
+String _time(Duration d)=>d.inMinutes.toString().padLeft(2,'0')+':'+(d.inSeconds%60).toString().padLeft(2,'0');
 }
