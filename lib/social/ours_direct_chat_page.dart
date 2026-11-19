@@ -133,7 +133,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Map<String,dynamic>? replyTo;
  RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
  Timer? typingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId;
- bool loading=true,sending=false,recording=false,uploading=false;String? localPartnerName;_ChatSkin skin=_skins.first;
+ bool loading=true,sending=false,recording=false,uploading=false;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
  int _streakCount(){
@@ -157,7 +157,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  }
  Future<void> _loadSkin() async{
   final p=await SharedPreferences.getInstance();final id=p.getString('ours_direct_skin_'+widget.conversationId)??'ours';
-  final found=_skins.where((s)=>s.id==id);if(mounted)setState(()=>skin=found.isEmpty?_skins.first:found.first);
+  final found=_skins.where((s)=>s.id==id);
+  final savedWallpaper=p.getString('ours_direct_wallpaper_'+widget.conversationId);
+  final savedOpacity=p.getDouble('ours_direct_wallpaper_opacity_'+widget.conversationId)??.22;
+  if(mounted)setState(()=>{skin=found.isEmpty?_skins.first:found.first,wallpaperPath=savedWallpaper,wallpaperOpacity=savedOpacity.clamp(.08,.45)});
  }
  Future<void> _chooseSkin() async{
   final selected=await showModalBottomSheet<_ChatSkin>(
@@ -247,6 +250,47 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(elapsed.inMinutes<60)return t('آخر ظهور منذ ${elapsed.inMinutes} دقيقة','Last seen ${elapsed.inMinutes}m ago');
   if(elapsed.inHours<24)return t('آخر ظهور منذ ${elapsed.inHours} ساعة','Last seen ${elapsed.inHours}h ago');
   return t('آخر ظهور ${DateFormat('d MMM', 'ar').format(seen)}','Last seen ${DateFormat('MMM d').format(seen)}');
+ }
+ Future<void> _chooseWallpaper() async{
+  var opacity=wallpaperOpacity;
+  final action=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF171326),showDragHandle:true,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(18,8,18,18),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Text(t('خلفية المحادثة','Chat wallpaper'),style:const TextStyle(color:_gold,fontSize:18,fontWeight:FontWeight.w800)),
+   const SizedBox(height:8),
+   Text(t('اختر صورة مستقلة عن الثيم، واضبط وضوحها حتى تبقى الرسائل سهلة القراءة.','Choose a wallpaper independently from the theme and adjust its visibility for readable messages.'),style:const TextStyle(color:_lavender,fontSize:12)),
+   const SizedBox(height:12),
+   Row(children:[Expanded(child:Text(t('وضوح الخلفية','Wallpaper visibility'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w700))),Text('${(opacity*100).round()}%',style:TextStyle(color:skin.accent))]),
+   Slider(value:opacity,min:.08,max:.45,onChanged:(v)=>setModal(()=>opacity=v),activeColor:skin.accent),
+   const SizedBox(height:8),
+   Wrap(spacing:8,runSpacing:8,children:[
+    OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'clear'),icon:const Icon(Icons.layers_clear_outlined),label:Text(t('إزالة الخلفية','Remove wallpaper'))),
+    OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'save'),icon:const Icon(Icons.tune_rounded),label:Text(t('حفظ الوضوح','Save visibility'))),
+    FilledButton.icon(onPressed:()=>Navigator.pop(ctx,'choose'),icon:const Icon(Icons.photo_library_outlined),label:Text(t('اختيار صورة','Choose image')))
+   ])
+  ])))));
+  if(action==null)return;
+  final prefs=await SharedPreferences.getInstance();
+  if(action=='clear'){
+   final old=wallpaperPath;
+   await prefs.remove('ours_direct_wallpaper_'+widget.conversationId);
+   if(mounted)setState(()=>wallpaperPath=null);
+   if(old!=null){try{final file=File(old);if(await file.exists())await file.delete();}catch(_){}}
+  }
+  if(action=='save'){
+   await prefs.setDouble('ours_direct_wallpaper_opacity_'+widget.conversationId,opacity);
+   if(mounted)setState(()=>wallpaperOpacity=opacity);
+  }
+  if(action=='choose'){
+   try{
+    final picked=await picker.pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);
+    if(picked==null)return;
+    final dir=await getApplicationDocumentsDirectory();
+    final target=File('${dir.path}/ours_chat_wallpaper_${widget.conversationId}.jpg');
+    await File(picked.path).copy(target.path);
+    await prefs.setString('ours_direct_wallpaper_'+widget.conversationId,target.path);
+    await prefs.setDouble('ours_direct_wallpaper_opacity_'+widget.conversationId,opacity);
+    if(mounted)setState(()=>{wallpaperPath=target.path,wallpaperOpacity=opacity});
+   }catch(e){_show(t('تعذر تطبيق الخلفية. حاول اختيار صورة أخرى.','Could not apply wallpaper. Try another image.'));}
+  }
  }
  Future<void> _load() async{
   try{
@@ -532,10 +576,12 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    actions:[
     IconButton(tooltip:t('اتصال صوتي','Voice call'),onPressed:()=>_callInfo(false),icon:Icon(Icons.call_outlined,color:skin.accent)),
     IconButton(tooltip:t('اتصال مرئي','Video call'),onPressed:()=>_callInfo(true),icon:Icon(Icons.videocam_outlined,color:skin.accent)),
-    IconButton(tooltip:t('تفاصيل المحادثة','Chat details'),icon:Icon(Icons.more_horiz,color:skin.accent),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>_ChatDetailsPage(partnerId:widget.partnerId,partnerName:localPartnerName??widget.partnerName,skin:skin,profile:()=>OursProfilePage(userId:widget.partnerId),nickname:_changeLocalNickname,search:_searchMessages,media:()=>_showChatLibrary('media'),files:()=>_showChatLibrary('files'),themes:_chooseSkin))))
+    IconButton(tooltip:t('تفاصيل المحادثة','Chat details'),icon:Icon(Icons.more_horiz,color:skin.accent),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>_ChatDetailsPage(partnerId:widget.partnerId,partnerName:localPartnerName??widget.partnerName,skin:skin,profile:()=>OursProfilePage(userId:widget.partnerId),nickname:_changeLocalNickname,search:_searchMessages,media:()=>_showChatLibrary('media'),files:()=>_showChatLibrary('files'),themes:_chooseSkin,wallpaper:_chooseWallpaper))))
    ]),
    body:Stack(children:[
     Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
+    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Opacity(opacity:wallpaperOpacity,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())))),
+    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:.48)))),
     Column(children:[
     Expanded(child:loading?Center(child:CircularProgressIndicator(color:skin.accent)):messages.isEmpty
      ?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
@@ -830,8 +876,8 @@ class _MarkupPainter extends CustomPainter{
  @override bool shouldRepaint(covariant _MarkupPainter old)=>old.strokes!=strokes;
 }
 class _ChatDetailsPage extends StatelessWidget{
- final String partnerId,partnerName;final _ChatSkin skin;final Widget Function() profile;final VoidCallback nickname,search,media,files;final Future<void> Function() themes;
- const _ChatDetailsPage({required this.partnerId,required this.partnerName,required this.skin,required this.profile,required this.nickname,required this.search,required this.media,required this.files,required this.themes});
+ final String partnerId,partnerName;final _ChatSkin skin;final Widget Function() profile;final VoidCallback nickname,search,media,files;final Future<void> Function() themes,wallpaper;
+ const _ChatDetailsPage({required this.partnerId,required this.partnerName,required this.skin,required this.profile,required this.nickname,required this.search,required this.media,required this.files,required this.themes,required this.wallpaper});
  @override Widget build(BuildContext context){final ar=Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
  Widget section(String title)=>Padding(padding:const EdgeInsets.fromLTRB(5,20,5,9),child:Text(title,style:TextStyle(color:skin.accent,fontSize:12,fontWeight:FontWeight.w800,letterSpacing:.4)));
  Widget tile(IconData icon,String title,String subtitle,VoidCallback action)=>_ChatDetailTile(icon:icon,title:title,subtitle:subtitle,accent:skin.accent,onTap:action);
@@ -847,6 +893,7 @@ class _ChatDetailsPage extends StatelessWidget{
   tile(Icons.search_rounded,t('البحث في الرسائل','Search messages'),t('اعثر على رسالة بسرعة','Find a message quickly'),search),
   tile(Icons.person_pin_rounded,t('اسم خاص للطرف الآخر','Private nickname'),t('اسم يظهر في جهازك فقط','Only on your device'),nickname),
   tile(Icons.palette_rounded,t('أجواء المحادثة','Chat atmosphere'),t('ثيمات حية وألوان مميزة','Vibrant themes and colors'),()=>themes()),
+  tile(Icons.wallpaper_rounded,t('خلفية المحادثة','Chat wallpaper'),t('اختر صورة واضبط وضوحها بشكل مستقل عن الثيم','Choose a photo and adjust visibility independently'),()=>wallpaper()),
  ]));
  }
 }
