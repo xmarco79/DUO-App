@@ -334,15 +334,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد عناصر بعد','Nothing shared yet'))):ListView(children:found.map((m)=>ListTile(leading:Icon(kind=='media'?Icons.image_outlined:Icons.insert_drive_file_outlined,color:skin.accent),title:Text((m['body']??'').toString().split('/').last,maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])))).toList()))
   ]))));
  }
- Future<void> _openAi() async {
-   final id = widget.spaceId;
-   if (id == null || id.isEmpty) {
-    _show(t('مساعد OURS متاح من داخل مساحتنا.', 'Open OURS AI from inside our space.'));
-    return;
-   }
-   await Navigator.push(context, MaterialPageRoute(builder: (_) => OursAiPage(spaceId: id)));
-  }
-  @override void dispose(){input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
+   @override void dispose(){input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
  @override Widget build(BuildContext context){
   final me=db.auth.currentUser!.id;
   return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,centerTitle:true,
