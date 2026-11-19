@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -293,11 +294,11 @@ class _OursImageEditPageState extends State<OursImageEditPage>{
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
  static const matrices=<List<double>>[
   [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0],
-  [1.08,0,0,0,7,0,1.02,0,0,2,0,0,.92,0,0,0,0,0,1,0],
-  [.92,0,0,0,0,0,1.02,0,0,0,0,0,1.12,0,8,0,0,0,1,0],
-  [.3,.59,.11,0,0,.3,.59,.11,0,0,.3,.59,.11,0,0,0,0,0,1,0],
+  [1.08,0,0,0,7,0,1.02,0,0,2,0,0,0.92,0,0,0,0,0,1,0],
+  [0.92,0,0,0,0,0,1.02,0,0,0,0,0,1.12,0,8,0,0,0,1,0],
+  [0.3,0.59,0.11,0,0,0.3,0.59,0.11,0,0,0.3,0.59,0.11,0,0,0,0,0,1,0],
   [1.2,0,0,0,-8,0,1.2,0,0,-8,0,0,1.2,0,-8,0,0,0,1,0],
-  [.393,.769,.189,0,0,.349,.686,.168,0,0,.272,.534,.131,0,0,0,0,0,1,0],
+  [00.393,0.769,0.189,0,0,00.349,0.686,0.168,0,0,0.272,0.534,0.131,0,0,0,0,0,1,0],
  ];
  Future<void> _export()async{
   try{
@@ -318,7 +319,7 @@ class _OursImageEditPageState extends State<OursImageEditPage>{
    Positioned.fill(child:InteractiveViewer(minScale:1,maxScale:4,child:ColorFiltered(colorFilter:ColorFilter.matrix(matrices[filter]),child:Image.memory(widget.bytes,fit:BoxFit.cover))))),
    Positioned.fill(child:GestureDetector(behavior:HitTestBehavior.translucent,onPanStart:drawing?((d)=>_start(d.localPosition)):null,onPanUpdate:drawing?((d)=>_move(d.localPosition)):null,onPanEnd:drawing?((d)=>_finish()):null,child:CustomPaint(painter:_DrawingPainter(strokes)))),
   ]))))),
-  SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),child:Row(children:[for(int i=0;i<matrices.length;i++)Padding(padding:const EdgeInsets.symmetric(horizontal:4),child:ChoiceChip(label:Text(ar?['أصلية','دافئة','باردة','أبيض وأسود','حيوية','سيبيا'][i]:['Original','Warm','Cool','Mono','Vivid','Sepia'][i]),selected:filter==i,selectedColor:widget.accent.withValues(alpha:.3),onSelected:(_)=>setState(()=>filter=i)))])),
+  SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),child:Row(children:[for(int i=0;i<matrices.length;i++)Padding(padding:const EdgeInsets.symmetric(horizontal:4),child:ChoiceChip(label:Text(ar?['أصلية','دافئة','باردة','أبيض وأسود','حيوية','سيبيا'][i]:['Original','Warm','Cool','Mono','Vivid','Sepia'][i]),selected:filter==i,selectedColor:widget.accent.withValues(alpha:0.3),onSelected:(_)=>setState(()=>filter=i)))])),
   Row(mainAxisAlignment:MainAxisAlignment.center,children:[
    IconButton(onPressed:()=>setState(()=>drawing=!drawing),tooltip:t('الرسم','Draw'),icon:Icon(drawing?Icons.draw:Icons.brush_outlined,color:drawing?widget.accent:Colors.white70)),
    IconButton(onPressed:strokes.isEmpty?null:()=>setState(()=>strokes.clear()),tooltip:t('مسح الرسم','Clear drawing'),icon:Icon(Icons.delete_outline,color:widget.accent)),
