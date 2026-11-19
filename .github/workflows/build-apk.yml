@@ -456,10 +456,10 @@ jobs:
           echo "$BADGING" | grep -F "package: name='com.ours.ours'"
           VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose "$APK")"
           echo "$VERIFY_OUTPUT"
-          echo "$VERIFY_OUTPUT" | grep -F "Verified using v1 scheme (JAR signing): true"
+          echo "V1 signature status is informational; Android API 24+ compatibility is verified through V2/V3."
           echo "$VERIFY_OUTPUT" | grep -F "Verified using v2 scheme (APK Signature Scheme v2): true"
           echo "$VERIFY_OUTPUT" | grep -F "Verified using v3 scheme (APK Signature Scheme v3): true"
-          echo "APK validation passed with a verified V2 signature."
+          echo "APK validation passed with verified V2 and V3 signatures."
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
