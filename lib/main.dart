@@ -2158,6 +2158,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   String username = '';
   String email = '';
   String? avatarUrl;
+  DateTime? birthday;
   String languageCode = 'ar';
   bool uploadingAvatar = false;
   bool loading = true;
@@ -2195,7 +2196,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       email = user.email ?? '';
       final profile = await db
           .from('duo_profiles')
-          .select('username, display_name, avatar_path, bio')
+          .select('username, display_name, avatar_path, bio, birthday')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -2206,6 +2207,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       displayNameController.text =
           profile?['display_name']?.toString() ?? '';
       bioController.text = profile?['bio']?.toString() ?? '';
+      birthday = DateTime.tryParse(profile?['birthday']?.toString() ?? '');
       setState(() => loading = false);
     } catch (e) {
       if (!mounted) return;
@@ -2284,6 +2286,18 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     }
   }
 
+  Future<void> chooseBirthday() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: birthday ?? DateTime(2000, 1, 1),
+      firstDate: DateTime(1900),
+      lastDate: now,
+      helpText: oursText(context, 'اختر تاريخ ميلادك', 'Choose your birthday'),
+    );
+    if (picked != null && mounted) setState(() => birthday = picked);
+  }
+
   Future<void> saveProfile() async {
     final value = displayNameController.text.trim();
     if (value.length > 30) {
@@ -2309,6 +2323,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           .update({
             'display_name': value.isEmpty ? null : value,
             'bio': bio,
+            'birthday': birthday == null ? null : DateFormat('yyyy-MM-dd').format(birthday!),
           })
           .eq('user_id', userId);
 
@@ -2495,6 +2510,18 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                     border: OutlineInputBorder(),
                   ),
                 ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.cake_outlined, color: gold),
+                  title: Text(oursText(context, 'تاريخ الميلاد', 'Birthday')),
+                  subtitle: Text(birthday == null
+                      ? oursText(context, 'غير محدد', 'Not set')
+                      : DateFormat(languageCode == 'ar' ? 'd MMMM yyyy' : 'MMMM d, yyyy').format(birthday!)),
+                  trailing: const Icon(Icons.calendar_month_outlined),
+                  onTap: chooseBirthday,
+                ),
+                const SizedBox(height: 8),
                 const SizedBox(height: 8),
                 InputDecorator(
                   decoration: InputDecoration(
