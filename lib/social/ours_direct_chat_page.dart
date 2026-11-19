@@ -549,7 +549,7 @@ class _OursAiPageState extends State<OursAiPage>{
    ]),
    Padding(padding:const EdgeInsets.all(10),child:Text(t('قد تتم معالجة سؤالك عبر مزوّد ذكاء اصطناعي خارجي. لا تفعّل سياق المحادثة إلا إذا رغبت بإرسال الرسائل الأخيرة.','Your prompt may be processed by an external AI provider. Enable chat context only if you want recent messages shared.'),textAlign:TextAlign.center,style:const TextStyle(color:_lavender,fontSize:10))),
    const Divider(color:Color(0x3329293D)),
-   Expanded(child:ListView.builder(controller:scroll,padding:const EdgeInsets.all(14),itemCount:messages.length,itemBuilder:(c,i){final m=messages[i],mine=m['role']=='user';return Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(constraints:const BoxConstraints(maxWidth:320),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(13),decoration:BoxDecoration(color:mine?const Color(0xFF342B4C):const Color(0xFF211D30),borderRadius:BorderRadius.circular(16)),child:SelectableText(m['content']??'',style:const TextStyle(height:1.5))));})),
+   Expanded(child:ListView.builder(controller:scroll,padding:const EdgeInsets.all(14),itemCount:messages.length,itemBuilder:(c,i){final m=messages[i],mine=m['role']=='user';return Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:IntrinsicWidth(child:Container(constraints:const BoxConstraints(maxWidth:320),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(13),decoration:BoxDecoration(gradient:LinearGradient(colors:mine?[const Color(0xFF6D42A8),const Color(0xFF39275D)]:[const Color(0xFF332345),const Color(0xFF21182F)]),borderRadius:BorderRadius.circular(16)),child:SelectableText(m['content']??'',style:const TextStyle(height:1.5)))));})),
    if(sending)const LinearProgressIndicator(color:_gold,minHeight:2),
    Padding(padding:const EdgeInsets.fromLTRB(10,8,10,12),child:Row(children:[
     Expanded(child:TextField(controller:input,minLines:1,maxLines:4,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اسأل OURS AI…','Ask OURS AI…'),filled:true,fillColor:const Color(0xFF29213D),border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none)))),
@@ -709,7 +709,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
            borderRadius:BorderRadius.circular(18),
            border:Border.all(color:_gold.withValues(alpha:.15)),
           ),
-          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
            SelectableText(row['body'].toString(),style:const TextStyle(color:Colors.white,height:1.5)),
            const SizedBox(height:5),
            Row(mainAxisSize:MainAxisSize.min,children:[
@@ -726,7 +726,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
               PopupMenuItem(value:'delete',child:Text(t('حذف الرسالة','Delete note'))),
              ],
             ),
-           ]),
+           ])),
           ]),
          ),
         );
