@@ -118,10 +118,17 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  final Set<String> hiddenIds={};
  Map<String,dynamic>? replyTo;
  RealtimeChannel? channel;AudioRecorder? recorder;String? recordingPath;
- bool loading=true,sending=false,recording=false,uploading=false;_ChatSkin skin=_skins.first;
+ bool loading=true,sending=false,recording=false,uploading=false;String? localPartnerName;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
- @override void initState(){super.initState();_loadSkin();_load();_listen();}
+ @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();}
+ Future<void> _changeLocalNickname() async{
+  final prefs=await SharedPreferences.getInstance();final key='ours_partner_alias_${uid}_${widget.partnerId}';
+  final controller=TextEditingController(text:prefs.getString(key)??widget.partnerName);
+  final value=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('اسم الطرف الآخر عندك','Your private nickname')),content:TextField(controller:controller,maxLength:24,decoration:InputDecoration(hintText:t('اسم يظهر لك فقط','Only visible to you'))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel'))),TextButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:Text(t('حفظ','Save')))]));
+  controller.dispose();if(value==null)return;if(value.isEmpty)await prefs.remove(key);else await prefs.setString(key,value);
+  if(mounted)setState(()=>localPartnerName=value.isEmpty?widget.partnerName:value);
+ }
  Future<void> _loadSkin() async{
   final p=await SharedPreferences.getInstance();final id=p.getString('ours_direct_skin_'+widget.conversationId)??'midnight';
   final found=_skins.where((s)=>s.id==id);if(mounted)setState(()=>skin=found.isEmpty?_skins.first:found.first);
@@ -362,7 +369,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     borderRadius:BorderRadius.circular(12),
     onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:widget.partnerId))),
     child:Column(mainAxisSize:MainAxisSize.min,children:[
-     Text(widget.partnerName,style:const TextStyle(fontSize:16)),
+     Text(localPartnerName??widget.partnerName,style:const TextStyle(fontSize:16)),
      Text(t('اضغط لعرض الملف الشخصي','Tap to view profile'),style:TextStyle(color:skin.accent,fontSize:10))
     ]),
    ),
@@ -370,9 +377,11 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     IconButton(tooltip:t('الثيم','Theme'),onPressed:_chooseSkin,icon:Icon(Icons.palette_outlined,color:skin.accent)),
     PopupMenuButton<String>(tooltip:t('المزيد','More'),icon:Icon(Icons.more_vert,color:skin.accent),onSelected:(v){
      if(v=='profile')Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:widget.partnerId)));
+     if(v=='nickname')_changeLocalNickname();
      if(v=='search')_searchMessages();if(v=='media')_showChatLibrary('media');if(v=='files')_showChatLibrary('files');
     },itemBuilder:(_)=>[
      PopupMenuItem(value:'profile',child:Text(t('الملف الشخصي','Profile'))),
+     PopupMenuItem(value:'nickname',child:Text(t('تخصيص الاسم عندك فقط','Set your private nickname'))),
      PopupMenuItem(value:'search',child:Text(t('البحث عن الرسائل','Search messages'))),
      PopupMenuItem(value:'media',child:Text(t('الوسائط المرسلة','Shared media'))),
      PopupMenuItem(value:'files',child:Text(t('الملفات','Files'))),
