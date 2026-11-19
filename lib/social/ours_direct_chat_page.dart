@@ -415,8 +415,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final path=message['body']?.toString()??'';
   if(type=='view_once'||type=='view_twice'){await _consumeTemporaryMedia(message['id'].toString());return;}
   if(type=='image'){
-   try{final url=await _signed(path);if(!mounted)return;await showDialog<void>(context:context,builder:(_)=>Dialog(backgroundColor:Colors.transparent,child:InteractiveViewer(child:Image.network(url,fit:BoxFit.contain))));}
-   catch(e){_show(t('تعذر فتح الصورة: $e','Could not open image: $e'));}
+   try{final url=await _signed(path);if(!mounted)return;await _openImageActions(url);}
+   catch(_){_show(t('تعذر فتح الصورة. تحقق من الاتصال.','Could not open image. Check your connection.'));}
    return;
   }
   await _openFile(path);
@@ -638,7 +638,7 @@ class _DirectAudioBubbleState extends State<_DirectAudioBubble>{
     final duration=durationSnap.data??Duration.zero;return StreamBuilder<Duration>(stream:player.onPositionChanged,initialData:Duration.zero,builder:(c,posSnap){
      final position=posSnap.data??Duration.zero;final progress=duration.inMilliseconds==0?0.0:(position.inMilliseconds/duration.inMilliseconds).clamp(0.0,1.0);
      return Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-      GestureDetector(onTapDown:(e){final box=context.findRenderObject() as RenderBox;final local=box.globalToLocal(e.globalPosition);final x=(local.dx/box.size.width).clamp(0.0,1.0);if(duration>Duration.zero)player.seek(Duration(milliseconds:(duration.inMilliseconds*x).round()));},child:SizedBox(height:26,child:CustomPaint(painter:_VoiceWavePainter(widget.skin.accent,progress)))),
+      LayoutBuilder(builder:(ctx,limits)=>GestureDetector(onTapDown:(e){final x=(e.localPosition.dx/limits.maxWidth).clamp(0.0,1.0);if(duration>Duration.zero)player.seek(Duration(milliseconds:(duration.inMilliseconds*x).round()));},child:SizedBox(width:limits.maxWidth,height:26,child:CustomPaint(painter:_VoiceWavePainter(widget.skin.accent,progress))))),
       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text(_time(position),style:TextStyle(color:widget.skin.accent,fontSize:10)),Text(_time(duration),style:TextStyle(color:widget.skin.accent.withValues(alpha:.65),fontSize:10))])
      ]);
     });
@@ -662,9 +662,16 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;
  @override void initState(){super.initState();_load();}
- Future<void> _load()async{try{final data=await db.from('ours_self_messages').select().order('created_at');if(mounted)setState(()=>rows=List<Map<String,dynamic>>.from(data));}catch(e){_notice(t('تعذر تحميل مذكرتك: $e','Could not load your notes: $e'));}finally{if(mounted)setState(()=>loading=false);}}
+ Future<void> _load()async{try{final data=await db.from('ours_self_messages').select().order('created_at');if(mounted)setState(()=>rows=List<Map<String,dynamic>>.from(data));}catch(e){_notice(t('تعذر تحميل الرسائل المحفوظة. تحقق من الاتصال.','Could not load saved messages. Check your connection.'));}finally{if(mounted)setState(()=>loading=false);}}
+ Future<void> _noteActions(Map<String,dynamic> row)async{
+  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:_p,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   ListTile(leading:const Icon(Icons.push_pin_outlined,color:_g),title:Text(t('تثبيت / إلغاء التثبيت','Pin / unpin')),onTap:()=>Navigator.pop(ctx,'pin')),
+   ListTile(leading:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent),title:Text(t('حذف الرسالة','Delete note')),onTap:()=>Navigator.pop(ctx,'delete'))
+  ])));
+  if(choice=='pin')await _togglePin(row);if(choice=='delete')await _delete(row);
+ }
  void _notice(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
- Future<void> _send()async{final text=input.text.trim();if(text.isEmpty||sending)return;setState(()=>sending=true);try{final row=await db.from('ours_self_messages').insert({'user_id':db.auth.currentUser!.id,'body':text}).select().single();if(mounted)setState(()=>rows.add(Map<String,dynamic>.from(row)));input.clear();}catch(e){_notice(t('تعذر حفظ الرسالة: $e','Could not save note: $e'));}finally{if(mounted)setState(()=>sending=false);}}
+ Future<void> _send()async{final text=input.text.trim();if(text.isEmpty||sending)return;setState(()=>sending=true);try{final row=await db.from('ours_self_messages').insert({'user_id':db.auth.currentUser!.id,'body':text}).select().single();if(mounted)setState(()=>rows.add(Map<String,dynamic>.from(row)));input.clear();}catch(e){_notice(t('تعذر حفظ الرسالة. حاول مجددًا.','Could not save note. Try again.'));}finally{if(mounted)setState(()=>sending=false);}}
  Future<void> _togglePin(Map<String,dynamic> row)async{try{final v=!(row['pinned']==true);await db.from('ours_self_messages').update({'pinned':v}).eq('id',row['id']);if(mounted)setState(()=>row['pinned']=v);}catch(e){_notice(e.toString());}}
  Future<void> _delete(Map<String,dynamic> row)async{try{await db.from('ours_self_messages').delete().eq('id',row['id']);if(mounted)setState(()=>rows.removeWhere((r)=>r['id']==row['id']));}catch(e){_notice(e.toString());}}
  @override void dispose(){input.dispose();scroll.dispose();super.dispose();}
@@ -700,7 +707,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
         final time=date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);
         return Align(
          alignment:AlignmentDirectional.centerEnd,
-         child:Container(
+         child:GestureDetector(onLongPress:()=>_noteActions(row),child:Container(
           constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.84),
           margin:const EdgeInsets.symmetric(vertical:5),
           padding:const EdgeInsets.fromLTRB(14,11,9,8),
@@ -709,23 +716,14 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
            borderRadius:BorderRadius.circular(18),
            border:Border.all(color:_gold.withValues(alpha:.15)),
           ),
-          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          child:IntrinsicWidth(child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
            SelectableText(row['body'].toString(),style:const TextStyle(color:Colors.white,height:1.5)),
            const SizedBox(height:5),
            Row(mainAxisSize:MainAxisSize.min,children:[
             if(row['pinned']==true)const Icon(Icons.push_pin_rounded,color:_gold,size:13),
             Text(time,style:const TextStyle(color:_lavender,fontSize:10)),
             const SizedBox(width:4),
-            PopupMenuButton<String>(
-             padding:EdgeInsets.zero,
-             constraints:const BoxConstraints(minWidth:150),
-             icon:const Icon(Icons.more_horiz,color:_lavender,size:18),
-             onSelected:(v)=>v=='pin'?_togglePin(row):_delete(row),
-             itemBuilder:(_)=>[
-              PopupMenuItem(value:'pin',child:Text(t('تثبيت / إلغاء التثبيت','Pin / unpin'))),
-              PopupMenuItem(value:'delete',child:Text(t('حذف الرسالة','Delete note'))),
-             ],
-            ),
+
            ])),
           ]),
          ),
