@@ -335,12 +335,23 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد نتائج','No results'))):ListView(children:found.map((m)=>ListTile(title:Text(m['body'].toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])))).toList()))
   ]))));
  }
+ Future<void> _openLibraryItem(Map<String,dynamic> message) async{
+  final type=message['message_type']?.toString()??'';
+  final path=message['body']?.toString()??'';
+  if(type=='view_once'||type=='view_twice'){await _consumeTemporaryMedia(message['id'].toString());return;}
+  if(type=='image'){
+   try{final url=await _signed(path);if(!mounted)return;await showDialog<void>(context:context,builder:(_)=>Dialog(backgroundColor:Colors.transparent,child:InteractiveViewer(child:Image.network(url,fit:BoxFit.contain))));}
+   catch(e){_show(t('تعذر فتح الصورة: $e','Could not open image: $e'));}
+   return;
+  }
+  await _openFile(path);
+ }
  Future<void> _showChatLibrary(String kind) async{
   final types=kind=='media'?['image','view_once','view_twice','video']:['file','audio'];
   final found=messages.where((m)=>types.contains(m['message_type'])).toList();
   await showModalBottomSheet<void>(context:context,isScrollControlled:true,backgroundColor:const Color(0xFF211D30),builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.65,child:Column(children:[
    Padding(padding:const EdgeInsets.all(16),child:Text(kind=='media'?t('الوسائط المرسلة','Shared media'):t('الملفات','Files'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold))),
-   Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد عناصر بعد','Nothing shared yet'))):ListView(children:found.map((m)=>ListTile(leading:Icon(kind=='media'?Icons.image_outlined:Icons.insert_drive_file_outlined,color:skin.accent),title:Text((m['body']??'').toString().split('/').last,maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])))).toList()))
+   Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد عناصر بعد','Nothing shared yet'))):ListView(children:found.map((m)=>ListTile(leading:Icon(kind=='media'?Icons.image_outlined:Icons.insert_drive_file_outlined,color:skin.accent),title:Text((m['body']??'').toString().split('/').last,maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])),onTap:(){Navigator.pop(ctx);_openLibraryItem(m);})).toList()))
   ]))));
  }
    @override void dispose(){input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
