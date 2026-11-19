@@ -154,10 +154,16 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final old=urls[path];if(old!=null)return old;final f=db.storage.from(_bucket).createSignedUrl(path,900);urls[path]=f;
   f.then((_){Future<void>.delayed(const Duration(minutes:10),(){if(identical(urls[path],f)){urls.remove(path);if(mounted)setState((){});}});},onError:(_){if(identical(urls[path],f))urls.remove(path);});return f;
  }
+ String _absoluteStorageRpcUrl(dynamic result){
+  final value=result?.toString()??'';if(value.isEmpty||value.startsWith('http'))return value;
+  final origin=Uri.parse(db.storage.from(_bucket).getPublicUrl('ours-url-base')).origin;
+  final path=value.startsWith('/storage/v1')?value:'/storage/v1'+(value.startsWith('/')?value:'/'+value);
+  return origin+path;
+ }
  Future<void> _openLimitedMedia(Map<String,dynamic> m) async{
   try{
    final result=await db.rpc('ours_consume_limited_media',params:{'p_message_id':m['id']});
-   final url=result?.toString()??'';if(url.isEmpty){_show(t('انتهت المشاهدات المسموحة','Allowed views have been used'));return;}
+   final url=_absoluteStorageRpcUrl(result);if(url.isEmpty){_show(t('انتهت المشاهدات المسموحة','Allowed views have been used'));return;}
    final p=(m['view_once_storage_path']??m['body']??'').toString();final isVideo=p.toLowerCase().endsWith('.mp4');
    if(isVideo){await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication);}
    else if(mounted){await showDialog<void>(context:context,builder:(_)=>Dialog(backgroundColor:Colors.transparent,child:InteractiveViewer(child:Image.network(url,fit:BoxFit.contain))));}
@@ -262,7 +268,7 @@ class _OursConversationDetailsPageState extends State<OursConversationDetailsPag
  @override void initState(){super.initState();tabs=TabController(length:3,vsync:this);future=_load();}
  Future<List<Map<String,dynamic>>> _load()async{final r=await db.from('duo_direct_messages').select('id,body,message_type,created_at,sender_id,view_once_storage_path,max_views,view_count').eq('conversation_id',widget.conversationId).order('created_at',ascending:false);return List<Map<String,dynamic>>.from(r);}
  Future<String> _signed(String path)=>db.storage.from(_bucket).createSignedUrl(path,300);
- Future<void> _open(Map<String,dynamic> m)async{final path=(m['body']=='[viewed]'?m['view_once_storage_path']:m['body'])?.toString()??'';try{final limited=m['message_type']=='view_once'||m['message_type']=='view_twice';final result=limited?await db.rpc('ours_consume_limited_media',params:{'p_message_id':m['id']}):await _signed(path);final url=result?.toString()??'';if(url.isEmpty)throw Exception('View limit reached');await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication);}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تعذر فتح العنصر أو انتهت المشاهدات','Unable to open item or view limit reached'))));}}
+ Future<void> _open(Map<String,dynamic> m)async{final path=(m['body']=='[viewed]'?m['view_once_storage_path']:m['body'])?.toString()??'';try{final limited=m['message_type']=='view_once'||m['message_type']=='view_twice';final result=limited?await db.rpc('ours_consume_limited_media',params:{'p_message_id':m['id']}):await _signed(path);final url=limited?_absoluteStorageRpcUrl(result):result?.toString()??'';if(url.isEmpty)throw Exception('View limit reached');await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication);}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تعذر فتح العنصر أو انتهت المشاهدات','Unable to open item or view limit reached'))));}}
  bool _isVideo(String p)=>p.toLowerCase().endsWith('.mp4')||p.toLowerCase().endsWith('.mov');
  @override void dispose(){tabs.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_navy,appBar:AppBar(backgroundColor:_navy,title:Text(t('معلومات المحادثة','Conversation info')),bottom:TabBar(controller:tabs,indicatorColor:_gold,labelColor:_gold,unselectedLabelColor:_lavender,tabs:[Tab(text:t('الوسائط','Media')),Tab(text:t('الملفات','Files')),Tab(text:t('الصوتيات','Audio'))])),
