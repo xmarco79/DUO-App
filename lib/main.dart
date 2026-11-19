@@ -5,11 +5,9 @@ import 'dart:ui' as ui;
 import 'notifications/ours_push_service.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'worlds/world_hub_page.dart';
-import 'social/ours_social_pages.dart';
-import 'notifications/ours_notifications.dart';
-import 'memories/ours_albums_page.dart';
+import 'social/ours_home_page.dart';
 import 'chat/ours_message_reactions.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
@@ -32,7 +30,48 @@ String oursText(BuildContext context, String ar, String en) =>
     Localizations.localeOf(context).languageCode == 'ar' ? ar : en;
 
 // Preview builds open the home screen without requiring an account.
-const bool previewMode = bool.fromEnvironment('OURS_PREVIEW_MODE', defaultValue: false);
+
+class _OursChatTheme {
+  final String id, titleAr, titleEn, detailAr, detailEn;
+  final Color background, mine, partner, accent;
+  final List<Color> mineGradient, partnerGradient;
+  final IconData symbol;
+  const _OursChatTheme(
+    this.id, this.titleAr, this.titleEn, this.detailAr, this.detailEn,
+    this.background, this.mine, this.partner, this.accent,
+    this.mineGradient, this.partnerGradient, this.symbol,
+  );
+}
+
+const _oursChatThemes = [
+  _OursChatTheme('ours','نبض OURS','OURS Pulse','هوية نابضة بتدرجات ليلية ولمعة ذهبية','OURS signature with lively gradients and gold glows',
+    Color(0xFF10101C),Color(0xFF3B285C),Color(0xFF241B36),Color(0xFFFFD66B),
+    [Color(0xFF6D42A8),Color(0xFF39275D)],[Color(0xFF332345),Color(0xFF21182F)],Icons.all_inclusive_rounded),
+  _OursChatTheme('aurora','أورورا لايف','Aurora Live','شفق متحرك بطيف فيروزي وأزرق','Vivid teal and blue aurora',
+    Color(0xFF071A27),Color(0xFF147B82),Color(0xFF123D50),Color(0xFF75F1D6),
+    [Color(0xFF20B7A6),Color(0xFF2368B7)],[Color(0xFF174D60),Color(0xFF0D2B3A)],Icons.auto_awesome),
+  _OursChatTheme('flamenco','فلامنكو','Flamenco','مرجان ووردي بلمسة بنفسجية','Coral, rose and violet',
+    Color(0xFF25101D),Color(0xFFB33C6D),Color(0xFF54233E),Color(0xFFFFA36D),
+    [Color(0xFFE65370),Color(0xFF943C93)],[Color(0xFF6A2C55),Color(0xFF351C36)],Icons.wb_twilight),
+  _OursChatTheme('bloom','بلوم','Bloom','وردي زاهي وموف ناعم','Vibrant pink and soft violet',
+    Color(0xFF261322),Color(0xFFB34F8B),Color(0xFF4B2844),Color(0xFFFFC2DE),
+    [Color(0xFFE36AA8),Color(0xFF9B5BDB)],[Color(0xFF623B5B),Color(0xFF35243D)],Icons.local_florist),
+  _OursChatTheme('lagoon','بلو لاجون','Blue Lagoon','موج أزرق ولمعة سماوية','Blue waves and cyan glow',
+    Color(0xFF061827),Color(0xFF167FB0),Color(0xFF123D58),Color(0xFF80E8FF),
+    [Color(0xFF168FCA),Color(0xFF2558B5)],[Color(0xFF194B68),Color(0xFF0D2B43)],Icons.waves),
+  _OursChatTheme('emerald','إميرالد','Emerald','أخضر زمردي ونعناع','Emerald and mint',
+    Color(0xFF0C1D18),Color(0xFF168B67),Color(0xFF18473A),Color(0xFF91F5B8),
+    [Color(0xFF20A879),Color(0xFF147B78)],[Color(0xFF285343),Color(0xFF17372F)],Icons.eco),
+  _OursChatTheme('dreamscape','دريم سكيب','Dreamscape','بنفسجي كوني وتوهج ليلي','Cosmic violet glow',
+    Color(0xFF100C2A),Color(0xFF7045D8),Color(0xFF342458),Color(0xFFD6B7FF),
+    [Color(0xFF8D59F0),Color(0xFF4B39B6)],[Color(0xFF443B68),Color(0xFF282442)],Icons.nights_stay),
+  _OursChatTheme('sundust','صن داست','Sun Dust','عنبر ونحاس وألوان غروب','Amber, copper and sunset',
+    Color(0xFF241813),Color(0xFFB66B35),Color(0xFF4C3024),Color(0xFFFFDA87),
+    [Color(0xFFD8873D),Color(0xFF9A4C39)],[Color(0xFF60452F),Color(0xFF35291F)],Icons.wb_sunny),
+  _OursChatTheme('cyberpop','سايبر بوب','Cyber Pop','نيون فوشيا وسماوي','Neon fuchsia and cyan',
+    Color(0xFF140A22),Color(0xFF8144C7),Color(0xFF36234D),Color(0xFF7CFFF1),
+    [Color(0xFFB53ED1),Color(0xFF4C68DA)],[Color(0xFF3B315F),Color(0xFF24203F)],Icons.bolt),
+];
 
 // ==================== APP PREFERENCES ====================
 
@@ -96,12 +135,106 @@ class OursApp extends StatelessWidget {
           scaffoldBackgroundColor: navy,
           colorScheme: const ColorScheme.dark(
             primary: gold,
+            onPrimary: navy,
             secondary: lavender,
+            onSecondary: navy,
             surface: purple,
+            onSurface: Colors.white,
+            error: Color(0xFFFF7777),
           ),
           useMaterial3: true,
+          visualDensity: VisualDensity.standard,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: navy,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: true,
+            titleTextStyle: TextStyle(
+              color: gold,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+            iconTheme: IconThemeData(color: lavender),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: purple.withValues(alpha: .58),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            labelStyle: const TextStyle(color: lavender),
+            hintStyle: TextStyle(color: lavender.withValues(alpha: .65)),
+            prefixIconColor: lavender,
+            suffixIconColor: lavender,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide(color: lavender.withValues(alpha: .24)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide(color: lavender.withValues(alpha: .20)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: const BorderSide(color: gold, width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: const BorderSide(color: Color(0xFFFF7777)),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: const BorderSide(color: Color(0xFFFF7777), width: 1.5),
+            ),
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              backgroundColor: gold,
+              foregroundColor: navy,
+              disabledBackgroundColor: gold.withValues(alpha: .22),
+              disabledForegroundColor: lavender.withValues(alpha: .65),
+              minimumSize: const Size(48, 50),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: lavender,
+              minimumSize: const Size(48, 48),
+              side: BorderSide(color: lavender.withValues(alpha: .55)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              foregroundColor: gold,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          snackBarTheme: SnackBarThemeData(
+            backgroundColor: purple,
+            contentTextStyle: const TextStyle(color: Colors.white),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          dialogTheme: DialogThemeData(
+            backgroundColor: purple,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          ),
+          navigationBarTheme: NavigationBarThemeData(
+            backgroundColor: purple,
+            indicatorColor: lavender.withValues(alpha: .18),
+            labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+              color: states.contains(WidgetState.selected) ? gold : lavender,
+              fontSize: 11,
+              fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+            )),
+          ),
+          progressIndicatorTheme: const ProgressIndicatorThemeData(color: gold),
+          dividerTheme: DividerThemeData(color: lavender.withValues(alpha: .14), thickness: 1),
         ),
-        home: previewMode ? const HomePage() : const OursEntryGate(),
+        home: const OursEntryGate(),
       ),
     );
   }
@@ -116,7 +249,6 @@ class OursEntryGate extends StatefulWidget {
 
 class _OursEntryGateState extends State<OursEntryGate> {
   bool showLogin = false;
-  bool creatingAccount = false;
   StreamSubscription<AuthState>? authSubscription;
 
   @override
@@ -126,7 +258,6 @@ class _OursEntryGateState extends State<OursEntryGate> {
       if (state.event == AuthChangeEvent.signedOut && mounted) {
         setState(() {
           showLogin = false;
-          creatingAccount = false;
         });
       }
     });
@@ -147,15 +278,17 @@ class _OursEntryGateState extends State<OursEntryGate> {
         final session = snapshot.data?.session ?? auth.currentSession;
         if (session != null) {
           return OursSocialHomePage(
+            onChatTap: (spaceId) => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => ChatPage(spaceId: spaceId)),
+            ),
             onProfileTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
             ),
           );
         }
-        if (showLogin) return LoginPage(initialCreatingAccount: creatingAccount);
+        if (showLogin) return const LoginPage();
         return WelcomePage(
-          onLogin: () => setState(() { showLogin = true; creatingAccount = false; }),
-          onRegister: () => setState(() { showLogin = true; creatingAccount = true; }),
+          onLogin: () => setState(() { showLogin = true; }),
         );
       },
     );
@@ -164,8 +297,7 @@ class _OursEntryGateState extends State<OursEntryGate> {
 
 class WelcomePage extends StatelessWidget {
   final VoidCallback onLogin;
-  final VoidCallback onRegister;
-  const WelcomePage({super.key, required this.onLogin, required this.onRegister});
+  const WelcomePage({super.key, required this.onLogin});
 
   @override
   Widget build(BuildContext context) {
@@ -191,17 +323,16 @@ class WelcomePage extends StatelessWidget {
                 Text(oursText(context, 'عالمك الخاص، بطريقتكما', 'A private universe for two'), textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 12),
-                Text(oursText(context, 'مساحة رقمية خاصة تجمعك أنت وشريكك فقط؛ للمحادثات والذكريات والعوالم التي تصنعانها معًا.', 'A private space for you and your partner to chat, share memories, and build your own worlds together.'),
+                Text(oursText(context, 'مساحة رقمية خاصة تجمع naif و zoi للمحادثات والإبداع والموسيقى.', 'A private space for naif and zoi to chat, create, and enjoy music together.'),
                   textAlign: TextAlign.center, style: const TextStyle(color: lavender, height: 1.8, fontSize: 15)),
                 const SizedBox(height: 38),
                 SizedBox(width: double.infinity, height: 54,
-                  child: FilledButton(onPressed: onRegister, child: Text(oursText(context, 'إنشاء حساب', 'Create account')))),
-                const SizedBox(height: 12),
-                SizedBox(width: double.infinity, height: 54,
                   child: OutlinedButton(onPressed: onLogin, style: OutlinedButton.styleFrom(foregroundColor: lavender, side: const BorderSide(color: lavender)),
                     child: Text(oursText(context, 'تسجيل الدخول', 'Log in')))),
-                const SizedBox(height: 28),
-                Text(oursText(context, 'عالم خاص لشخصين فقط', 'A private world for two only'), style: const TextStyle(color: gold, fontSize: 12, letterSpacing: 1.2)),
+                const SizedBox(height: 18),
+                Text(oursText(context, 'الحسابان المعتمدان: naif و zoi فقط', 'The only accounts: naif and zoi'), textAlign: TextAlign.center, style: const TextStyle(color: gold, fontSize: 12, letterSpacing: 0.5)),
+                const SizedBox(height: 10),
+                Text(oursText(context, 'عالم خاص لشخصين فقط', 'A private world for two only'), style: const TextStyle(color: lavender, fontSize: 11, letterSpacing: 1.2)),
               ],
             ),
           ),
@@ -225,6 +356,9 @@ class OursAuthGate extends StatelessWidget {
         final session = snapshot.data?.session ?? auth.currentSession;
         if (session != null) {
           return OursSocialHomePage(
+            onChatTap: (spaceId) => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => ChatPage(spaceId: spaceId)),
+            ),
             onProfileTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
             ),
@@ -246,8 +380,7 @@ class OursAuthGate extends StatelessWidget {
 // ==================== LOGIN PAGE ====================
 
 class LoginPage extends StatefulWidget {
-  final bool initialCreatingAccount;
-  const LoginPage({super.key, this.initialCreatingAccount = false});
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -256,10 +389,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final username = TextEditingController();
   final password = TextEditingController();
-  final confirmPassword = TextEditingController();
 
   bool loading = false;
-  late bool creatingAccount = widget.initialCreatingAccount;
 
   SupabaseClient get db => Supabase.instance.client;
 
@@ -310,9 +441,13 @@ class _LoginPageState extends State<LoginPage> {
 
       // OursAuthGate observes the authenticated session and opens HomePage.
     } catch (e) {
-      showMessage(
-        e.toString().replaceFirst('Exception: ', ''),
-      );
+      final raw = e.toString().toLowerCase();
+      final message = raw.contains('invalid login') || raw.contains('invalid credentials') || raw.contains('password')
+          ? oursText(context, 'اسم المستخدم أو كلمة المرور غير صحيحة', 'Username or password is incorrect')
+          : raw.contains('socket') || raw.contains('network') || raw.contains('connection') || raw.contains('timeout')
+              ? oursText(context, 'تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مجددًا.', 'Could not connect. Check your internet and retry.')
+              : oursText(context, 'تعذر تسجيل الدخول الآن. حاول مرة أخرى.', 'Login failed. Please try again.');
+      showMessage(message);
     } finally {
       if (mounted) {
         setState(() => loading = false);
@@ -320,94 +455,11 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> register() async {
-    final user = username.text.trim().toLowerCase();
-    final pass = password.text;
-    final confirm = confirmPassword.text;
-
-    if (!RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(user)) {
-      showMessage(oursText(
-        context,
-        'اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا، ويحتوي على أحرف إنجليزية أو أرقام أو _ فقط',
-        'Username must be 3–20 characters using English letters, numbers, or _ only',
-      ));
-      return;
-    }
-
-    if (pass.length < 8) {
-      showMessage(oursText(context, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'Password must be at least 8 characters'));
-      return;
-    }
-
-    if (pass != confirm) {
-      showMessage(oursText(context, 'كلمتا المرور غير متطابقتين', 'Passwords do not match'));
-      return;
-    }
-
-    setState(() => loading = true);
-
-    try {
-      final response = await db.functions.invoke(
-        'duo-username-register',
-        body: {
-          'username': user,
-          'password': pass,
-        },
-      );
-
-      final data = response.data is Map
-          ? Map<String, dynamic>.from(response.data)
-          : <String, dynamic>{};
-
-      if (response.status < 200 || response.status >= 300) {
-        throw Exception(data['error'] ?? oursText(context, 'تعذر إنشاء الحساب', 'Could not create account'));
-      }
-
-      final loginResponse = await db.functions.invoke(
-        'duo-username-login',
-        body: {
-          'username': user,
-          'password': pass,
-        },
-      );
-
-      final loginData = loginResponse.data is Map
-          ? Map<String, dynamic>.from(loginResponse.data)
-          : <String, dynamic>{};
-
-      if (loginResponse.status != 200) {
-        throw Exception(
-          loginData['error'] ?? oursText(context, 'تم إنشاء الحساب، تعذر تسجيل الدخول', 'Account created, but login failed'),
-        );
-      }
-
-      final refreshToken = loginData['refresh_token'];
-
-      if (refreshToken == null) {
-        throw Exception(oursText(context, 'لم يتم استلام بيانات الجلسة', 'Session data was not received'));
-      }
-
-      await db.auth.setSession(refreshToken);
-
-      if (!mounted) return;
-
-      // OursAuthGate observes the authenticated session and opens HomePage.
-    } catch (e) {
-      showMessage(
-        e.toString().replaceFirst('Exception: ', ''),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => loading = false);
-      }
-    }
-  }
 
   @override
   void dispose() {
     username.dispose();
     password.dispose();
-    confirmPassword.dispose();
     super.dispose();
   }
 
@@ -445,7 +497,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 50),
                 Text(
-                  creatingAccount ? oursText(context, 'أنشئ حسابك', 'Create your account') : oursText(context, 'مرحبًا بعودتك', 'Welcome back'),
+                  oursText(context, 'مرحبًا بعودتك', 'Welcome back'),
                   style: const TextStyle(fontSize: 24),
                 ),
                 const SizedBox(height: 25),
@@ -454,7 +506,7 @@ class _LoginPageState extends State<LoginPage> {
                   autocorrect: false,
                   decoration: InputDecoration(
                     labelText: oursText(context, 'اسم المستخدم', 'Username'),
-                    hintText: 'e.g. ours_user',
+                    hintText: 'naif / zoi',
                     prefixIcon: Icon(Icons.person_outline),
                     border: OutlineInputBorder(),
                   ),
@@ -469,72 +521,22 @@ class _LoginPageState extends State<LoginPage> {
                     border: OutlineInputBorder(),
                   ),
                 ),
-                if (creatingAccount) ...[
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: confirmPassword,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: oursText(context, 'تأكيد كلمة المرور', 'Confirm password'),
-                      prefixIcon: Icon(Icons.lock_reset),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    oursText(context, 'اسم المستخدم: أحرف إنجليزية وأرقام و _ فقط', 'Username: English letters, numbers and _ only'),
-                    style: TextStyle(
-                      color: lavender,
-                      fontSize: 12,
-                    ),
-                  ),
-                  Text(
-                    oursText(context, 'كلمة المرور: 8 أحرف على الأقل', 'Password: at least 8 characters'),
-                    style: TextStyle(
-                      color: lavender,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 25),
                 SizedBox(
                   width: double.infinity,
                   height: 54,
                   child: FilledButton(
-                    onPressed: loading
-                        ? null
-                        : creatingAccount
-                            ? register
-                            : login,
+                    onPressed: loading ? null : login,
                     child: loading
                         ? const CircularProgressIndicator(
                             color: navy,
                           )
                         : Text(
-                            creatingAccount
-                                ? oursText(context, 'إنشاء الحساب', 'Create account')
-                                : oursText(context, 'تسجيل الدخول', 'Log in'),
+                            oursText(context, 'تسجيل الدخول', 'Log in'),
                           ),
                   ),
                 ),
                 const SizedBox(height: 18),
-                TextButton(
-                  onPressed: loading
-                      ? null
-                      : () {
-                          setState(() {
-                            creatingAccount = !creatingAccount;
-                            password.clear();
-                            confirmPassword.clear();
-                          });
-                        },
-                  child: Text(
-                    creatingAccount
-                        ? oursText(context, 'لديك حساب بالفعل؟ تسجيل الدخول', 'Already have an account? Log in')
-                        : oursText(context, 'ليس لديك حساب؟ إنشاء حساب جديد', 'New here? Create an account'),
-                    style: const TextStyle(color: lavender),
-                  ),
-                ),
                 const SizedBox(height: 20),
                 const Text(
                   'A WORLD OF TWO',
@@ -555,409 +557,7 @@ class _LoginPageState extends State<LoginPage> {
 
 // ==================== HOME PAGE ====================
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  int selectedWorldIndex = 0;
-  bool loading = true;
-  String? inviteCode;
-  String? spaceId;
-
-  final codeController = TextEditingController();
-
-  SupabaseClient get db => Supabase.instance.client;
-
-  @override
-  void initState() {
-    super.initState();
-    loadExistingSpace();
-  }
-
-  Future<void> loadExistingSpace() async {
-    try {
-      final userId = db.auth.currentUser?.id;
-      if (userId == null) {
-        if (mounted) setState(() => loading = false);
-        return;
-      }
-
-      final membership = await db
-          .from('duo_members')
-          .select('space_id')
-          .eq('user_id', userId)
-          .maybeSingle();
-
-      if (!mounted) return;
-      setState(() {
-        spaceId = membership?['space_id']?.toString();
-        loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => loading = false);
-      message('تعذر استرجاع مساحتك: $e');
-    }
-  }
-
-  void message(String value) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(value)),
-    );
-  }
-
-  Future<void> createSpace() async {
-    setState(() => loading = true);
-
-    try {
-      final createdSpace = await db.rpc('create_duo_space');
-      final createdId = createdSpace?.toString() ?? '';
-      if (createdId.isEmpty) throw Exception('لم يرجع الخادم معرّف المساحة');
-      if (!mounted) return;
-      setState(() => spaceId = createdId);
-
-      // Space creation and invite generation are separate operations.
-      // Preserve the created space if invite generation fails.
-      try {
-        final code = await db.rpc('create_duo_invite');
-        if (!mounted) return;
-        setState(() => inviteCode = code.toString());
-        message('تم إنشاء المساحة بنجاح');
-      } catch (inviteError) {
-        if (!mounted) return;
-        message('تم إنشاء المساحة، لكن تعذر إنشاء رمز الدعوة. يمكنك إعادة المحاولة لاحقًا. ($inviteError)');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      message('تعذر إنشاء المساحة: $e');
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
-
-  Future<void> joinSpace() async {
-    final code = codeController.text.trim();
-
-    if (code.length != 8) {
-      message('أدخل رمز الدعوة المكوّن من 8 خانات');
-      return;
-    }
-
-    setState(() => loading = true);
-
-    try {
-      final joinedSpace = await db.rpc(
-        'redeem_duo_invite',
-        params: {'p_code': code},
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        spaceId = joinedSpace.toString();
-        inviteCode = null;
-      });
-
-      codeController.clear();
-      message('تم الانضمام إلى المساحة بنجاح');
-    } catch (e) {
-      message('تعذر الانضمام: $e');
-    } finally {
-      if (mounted) {
-        setState(() => loading = false);
-      }
-    }
-  }
-
-  void openChat() {
-    if (spaceId == null) return;
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ChatPage(spaceId: spaceId!),
-      ),
-    );
-  }
-
-  void showJoinDialog() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: purple,
-        title: const Text('الانضمام إلى مساحة'),
-        content: TextField(
-          controller: codeController,
-          maxLength: 8,
-          textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(
-            hintText: 'رمز الدعوة',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(oursText(context, 'إلغاء', 'Cancel')),
-          ),
-          FilledButton(
-            onPressed: loading
-                ? null
-                : () {
-                    Navigator.pop(dialogContext);
-                    joinSpace();
-                  },
-            child: const Text('انضمام'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget actionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback? onTap,
-  }) {
-    return Card(
-      color: purple,
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(18),
-        leading: Icon(
-          icon,
-          color: gold,
-          size: 32,
-        ),
-        title: Text(title),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Text(
-            subtitle,
-            style: const TextStyle(color: lavender),
-          ),
-        ),
-        trailing: const Icon(
-          Icons.arrow_forward_ios,
-          color: gold,
-        ),
-        onTap: onTap,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    codeController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'OURS',
-          style: TextStyle(
-            color: gold,
-            letterSpacing: 5,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: navy,
-        actions: previewMode ? const [] : [
-          OursNotificationBell(spaceId: spaceId),
-          IconButton(
-            tooltip: 'الملف الشخصي والإعدادات',
-            icon: const Icon(Icons.person_outline),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ProfileSettingsPage(),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (dialogContext) => AlertDialog(
-                  backgroundColor: purple,
-                  icon: const Icon(Icons.logout_rounded, color: gold),
-                  title: Text(oursText(context, 'تسجيل الخروج', 'Log out')),
-                  content: Text(oursText(context, 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟', 'Are you sure you want to log out?')),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(oursText(context, 'إلغاء', 'Cancel'))),
-                    FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(oursText(context, 'تسجيل الخروج', 'Log out'))),
-                  ],
-                ),
-              );
-              if (confirmed != true) return;
-              try {
-                await OursPushService.unregisterCurrentToken();
-                await db.auth.signOut();
-
-                if (!mounted) return;
-
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const LoginPage(),
-                  ),
-                );
-              } catch (e) {
-                message('تعذر تسجيل الخروج: $e');
-              }
-            },
-          ),
-        ],
-      ),
-      body: selectedWorldIndex == 0 ? SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.all_inclusive_rounded,
-                  color: gold,
-                  size: 65,
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'عالمك الخاص يبدأ هنا',
-                  style: TextStyle(fontSize: 25),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'مساحة تجمع شخصين فقط',
-                  style: TextStyle(color: lavender),
-                ),
-                const SizedBox(height: 45),
-                if (previewMode) ...[
-                  Card(
-                    color: purple,
-                    child: const Padding(
-                      padding: EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Icon(Icons.visibility_outlined, color: gold),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'وضع معاينة — يمكنك استكشاف الواجهة، لكن إنشاء المساحات والمحادثات يتطلب تسجيل الدخول.',
-                              style: TextStyle(color: lavender),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                ],
-                if (spaceId == null) ...[
-                  actionCard(
-                    icon: Icons.add_circle_outline,
-                    title: 'إنشاء مساحة جديدة',
-                    subtitle: 'أنشئ عالمك الخاص وأرسل رمز الدعوة',
-                    onTap: loading ? null : previewMode
-                        ? () => message('هذه نسخة معاينة؛ إنشاء مساحة يتطلب حسابًا.')
-                        : createSpace,
-                  ),
-                  const SizedBox(height: 18),
-                  actionCard(
-                    icon: Icons.vpn_key_outlined,
-                    title: 'الانضمام إلى مساحة',
-                    subtitle: 'أدخل رمز الدعوة الذي وصلك',
-                    onTap: loading ? null : previewMode
-                        ? () => message('هذه نسخة معاينة؛ الانضمام يتطلب حسابًا.')
-                        : showJoinDialog,
-                  ),
-                ] else ...[
-                  const Card(
-                    color: purple,
-                    child: ListTile(
-                      leading: Icon(Icons.verified_user_outlined, color: gold, size: 30),
-                      title: Text('مساحتك جاهزة'),
-                      subtitle: Text(
-                        'لديك مساحة خاصة بالفعل. يمكنك فتح محادثتك من الزر أدناه.',
-                        style: TextStyle(color: lavender),
-                      ),
-                    ),
-                  ),
-                ],
-                if (loading) ...[
-                  const SizedBox(height: 20),
-                  const CircularProgressIndicator(color: gold),
-                ],
-                if (inviteCode != null) ...[
-                  const SizedBox(height: 30),
-                  const Text('رمز الدعوة الخاص بك'),
-                  const SizedBox(height: 12),
-                  SelectableText(
-                    inviteCode!,
-                    style: const TextStyle(
-                      fontSize: 30,
-                      color: gold,
-                      letterSpacing: 7,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'شاركه مع الشخص الذي تريد دعوته',
-                    style: TextStyle(color: lavender),
-                  ),
-                ],
-                if (spaceId != null) ...[
-                  const SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: FilledButton.icon(
-                      onPressed: openChat,
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      label: const Text(
-                        'فتح المحادثة',
-                        style: TextStyle(fontSize: 17),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ) : OursWorldHubPage(
-        key: ValueKey('ours-world-$selectedWorldIndex'),
-        spaceId: spaceId,
-        worldIndex: selectedWorldIndex,
-      ),
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: purple,
-        selectedIndex: selectedWorldIndex,
-        onDestinationSelected: (index) => setState(() => selectedWorldIndex = index),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.forum_outlined), label: 'Connect'),
-          NavigationDestination(icon: Icon(Icons.public_outlined), label: 'Universe'),
-          NavigationDestination(icon: Icon(Icons.sports_esports_outlined), label: 'Play'),
-          NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), label: 'Memories'),
-          NavigationDestination(icon: Icon(Icons.favorite_border), label: 'Together'),
-        ],
-      ),
-    );
-  }
-}
-
- // ==================== CHAT PAGE ====================
+// ==================== CHAT PAGE ====================
 
 class ChatPage extends StatefulWidget {
   final String spaceId;
@@ -996,6 +596,7 @@ class _ChatPageState extends State<ChatPage> {
   String partnerName = 'مساحتكما الخاصة';
   int unreadIncomingCount = 0;
   String searchQuery = '';
+  _OursChatTheme chatTheme = _oursChatThemes.first;
 
   RealtimeChannel? channel;
   RealtimeChannel? presenceChannel;
@@ -1007,10 +608,106 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     loadMessages();
+    loadChatTheme();
     loadQuietMode();
     loadParticipantNames();
     listenToMessages();
     listenToPresence();
+  }
+
+  Future<void> loadChatTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getString('ours_chat_theme_${currentUserId}') ?? 'ours';
+    final selected = _oursChatThemes.where((theme) => theme.id == id);
+    if (mounted) setState(() => chatTheme = selected.isEmpty ? _oursChatThemes.first : selected.first);
+  }
+
+  Future<void> chooseChatTheme() async {
+    final selected = await showModalBottomSheet<_OursChatTheme>(
+      context: context,
+      backgroundColor: const Color(0xFF171326),
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.of(sheetContext).size.height * 0.68,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(oursText(context, 'اختر أجواء محادثتكما', 'Choose your chat atmosphere'),
+                  style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(oursText(context, 'كل ثيم له خلفية وفقاعات وألوانه الخاصة', 'Every theme has its own mood, bubbles and colors'),
+                  style: const TextStyle(color: lavender, fontSize: 12)),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: GridView.builder(
+                    itemCount: _oursChatThemes.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2, childAspectRatio: 1.32,
+                      crossAxisSpacing: 11, mainAxisSpacing: 11,
+                    ),
+                    itemBuilder: (context, index) {
+                      final theme = _oursChatThemes[index];
+                      final active = chatTheme.id == theme.id;
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => Navigator.pop(sheetContext, theme),
+                        child: Container(
+                          padding: const EdgeInsets.all(11),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(colors: [theme.background, theme.partner], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: active ? theme.accent : theme.accent.withValues(alpha: .28), width: active ? 2 : 1),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                Icon(theme.symbol, color: theme.accent, size: 19),
+                                const Spacer(),
+                                if (active) Icon(Icons.check_circle_rounded, color: theme.accent, size: 19),
+                              ]),
+                              const Spacer(),
+                              Align(alignment: AlignmentDirectional.centerEnd, child: Container(
+                                width: 76, height: 22, decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: theme.mineGradient),
+                                  borderRadius: const BorderRadiusDirectional.only(topStart: Radius.circular(12), bottomStart: Radius.circular(12), bottomEnd: Radius.circular(12)),
+                                ),
+                              )),
+                              const SizedBox(height: 5),
+                              Align(alignment: AlignmentDirectional.centerStart, child: Container(
+                                width: 62, height: 19, decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: theme.partnerGradient),
+                                  borderRadius: const BorderRadiusDirectional.only(topEnd: Radius.circular(12), bottomStart: Radius.circular(12), bottomEnd: Radius.circular(12)),
+                                  border: Border.all(color: theme.accent.withValues(alpha: .24)),
+                                ),
+                              )),
+                              const SizedBox(height: 9),
+                              Text(oursText(context, theme.titleAr, theme.titleEn),
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+                              Text(oursText(context, theme.detailAr, theme.detailEn),
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: theme.accent.withValues(alpha: .9), fontSize: 9)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => chatTheme = selected);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ours_chat_theme_${currentUserId}', selected.id);
   }
 
   Future<void> loadQuietMode() async {
@@ -1221,6 +918,40 @@ class _ChatPageState extends State<ChatPage> {
         final body = item['body']?.toString() ?? '';
         return body.length > 70 ? '${body.substring(0, 70)}…' : body;
     }
+  }
+
+  Future<void> _showMessageActions(Map<String, dynamic> item, bool isMine) async {
+    if (item['deleted_at'] != null) return;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: chatTheme.partner,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: Icon(Icons.reply_rounded, color: chatTheme.accent),
+            title: Text(oursText(context, 'الرد على الرسالة', 'Reply')),
+            onTap: () => Navigator.pop(sheetContext, 'reply'),
+          ),
+          if (item['message_type'] == 'text')
+            ListTile(
+              leading: Icon(Icons.copy_rounded, color: chatTheme.accent),
+              title: Text(oursText(context, 'نسخ النص', 'Copy text')),
+              onTap: () => Navigator.pop(sheetContext, 'copy'),
+            ),
+          if (isMine)
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+              title: Text(oursText(context, 'حذف الرسالة', 'Delete message')),
+              onTap: () => Navigator.pop(sheetContext, 'delete'),
+            ),
+        ]),
+      ),
+    );
+    if (!mounted || action == null) return;
+    if (action == 'reply') _replyToMessage(item);
+    if (action == 'copy') await _copyMessage(item['body']?.toString() ?? '');
+    if (action == 'delete') await _deleteMessage(item);
   }
 
   void _replyToMessage(Map<String, dynamic> item) {
@@ -1554,10 +1285,31 @@ class _ChatPageState extends State<ChatPage> {
     if (value == null) return '';
     try {
       final date = DateTime.parse(value.toString()).toLocal();
-      return DateFormat('h:mm a').format(date);
+      return DateFormat(Localizations.localeOf(context).languageCode == 'ar' ? 'HH:mm' : 'h:mm a').format(date);
     } catch (_) {
       return '';
     }
+  }
+
+  bool _sameChatDay(dynamic first, dynamic second) {
+    final a = DateTime.tryParse(first?.toString() ?? '')?.toLocal();
+    final b = DateTime.tryParse(second?.toString() ?? '')?.toLocal();
+    return a != null && b != null && a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  String _formatChatDate(dynamic value) {
+    final date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+    if (date == null) return '';
+    final now = DateTime.now();
+    if (date.year == now.year && date.month == now.month && date.day == now.day) return oursText(context, 'اليوم', 'Today');
+    final yesterday = now.subtract(const Duration(days: 1));
+    if (date.year == yesterday.year && date.month == yesterday.month && date.day == yesterday.day) return oursText(context, 'أمس', 'Yesterday');
+    return DateFormat('d MMM yyyy', Localizations.localeOf(context).languageCode).format(date);
+  }
+
+  Future<void> _copyMessage(String value) async {
+    await Clipboard.setData(ClipboardData(text: value));
+    showMessage(oursText(context, 'تم نسخ الرسالة', 'Message copied'));
   }
 
   void scrollToBottom() {
@@ -1616,12 +1368,6 @@ class _ChatPageState extends State<ChatPage> {
     controller.dispose();
   }
 
-  void openAlbums() {
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => OursAlbumsPage(spaceId: widget.spaceId),
-    ));
-  }
-
   void openMediaGallery() {
     Navigator.push(
       context,
@@ -1659,33 +1405,51 @@ class _ChatPageState extends State<ChatPage> {
           }).toList();
 
     return Scaffold(
+      backgroundColor: chatTheme.background,
       appBar: AppBar(
-        title: Column(
+        title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'OURS',
-              style: TextStyle(
-                color: gold,
-                letterSpacing: 5,
+            CircleAvatar(
+              radius: 19,
+              backgroundColor: chatTheme.accent.withValues(alpha: .18),
+              child: Text(
+                partnerName.isNotEmpty ? partnerName.substring(0, 1).toUpperCase() : 'O',
+                style: TextStyle(color: chatTheme.accent, fontWeight: FontWeight.w800),
               ),
             ),
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 7, height: 7, decoration: BoxDecoration(
-                color: partnerOnline ? Colors.lightGreenAccent : Colors.grey,
-                shape: BoxShape.circle,
-              )),
-              const SizedBox(width: 5),
-              Text(
-                partnerOnline ? '$partnerName · متصل الآن' : '$partnerName · غير متصل',
-                style: const TextStyle(color: lavender, fontSize: 11, letterSpacing: 0),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(partnerName, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    Container(width: 7, height: 7, decoration: BoxDecoration(
+                      color: partnerOnline ? const Color(0xFF61D69A) : Colors.grey,
+                      shape: BoxShape.circle,
+                    )),
+                    const SizedBox(width: 5),
+                    Text(
+                      partnerOnline ? oursText(context, 'متصل الآن', 'online') : oursText(context, 'غير متصل', 'offline'),
+                      style: TextStyle(color: chatTheme.accent, fontSize: 10),
+                    ),
+                  ]),
+                ],
               ),
-            ]),
+            ),
           ],
         ),
-        centerTitle: true,
-        backgroundColor: navy,
+        centerTitle: false,
+        backgroundColor: chatTheme.background,
         actions: [
+          IconButton(
+            tooltip: 'مظهر المحادثة',
+            onPressed: chooseChatTheme,
+            icon: const Icon(Icons.palette_outlined, color: gold),
+          ),
           IconButton(
             tooltip: 'البحث في المحادثة',
             onPressed: showMessageSearch,
@@ -1693,11 +1457,6 @@ class _ChatPageState extends State<ChatPage> {
               Icons.search,
               color: searchQuery.isEmpty ? gold : Colors.lightGreenAccent,
             ),
-          ),
-          IconButton(
-            tooltip: 'ألبومات الصور المشتركة',
-            onPressed: openAlbums,
-            icon: const Icon(Icons.photo_album_outlined, color: gold),
           ),
           IconButton(
             tooltip: 'الوسائط والملفات المشتركة',
@@ -1754,33 +1513,57 @@ class _ChatPageState extends State<ChatPage> {
                           final isMe =
                               item['sender_id'] == currentUserId;
 
-                          return Align(
+                          final showDate = index == 0 ||
+                              !_sameChatDay(displayedMessages[index - 1]['created_at'], item['created_at']);
+                          final groupedWithPrevious = index > 0 &&
+                              !showDate &&
+                              displayedMessages[index - 1]['sender_id'] == item['sender_id'];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (showDate)
+                                Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.only(top: 8, bottom: 14),
+                                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: chatTheme.partner.withValues(alpha: 0.85),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: chatTheme.accent.withValues(alpha: 0.18)),
+                                    ),
+                                    child: Text(_formatChatDate(item['created_at']), style: TextStyle(color: chatTheme.accent, fontSize: 10)),
+                                  ),
+                                ),
+                              Align(
                             alignment: isMe
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              constraints: const BoxConstraints(
-                                maxWidth: 280,
+                                ? AlignmentDirectional.centerEnd
+                                : AlignmentDirectional.centerStart,
+                            child: GestureDetector(
+                              onLongPress: () => _showMessageActions(item, isMe),
+                              child: Container(
+                              constraints: BoxConstraints(
+                                maxWidth: MediaQuery.of(context).size.width * 0.80,
                               ),
-                              margin: const EdgeInsets.only(bottom: 12),
+                              margin: EdgeInsets.only(bottom: groupedWithPrevious ? 4 : 12),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 12,
                               ),
                               decoration: BoxDecoration(
-                                color: isMe
-                                    ? purple
-                                    : const Color(0xFF211D30),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: gold.withOpacity(0.25),
+                                gradient: LinearGradient(colors: isMe ? chatTheme.mineGradient : chatTheme.partnerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(19),
+                                  topRight: const Radius.circular(19),
+                                  bottomLeft: Radius.circular(isMe ? 19 : 5),
+                                  bottomRight: Radius.circular(isMe ? 5 : 19),
                                 ),
+                                border: Border.all(color: chatTheme.accent.withValues(alpha: 0.18)),
                               ),
-                              child: Column(
+                              child: IntrinsicWidth(child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (!isMe)
+                                  if (!isMe && !groupedWithPrevious)
                                     Padding(
                                       padding: const EdgeInsets.only(bottom: 6),
                                       child: Text(
@@ -1794,13 +1577,12 @@ class _ChatPageState extends State<ChatPage> {
                                     ),
                                   if (item['reply_to'] != null)
                                     Container(
-                                      width: double.infinity,
                                       margin: const EdgeInsets.only(bottom: 8),
                                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: navy.withOpacity(0.65),
+                                        color: chatTheme.background.withValues(alpha: 0.65),
                                         borderRadius: BorderRadius.circular(8),
-                                        border: const Border(left: BorderSide(color: gold, width: 3)),
+                                        border: Border(left: BorderSide(color: chatTheme.accent, width: 3)),
                                       ),
                                       child: Text(
                                         'رد على: ${_messagePreview(messages.firstWhere(
@@ -1881,12 +1663,9 @@ class _ChatPageState extends State<ChatPage> {
                                       },
                                     )
                                   else
-                                    Text(
+                                    SelectableText(
                                       item['body']?.toString() ?? '',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                      ),
+                                      style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5),
                                     ),
                                   if (item['deleted_at'] == null)
                                     Padding(
@@ -1904,28 +1683,19 @@ class _ChatPageState extends State<ChatPage> {
                                         _formatMessageTime(item['created_at']),
                                         style: const TextStyle(color: lavender, fontSize: 10),
                                       ),
-                                      const SizedBox(width: 8),
-                                      if (item['deleted_at'] == null)
-                                        InkWell(
-                                          onTap: () => _replyToMessage(item),
-                                          child: const Padding(
-                                            padding: EdgeInsets.all(4),
-                                            child: Icon(Icons.reply_rounded, color: lavender, size: 17),
-                                          ),
-                                        ),
+                                      const SizedBox(width: 6),
                                       if (isMe && item['deleted_at'] == null)
-                                        InkWell(
-                                          onTap: () => _deleteMessage(item),
-                                          child: const Padding(
-                                            padding: EdgeInsets.all(4),
-                                            child: Icon(Icons.delete_outline, color: Colors.redAccent, size: 17),
-                                          ),
-                                        ),
+                                        const Icon(Icons.check_rounded, color: lavender, size: 13),
+
                                     ],
                                   ),
                                 ],
                               ),
                             ),
+                            ),
+                            ),
+                          ),
+                            ],
                           );
                         },
                       ),
@@ -1933,10 +1703,10 @@ class _ChatPageState extends State<ChatPage> {
           Container(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
             decoration: BoxDecoration(
-              color: purple,
+              gradient: LinearGradient(colors: [chatTheme.mine, chatTheme.background], begin: Alignment.centerLeft, end: Alignment.centerRight),
               border: Border(
                 top: BorderSide(
-                  color: gold.withOpacity(0.2),
+                  color: chatTheme.accent.withValues(alpha: 0.2),
                 ),
               ),
             ),
@@ -1994,7 +1764,7 @@ class _ChatPageState extends State<ChatPage> {
                           ? 'اكتب رسالتك...'
                           : 'الرد على: ${_messagePreview(replyingTo!)}',
                       filled: true,
-                      fillColor: navy,
+                      fillColor: chatTheme.partner,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,
@@ -2156,6 +1926,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   SupabaseClient get db => Supabase.instance.client;
 
   String username = '';
+  DateTime? birthDate;
   String email = '';
   String? avatarUrl;
   String languageCode = 'ar';
@@ -2195,7 +1966,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       email = user.email ?? '';
       final profile = await db
           .from('duo_profiles')
-          .select('username, display_name, avatar_path, bio')
+          .select('username, display_name, avatar_path, bio, birth_date')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -2206,11 +1977,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       displayNameController.text =
           profile?['display_name']?.toString() ?? '';
       bioController.text = profile?['bio']?.toString() ?? '';
+      final birthRaw = profile?['birth_date']?.toString();
+      birthDate = birthRaw == null ? null : DateTime.tryParse(birthRaw);
       setState(() => loading = false);
     } catch (e) {
       if (!mounted) return;
       setState(() => loading = false);
-      showMessage(oursText(context, 'تعذر تحميل الملف الشخصي: $e', 'Could not load profile: $e'));
+      showMessage(oursText(context, 'تعذر تحميل الملف الشخصي. تحقق من الاتصال ثم أعد المحاولة.', 'Could not load profile. Check your connection and retry.'));
     }
   }
 
@@ -2278,7 +2051,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       setState(() => avatarUrl = db.storage.from('ours-avatars').getPublicUrl(path) + '?v=' + DateTime.now().millisecondsSinceEpoch.toString());
       showMessage(oursText(context, 'تم تحديث الصورة الشخصية', 'Profile photo updated'));
     } catch (e) {
-      showMessage(oursText(context, 'تعذر تحديث الصورة: $e', 'Could not update photo: $e'));
+      showMessage(oursText(context, 'تعذر تحديث الصورة الشخصية. حاول مرة أخرى.', 'Could not update profile photo. Please retry.'));
     } finally {
       if (mounted) setState(() => uploadingAvatar = false);
     }
@@ -2309,13 +2082,16 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           .update({
             'display_name': value.isEmpty ? null : value,
             'bio': bio,
+            'birth_date': birthDate?.toIso8601String().split('T').first,
           })
-          .eq('user_id', userId);
+          .eq('user_id', userId)
+          .select('user_id')
+          .single();
 
       if (!mounted) return;
       showMessage(oursText(context, 'تم حفظ الملف الشخصي', 'Profile saved'));
     } catch (e) {
-      showMessage(oursText(context, 'تعذر حفظ التغييرات: $e', 'Could not save changes: $e'));
+      showMessage(oursText(context, 'تعذر حفظ التغييرات. تحقق من الاتصال وحاول مجددًا.', 'Could not save changes. Check your connection and retry.'));
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -2342,7 +2118,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
-      showMessage('تعذر تسجيل الخروج: $e');
+      showMessage(oursText(context, 'تعذر تسجيل الخروج. حاول مرة أخرى.', 'Could not log out. Please retry.'));
     }
   }
 
@@ -2384,7 +2160,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       await db.auth.updateUser(UserAttributes(password: password));
       showMessage(oursText(context, 'تم تحديث كلمة المرور', 'Password updated'));
     } catch (e) {
-      showMessage(oursText(context, 'تعذر تغيير كلمة المرور: $e', 'Could not change password: $e'));
+      showMessage(oursText(context, 'تعذر تغيير كلمة المرور. تحقق من اتصالك وحاول مجددًا.', 'Could not change password. Check your connection and retry.'));
     }
   }
 
@@ -2415,201 +2191,373 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     super.dispose();
   }
 
+  Widget sectionTitle(String title, String subtitle, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 22, 4, 10),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: gold.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: gold.withOpacity(0.18)),
+            ),
+            child: Icon(icon, color: gold, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(color: gold, fontSize: 15, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: const TextStyle(color: lavender, fontSize: 11)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget settingsCard({required List<Widget> children}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: purple.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: gold.withOpacity(0.12)),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget settingsRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+    Widget? trailing,
+    Color? iconColor,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: (iconColor ?? gold).withOpacity(0.10),
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Icon(icon, color: iconColor ?? gold, size: 20),
+      ),
+      title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Text(subtitle, style: const TextStyle(color: lavender, fontSize: 11, height: 1.35)),
+      ),
+      trailing: trailing ?? (onTap == null ? null : const Icon(Icons.chevron_right_rounded, color: lavender)),
+      onTap: onTap,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final displayName = displayNameController.text.trim();
+    final accountTitle = displayName.isNotEmpty
+        ? displayName
+        : (username.isNotEmpty ? '@$username' : oursText(context, 'حساب OURS', 'OURS account'));
+
     return Scaffold(
+      backgroundColor: navy,
       appBar: AppBar(
-        title: Text(
-          oursText(context, 'الملف الشخصي والإعدادات', 'Profile & settings'),
-          style: TextStyle(color: gold, fontSize: 18),
-        ),
+        elevation: 0,
         backgroundColor: navy,
+        centerTitle: false,
+        title: Text(
+          oursText(context, 'الإعدادات', 'Settings'),
+          style: const TextStyle(color: gold, fontSize: 19, fontWeight: FontWeight.w700),
+        ),
+        actions: [
+          IconButton(
+            tooltip: oursText(context, 'تحديث البيانات', 'Refresh account'),
+            onPressed: loading ? null : () {
+              setState(() => loading = true);
+              loadProfile();
+              loadPreferences();
+            },
+            icon: const Icon(Icons.refresh_rounded, color: lavender),
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: gold))
           : ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 34),
               children: [
-                const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: uploadingAvatar ? null : chooseAvatar,
-                  child: Stack(
-                    alignment: Alignment.center,
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [purple, navy.withOpacity(0.96)],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: gold.withOpacity(0.24)),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 18, offset: const Offset(0, 8)),
+                    ],
+                  ),
+                  child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 48,
-                        backgroundColor: purple,
-                        backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
-                        child: avatarUrl == null ? const Icon(Icons.person_rounded, color: gold, size: 48) : null,
+                      GestureDetector(
+                        onTap: uploadingAvatar ? null : chooseAvatar,
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 34,
+                              backgroundColor: navy,
+                              backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
+                              child: avatarUrl == null ? const Icon(Icons.person_rounded, color: gold, size: 34) : null,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                width: 23,
+                                height: 23,
+                                decoration: const BoxDecoration(color: gold, shape: BoxShape.circle),
+                                child: uploadingAvatar
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(5),
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: navy),
+                                      )
+                                    : const Icon(Icons.edit_rounded, color: navy, size: 13),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      Positioned(
-                        bottom: 0, right: 0,
-                        child: CircleAvatar(
-                          radius: 16, backgroundColor: gold,
-                          child: uploadingAvatar
-                              ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: navy))
-                              : const Icon(Icons.camera_alt_outlined, color: navy, size: 17),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(accountTitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 4),
+                            Text(email.isEmpty ? oursText(context, 'البريد غير متاح', 'Email unavailable') : email,
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: lavender, fontSize: 11)),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: gold.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: gold.withOpacity(0.22)),
+                              ),
+                              child: Text(
+                                username.isEmpty ? 'OURS · PRIVATE ACCOUNT' : '@$username  ·  OURS',
+                                style: const TextStyle(color: gold, fontSize: 10, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(oursText(context, 'اضغط لتغيير الصورة', 'Tap to change photo'), style: const TextStyle(color: lavender, fontSize: 12)),
-                const SizedBox(height: 14),
-                Center(
-                  child: Text(
-                    username.isEmpty ? oursText(context, 'حساب OURS', 'OURS account') : '@$username',
-                    style: const TextStyle(
-                      color: lavender,
-                      letterSpacing: 1,
+
+                sectionTitle(
+                  oursText(context, 'الملف الشخصي', 'Profile'),
+                  oursText(context, 'عدّل المعلومات التي تظهر لشريكك', 'Manage the details your partner sees'),
+                  Icons.person_outline_rounded,
+                ),
+                settingsCard(children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    child: TextField(
+                      controller: displayNameController,
+                      maxLength: 30,
+                      decoration: InputDecoration(
+                        labelText: oursText(context, 'الاسم الظاهر', 'Display name'),
+                        hintText: oursText(context, 'اكتب اسمك', 'Enter your name'),
+                        prefixIcon: const Icon(Icons.badge_outlined),
+                        filled: true,
+                        fillColor: navy.withOpacity(0.6),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        counterStyle: const TextStyle(color: lavender, fontSize: 10),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 28),
-                Text(
-                  oursText(context, 'معلومات الحساب', 'Account information'),
-                  style: TextStyle(color: gold, fontSize: 18),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: displayNameController,
-                  maxLength: 30,
-                  decoration: InputDecoration(
-                    labelText: oursText(context, 'الاسم الظاهر', 'Display name'),
-                    hintText: oursText(context, 'كيف تريد أن يظهر اسمك؟', 'How should your name appear?'),
-                    prefixIcon: Icon(Icons.badge_outlined),
-                    border: OutlineInputBorder(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.cake_outlined),
+                      label: Text(birthDate == null
+                        ? oursText(context, 'إضافة تاريخ الميلاد', 'Add birthday')
+                        : oursText(context, 'تاريخ الميلاد: ${DateFormat('yyyy/MM/dd').format(birthDate!)}', 'Birthday: ${DateFormat('yyyy/MM/dd').format(birthDate!)}')),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: birthDate ?? DateTime(2008, 1, 1),
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null && mounted) setState(() => birthDate = picked);
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: bioController,
-                  maxLength: 160,
-                  minLines: 2,
-                  maxLines: 4,
-                  decoration: InputDecoration(
-                    labelText: oursText(context, 'نبذة عنك', 'About you'),
-                    hintText: oursText(context, 'اكتب نبذة قصيرة تظهر في ملفك الشخصي', 'Write a short profile bio'),
-                    prefixIcon: Icon(Icons.notes_rounded),
-                    border: OutlineInputBorder(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                    child: TextField(
+                      controller: bioController,
+                      maxLength: 160,
+                      minLines: 2,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: oursText(context, 'نبذة شخصية', 'About you'),
+                        hintText: oursText(context, 'مساحة صغيرة تعبّر عنك', 'A short introduction'),
+                        prefixIcon: const Icon(Icons.notes_rounded),
+                        filled: true,
+                        fillColor: navy.withOpacity(0.6),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        counterStyle: const TextStyle(color: lavender, fontSize: 10),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: oursText(context, 'اسم المستخدم', 'Username'),
-                    prefixIcon: Icon(Icons.alternate_email),
-                    border: OutlineInputBorder(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: FilledButton.icon(
+                        onPressed: saving ? null : saveProfile,
+                        icon: saving
+                            ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2, color: navy))
+                            : const Icon(Icons.check_rounded),
+                        label: Text(oursText(context, 'حفظ الملف الشخصي', 'Save profile')),
+                      ),
+                    ),
                   ),
-                  child: Text(username.isEmpty ? '—' : username),
+                ]),
+
+                sectionTitle(
+                  oursText(context, 'التفضيلات', 'Preferences'),
+                  oursText(context, 'تحكّم بتجربة استخدام OURS', 'Make OURS work the way you like'),
+                  Icons.tune_rounded,
                 ),
-                const SizedBox(height: 14),
-                InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: oursText(context, 'البريد المرتبط بالحساب', 'Account email'),
-                    prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
+                settingsCard(children: [
+                  settingsRow(
+                    icon: Icons.notifications_off_outlined,
+                    title: oursText(context, 'الوضع الهادئ', 'Quiet mode'),
+                    subtitle: oursText(context, 'كتم التنبيهات أثناء استخدام التطبيق', 'Mute notifications while using the app'),
+                    trailing: Switch(
+                      value: quietMode,
+                      activeColor: gold,
+                      onChanged: (value) async {
+                        setState(() => quietMode = value);
+                        await savePreference('ours_quiet_mode', value);
+                      },
+                    ),
                   ),
-                  child: Text(email.isEmpty ? oursText(context, 'غير متاح', 'Not available') : email),
-                ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  height: 52,
-                  child: FilledButton.icon(
-                    onPressed: saving ? null : saveProfile,
-                    icon: saving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: navy,
-                            ),
-                          )
-                        : const Icon(Icons.save_outlined),
-                    label: Text(oursText(context, 'حفظ التغييرات', 'Save changes')),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.language_rounded,
+                    title: oursText(context, 'لغة التطبيق', 'App language'),
+                    subtitle: languageCode == 'ar' ? 'العربية' : 'English',
+                    trailing: DropdownButton<String>(
+                      value: languageCode,
+                      underline: const SizedBox.shrink(),
+                      dropdownColor: purple,
+                      items: const [
+                        DropdownMenuItem(value: 'ar', child: Text('العربية')),
+                        DropdownMenuItem(value: 'en', child: Text('English')),
+                      ],
+                      onChanged: (value) async {
+                        if (value == null) return;
+                        setState(() => languageCode = value);
+                        await OursAppSettings.setLanguage(value);
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 30),
-                Text(
-                  oursText(context, 'الإعدادات والخصوصية', 'Settings & privacy'),
-                  style: TextStyle(color: gold, fontSize: 18),
-                ),
-                const SizedBox(height: 10),
-                SwitchListTile(
-                  value: quietMode,
-                  activeColor: gold,
-                  secondary: const Icon(Icons.notifications_off_outlined, color: gold),
-                  title: Text(oursText(context, 'الوضع الهادئ', 'Quiet mode')),
-                  subtitle: Text(oursText(context, 'كتم التنبيهات التي تصل أثناء استخدام التطبيق', 'Mute notifications while using the app'),
-                      style: TextStyle(color: lavender)),
-                  onChanged: (value) {
-                    setState(() => quietMode = value);
-                    savePreference('ours_quiet_mode', value);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.language_rounded, color: gold),
-                  title: Text(oursText(context, 'لغة التطبيق', 'App language')),
-                  subtitle: Text(languageCode == 'ar' ? 'العربية' : 'English'),
-                  trailing: DropdownButton<String>(
-                    value: languageCode,
-                    underline: const SizedBox.shrink(),
-                    items: const [
-                      DropdownMenuItem(value: 'ar', child: Text('العربية')),
-                      DropdownMenuItem(value: 'en', child: Text('English')),
-                    ],
-                    onChanged: (value) async {
-                      if (value == null) return;
-                      setState(() => languageCode = value);
-                      await OursAppSettings.setLanguage(value);
-                    },
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.delete_outline_rounded,
+                    title: oursText(context, 'تأكيد الحذف', 'Confirm before deleting'),
+                    subtitle: oursText(context, 'اطلب تأكيدًا قبل حذف العناصر', 'Ask before deleting items'),
+                    trailing: Switch(
+                      value: confirmBeforeDelete,
+                      activeColor: gold,
+                      onChanged: (value) async {
+                        setState(() => confirmBeforeDelete = value);
+                        await savePreference('ours_confirm_delete', value);
+                      },
+                    ),
                   ),
+                ]),
+
+                sectionTitle(
+                  oursText(context, 'الأمان والخصوصية', 'Security & privacy'),
+                  oursText(context, 'حسابك ومساحتكما الخاصة', 'Your account and private space'),
+                  Icons.shield_outlined,
                 ),
-                SwitchListTile(
-                  value: confirmBeforeDelete,
-                  activeColor: gold,
-                  secondary: const Icon(Icons.delete_outline, color: gold),
-                  title: Text(oursText(context, 'تأكيد الحذف', 'Confirm before deleting')),
-                  subtitle: Text(oursText(context, 'الاحتفاظ بتأكيد قبل حذف العناصر', 'Ask before deleting items'),
-                      style: TextStyle(color: lavender)),
-                  onChanged: (value) {
-                    setState(() => confirmBeforeDelete = value);
-                    savePreference('ours_confirm_delete', value);
-                  },
+                settingsCard(children: [
+                  settingsRow(
+                    icon: Icons.password_rounded,
+                    title: oursText(context, 'تغيير كلمة المرور', 'Change password'),
+                    subtitle: oursText(context, 'استخدم كلمة مرور قوية وخاصة', 'Keep your account protected'),
+                    onTap: changePassword,
+                  ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.lock_outline_rounded,
+                    title: oursText(context, 'مساحتك الخاصة', 'Your private space'),
+                    subtitle: oursText(context, 'محتوى OURS مخصص لك ولشريكك فقط', 'Your OURS content is only for you and your partner'),
+                  ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.people_alt_outlined,
+                    title: oursText(context, 'حد الأعضاء', 'Member limit'),
+                    subtitle: oursText(context, 'حسابان فقط في كل مساحة', 'Exactly two accounts per space'),
+                    trailing: const Text('2 / 2', style: TextStyle(color: gold, fontWeight: FontWeight.w700)),
+                  ),
+                ]),
+
+                sectionTitle(
+                  oursText(context, 'حول التطبيق', 'About the app'),
+                  oursText(context, 'معلومات عن تجربتك مع OURS', 'Your OURS experience'),
+                  Icons.info_outline_rounded,
                 ),
-                settingsTile(
-                  icon: Icons.password_rounded,
-                  title: oursText(context, 'تغيير كلمة المرور', 'Change password'),
-                  subtitle: oursText(context, 'حدّث كلمة مرور حسابك', 'Update your account password'),
-                  onTap: changePassword,
-                ),
-                settingsTile(
-                  icon: Icons.lock_outline,
-                  title: oursText(context, 'مساحتك الخاصة', 'Your private space'),
-                  subtitle: oursText(context, 'المحادثة والملفات مخصصة لأعضاء مساحتك فقط', 'Your private content is only visible to your connected partner'),
-                ),
-                settingsTile(
-                  icon: Icons.people_outline,
-                  title: oursText(context, 'عدد الأعضاء', 'Members'),
-                  subtitle: oursText(context, 'كل مساحة في OURS مخصصة لشخصين فقط', 'Every OURS space is designed for two people'),
-                ),
-                settingsTile(
-                  icon: Icons.info_outline,
-                  title: oursText(context, 'حول OURS', 'About OURS'),
-                  subtitle: 'YOUR PRIVATE UNIVERSE · الإصدار 1.0.0',
-                ),
-                const SizedBox(height: 16),
+                settingsCard(children: [
+                  settingsRow(
+                    icon: Icons.all_inclusive_rounded,
+                    title: 'OURS',
+                    subtitle: 'YOUR PRIVATE UNIVERSE',
+                    trailing: const Text('1.0.0', style: TextStyle(color: lavender, fontSize: 12)),
+                  ),
+                ]),
+
+                const SizedBox(height: 24),
                 OutlinedButton.icon(
                   onPressed: signOut,
-                  icon: const Icon(Icons.logout),
-                  label: Text(oursText(context, 'تسجيل الخروج', 'Log out')),
+                  icon: const Icon(Icons.logout_rounded),
+                  label: Text(oursText(context, 'تسجيل الخروج من الحساب', 'Sign out of account')),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: gold,
-                    side: const BorderSide(color: gold),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    foregroundColor: Colors.redAccent,
+                    side: BorderSide(color: Colors.redAccent.withOpacity(0.55)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text('MADE FOR TWO  ·  OURS',
+                    style: TextStyle(color: lavender.withOpacity(0.65), fontSize: 10, letterSpacing: 2)),
                 ),
               ],
             ),
