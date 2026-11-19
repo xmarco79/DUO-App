@@ -518,7 +518,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>Dialog(backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
     Padding(padding:const EdgeInsets.all(12),child:Text(t('صورة مؤقتة','Temporary photo'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700))),
     Expanded(child:Center(child:InteractiveViewer(minScale:.5,maxScale:4,child:Image.network(url,fit:BoxFit.contain)))),
-    Padding(padding:const EdgeInsets.all(14),child:TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close'),style:const TextStyle(color:Colors.white)))))
+    Padding(padding:const EdgeInsets.all(14),child:TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close'),style:const TextStyle(color:Colors.white))))
    ])))));
    final row=await db.from('duo_direct_messages').select('view_count,max_views').eq('id',messageId).maybeSingle();
    final count=(row?['view_count'] as num?)?.toInt()??1,limit=(row?['max_views'] as num?)?.toInt()??1;
@@ -582,7 +582,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    final request=await client.getUrl(Uri.parse(url));final response=await request.close();
    if(response.statusCode<200||response.statusCode>=300)throw Exception('Download failed');
    final total=response.contentLength;var received=0;final bytes=BytesBuilder(copy:false);
-   if(mounted)setState(()=>{downloadProgress=total>0?0.0:null;downloading=true;});
+   if(mounted)setState((){downloadProgress=total>0?0.0:null;downloading=true;});
    await for(final chunk in response){
     bytes.add(chunk);received+=chunk.length;
     if(mounted)setState(()=>downloadProgress=total>0?(received/total).clamp(0.0,1.0):null);
@@ -590,7 +590,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    final saved=await FilePicker.platform.saveFile(fileName:(name?.trim().isNotEmpty==true?name!:path.split('/').last),bytes:bytes.takeBytes());
    if(saved!=null){_show(t('تم حفظ الملف في الموقع الذي اخترته','File saved to your selected location'));await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication);}
   }catch(e){_show(t('تعذر تحميل الملف. حاول مجددًا.','Could not download file. Try again.'));}
-  finally{client?.close(force:true);if(mounted)setState(()=>{downloadProgress=null;downloading=false;});}
+  finally{client?.close(force:true);if(mounted)setState((){downloadProgress=null;downloading=false;});}
  }
 String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();return d==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(d);}
  String _dateLabel(DateTime date){
@@ -698,7 +698,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       Text(_presenceLabel(),style:TextStyle(color:partnerOnline?const Color(0xFF70D9A0):skin.accent,fontSize:10)),
       const SizedBox(width:7),
       Text(t('· الملف الشخصي','· Profile'),style:TextStyle(color:skin.accent,fontSize:10)),
-      if(_streakCount()>0)Padding(padding:const EdgeInsetsDirectional.only(start:6),child:Tooltip(message:_streakStageName()+t(' · يحتسب اليوم عند تفاعل كل منكما',' · counts when both of you interact'),child:AnimatedContainer(duration:const Duration(milliseconds:320),padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),decoration:BoxDecoration(gradient:LinearGradient(colors:switch(_streakStage()){1=>[const Color(0xFF467E88),const Color(0xFF6FAEAA)],2=>[const Color(0xFF3C9C8B),const Color(0xFF75C9A6)],3=>[const Color(0xFF5D75C8),const Color(0xFF9B7BDA)],4=>[const Color(0xFF9C62B6),const Color(0xFFD18BB4)],5=>[const Color(0xFFC27B46),const Color(0xFFE8BD77)],_=>[const Color(0xFFD7A84F),const Color(0xFFFFE3A2)]},borderRadius:BorderRadius.circular(12),boxShadow:[BoxShadow(color:skin.accent.withValues(alpha:.16),blurRadius:9)]),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.auto_awesome_rounded,color:Colors.white,size:11),const SizedBox(width:4),Text('${_streakCount()} · ${_streakStageName()}',style:const TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))]))))
+      if(_streakCount()>0)Padding(padding:const EdgeInsetsDirectional.only(start:6),child:Tooltip(message:_streakStageName()+t(' · يحتسب اليوم عند تفاعل كل منكما',' · counts when both of you interact'),child:AnimatedContainer(duration:const Duration(milliseconds:320),padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),decoration:BoxDecoration(gradient:LinearGradient(colors:switch(_streakStage()){1=>[const Color(0xFF467E88),const Color(0xFF6FAEAA)],2=>[const Color(0xFF3C9C8B),const Color(0xFF75C9A6)],3=>[const Color(0xFF5D75C8),const Color(0xFF9B7BDA)],4=>[const Color(0xFF9C62B6),const Color(0xFFD18BB4)],5=>[const Color(0xFFC27B46),const Color(0xFFE8BD77)],_=>[const Color(0xFFD7A84F),const Color(0xFFFFE3A2)]}),borderRadius:BorderRadius.circular(12),boxShadow:[BoxShadow(color:skin.accent.withValues(alpha:.16),blurRadius:9)]),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.auto_awesome_rounded,color:Colors.white,size:11),const SizedBox(width:4),Text('${_streakCount()} · ${_streakStageName()}',style:const TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))]))))
      ])
     ]),
    ),
@@ -858,7 +858,7 @@ class _OursAiPageState extends State<OursAiPage>{
   if(!mounted)return;
   await showModalBottomSheet<void>(context:context,backgroundColor:skin.bg,isScrollControlled:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.6,child:ListView(children:found.reversed.map((i)=>ListTile(title:Text(messages[i]['content']??'',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white)),subtitle:Text(_time(messages[i]['created_at']),style:TextStyle(color:skin.accent)),onTap:(){Navigator.pop(ctx);_jumpToMessage(i);})).toList()))));
  }
- @override void initState(){super.initState();_restore();_loadAppearance();}
+
  Future<void> _restore() async{try{final p=await SharedPreferences.getInstance();final raw=p.getString('ours_ai_history_'+db.auth.currentUser!.id);if(raw!=null){final decoded=(jsonDecode(raw) as List).map((e)=>Map<String,String>.from(e)).toList();if(mounted)setState(()=>messages.addAll(decoded));}}catch(_){} }
  Future<void> _persist() async{try{final p=await SharedPreferences.getInstance();await p.setString('ours_ai_history_'+db.auth.currentUser!.id,jsonEncode(messages.take(100).toList()));}catch(_){} }
  @override void dispose(){input.dispose();scroll.dispose();super.dispose();}
