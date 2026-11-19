@@ -22,6 +22,7 @@ class _ChatSkin{
  const _ChatSkin(this.id,this.ar,this.en,this.bg,this.mine,this.partner,this.accent);
 }
 const _skins=[
+ _ChatSkin('ours','OURS · الهوية الرئيسية','OURS · Signature',Color(0xFF10101C),Color(0xFF29213D),Color(0xFF211D30),Color(0xFFD9BC86)),
  _ChatSkin('aurora','الشفق القطبي','Aurora',Color(0xFF091A27),Color(0xFF174A55),Color(0xFF142D3B),Color(0xFF75E0D0)),
  _ChatSkin('sunset','غروب دافئ','Sunset',Color(0xFF211329),Color(0xFF713C52),Color(0xFF38243E),Color(0xFFFFB28A)),
  _ChatSkin('sakura','حديقة ساكورا','Sakura',Color(0xFF251923),Color(0xFF75445C),Color(0xFF3E2B3A),Color(0xFFFFB9D0)),
@@ -47,6 +48,16 @@ class _ChatAtmospherePainter extends CustomPainter {
   final soft=Paint()..color=accent.withValues(alpha:.10)..style=PaintingStyle.fill;
   final line=Paint()..color=accent.withValues(alpha:.16)..style=PaintingStyle.stroke..strokeWidth=1.2;
   switch(skin.id){
+   case 'ours':
+    for(var i=0;i<5;i++){
+     final orbit=Rect.fromCenter(center:Offset(size.width*.5,size.height*.48),width:size.width*(.42+i*.10),height:size.height*(.18+i*.07));
+     canvas.drawOval(orbit,line..strokeWidth=1.0+i*.25);
+    }
+    for(var i=0;i<36;i++){
+     final x=((i*67)%997)/997*size.width,y=((i*131)%991)/991*size.height;
+     canvas.drawCircle(Offset(x,y),1+(i%3)*.45,Paint()..color=accent.withValues(alpha:.12+(i%3)*.03));
+    }
+    break;
    case 'aurora':
     for(var i=0;i<4;i++){
      final path=Path()..moveTo(-size.width*.1,size.height*(.20+i*.12))
@@ -130,7 +141,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(mounted)setState(()=>localPartnerName=value.isEmpty?widget.partnerName:value);
  }
  Future<void> _loadSkin() async{
-  final p=await SharedPreferences.getInstance();final id=p.getString('ours_direct_skin_'+widget.conversationId)??'midnight';
+  final p=await SharedPreferences.getInstance();final id=p.getString('ours_direct_skin_'+widget.conversationId)??'ours';
   final found=_skins.where((s)=>s.id==id);if(mounted)setState(()=>skin=found.isEmpty?_skins.first:found.first);
  }
  Future<void> _chooseSkin() async{
