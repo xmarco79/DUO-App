@@ -44,30 +44,33 @@ class _OursChatTheme {
 }
 
 const _oursChatThemes = [
-  _OursChatTheme('aurora','الشفق القطبي','Aurora','ألوان سماوية ولمعات فيروزية','Sky tones with teal highlights',
-    Color(0xFF091A27),Color(0xFF174A55),Color(0xFF142D3B),Color(0xFF75E0D0),
-    [Color(0xFF236A70),Color(0xFF17465F)],[Color(0xFF183C4B),Color(0xFF102A3A)],Icons.auto_awesome),
-  _OursChatTheme('sunset','غروب دافئ','Sunset','تدرجات الغروب والمرجان','Warm sunset and coral tones',
-    Color(0xFF211329),Color(0xFF713C52),Color(0xFF38243E),Color(0xFFFFB28A),
-    [Color(0xFF9A4D5C),Color(0xFF5B315A)],[Color(0xFF4C2C4B),Color(0xFF2B203B)],Icons.wb_twilight),
-  _OursChatTheme('sakura','حديقة ساكورا','Sakura','وردي مزهر ولمسات كريمية','Blooming pink with soft cream accents',
-    Color(0xFF251923),Color(0xFF75445C),Color(0xFF3E2B3A),Color(0xFFFFB9D0),
-    [Color(0xFF98536E),Color(0xFF69405F)],[Color(0xFF503447),Color(0xFF332638)],Icons.local_florist),
-  _OursChatTheme('ocean','أعماق المحيط','Deep ocean','أزرق عميق وفقاعات زجاجية','Deep blue with aqua glass tones',
-    Color(0xFF071B30),Color(0xFF15577A),Color(0xFF12354D),Color(0xFF75D5F2),
-    [Color(0xFF16759A),Color(0xFF174A79)],[Color(0xFF1B455F),Color(0xFF102C43)],Icons.waves),
-  _OursChatTheme('forest','غابة مطيرة','Rainforest','أخضر زمردي وطبيعة هادئة','Emerald greens and calm nature',
-    Color(0xFF0D211D),Color(0xFF28664D),Color(0xFF1C3D32),Color(0xFFA8E6B7),
-    [Color(0xFF347B59),Color(0xFF205C54)],[Color(0xFF285343),Color(0xFF17372F)],Icons.park),
-  _OursChatTheme('lavender','حلم بنفسجي','Lavender dream','بنفسجي متوهج ودرجات ليل','Glowing violet and dreamy night shades',
-    Color(0xFF17132B),Color(0xFF55418A),Color(0xFF30294F),Color(0xFFC5A8FF),
-    [Color(0xFF7255A9),Color(0xFF493A82)],[Color(0xFF443B68),Color(0xFF282442)],Icons.nights_stay),
-  _OursChatTheme('desert','وهج الصحراء','Desert glow','رملي ونحاسي بلمسة ذهبية','Sand, copper and golden warmth',
-    Color(0xFF241B17),Color(0xFF795034),Color(0xFF443126),Color(0xFFFFD18B),
-    [Color(0xFF98613B),Color(0xFF6C4932)],[Color(0xFF60452F),Color(0xFF35291F)],Icons.wb_sunny),
-  _OursChatTheme('neon','مدينة نيون','Neon city','ألوان كهربائية وسط ليل داكن','Electric accents over a midnight city',
-    Color(0xFF130F25),Color(0xFF553A79),Color(0xFF2D2448),Color(0xFF8EF0FF),
-    [Color(0xFF6A3C9B),Color(0xFF344C91)],[Color(0xFF3B315F),Color(0xFF24203F)],Icons.bolt),
+  _OursChatTheme('ours','نبض OURS','OURS Pulse','هوية نابضة بتدرجات ليلية ولمعة ذهبية','OURS signature with lively gradients and gold glows',
+    Color(0xFF10101C),Color(0xFF3B285C),Color(0xFF241B36),Color(0xFFFFD66B),
+    [Color(0xFF6D42A8),Color(0xFF39275D)],[Color(0xFF332345),Color(0xFF21182F)],Icons.all_inclusive_rounded),
+  _OursChatTheme('aurora','أورورا لايف','Aurora Live','شفق متحرك بطيف فيروزي وأزرق','Vivid teal and blue aurora',
+    Color(0xFF071A27),Color(0xFF147B82),Color(0xFF123D50),Color(0xFF75F1D6),
+    [Color(0xFF20B7A6),Color(0xFF2368B7)],[Color(0xFF174D60),Color(0xFF0D2B3A)],Icons.auto_awesome),
+  _OursChatTheme('flamenco','فلامنكو','Flamenco','مرجان ووردي بلمسة بنفسجية','Coral, rose and violet',
+    Color(0xFF25101D),Color(0xFFB33C6D),Color(0xFF54233E),Color(0xFFFFA36D),
+    [Color(0xFFE65370),Color(0xFF943C93)],[Color(0xFF6A2C55),Color(0xFF351C36)],Icons.wb_twilight),
+  _OursChatTheme('bloom','بلوم','Bloom','وردي زاهي وموف ناعم','Vibrant pink and soft violet',
+    Color(0xFF261322),Color(0xFFB34F8B),Color(0xFF4B2844),Color(0xFFFFC2DE),
+    [Color(0xFFE36AA8),Color(0xFF9B5BDB)],[Color(0xFF623B5B),Color(0xFF35243D)],Icons.local_florist),
+  _OursChatTheme('lagoon','بلو لاجون','Blue Lagoon','موج أزرق ولمعة سماوية','Blue waves and cyan glow',
+    Color(0xFF061827),Color(0xFF167FB0),Color(0xFF123D58),Color(0xFF80E8FF),
+    [Color(0xFF168FCA),Color(0xFF2558B5)],[Color(0xFF194B68),Color(0xFF0D2B43)],Icons.waves),
+  _OursChatTheme('emerald','إميرالد','Emerald','أخضر زمردي ونعناع','Emerald and mint',
+    Color(0xFF0C1D18),Color(0xFF168B67),Color(0xFF18473A),Color(0xFF91F5B8),
+    [Color(0xFF20A879),Color(0xFF147B78)],[Color(0xFF285343),Color(0xFF17372F)],Icons.eco),
+  _OursChatTheme('dreamscape','دريم سكيب','Dreamscape','بنفسجي كوني وتوهج ليلي','Cosmic violet glow',
+    Color(0xFF100C2A),Color(0xFF7045D8),Color(0xFF342458),Color(0xFFD6B7FF),
+    [Color(0xFF8D59F0),Color(0xFF4B39B6)],[Color(0xFF443B68),Color(0xFF282442)],Icons.nights_stay),
+  _OursChatTheme('sundust','صن داست','Sun Dust','عنبر ونحاس وألوان غروب','Amber, copper and sunset',
+    Color(0xFF241813),Color(0xFFB66B35),Color(0xFF4C3024),Color(0xFFFFDA87),
+    [Color(0xFFD8873D),Color(0xFF9A4C39)],[Color(0xFF60452F),Color(0xFF35291F)],Icons.wb_sunny),
+  _OursChatTheme('cyberpop','سايبر بوب','Cyber Pop','نيون فوشيا وسماوي','Neon fuchsia and cyan',
+    Color(0xFF140A22),Color(0xFF8144C7),Color(0xFF36234D),Color(0xFF7CFFF1),
+    [Color(0xFFB53ED1),Color(0xFF4C68DA)],[Color(0xFF3B315F),Color(0xFF24203F)],Icons.bolt),
 ];
 
 // ==================== APP PREFERENCES ====================
@@ -610,7 +613,7 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> loadChatTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    final id = prefs.getString('ours_chat_theme_${currentUserId}') ?? 'midnight';
+    final id = prefs.getString('ours_chat_theme_${currentUserId}') ?? 'ours';
     final selected = _oursChatThemes.where((theme) => theme.id == id);
     if (mounted) setState(() => chatTheme = selected.isEmpty ? _oursChatThemes.first : selected.first);
   }
@@ -1552,7 +1555,7 @@ class _ChatPageState extends State<ChatPage> {
                                 ),
                                 border: Border.all(color: chatTheme.accent.withValues(alpha: 0.18)),
                               ),
-                              child: Column(
+                              child: IntrinsicWidth(child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -1570,7 +1573,6 @@ class _ChatPageState extends State<ChatPage> {
                                     ),
                                   if (item['reply_to'] != null)
                                     Container(
-                                      width: double.infinity,
                                       margin: const EdgeInsets.only(bottom: 8),
                                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                                       decoration: BoxDecoration(
@@ -2077,7 +2079,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             'bio': bio,
             'birth_date': birthDate?.toIso8601String().split('T').first,
           })
-          .eq('user_id', userId);
+          .eq('user_id', userId)
+          .select('user_id')
+          .single();
 
       if (!mounted) return;
       showMessage(oursText(context, 'تم حفظ الملف الشخصي', 'Profile saved'));
