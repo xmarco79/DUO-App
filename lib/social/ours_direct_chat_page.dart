@@ -624,18 +624,32 @@ class _DirectAudioBubble extends StatefulWidget{
 }
 class _DirectAudioBubbleState extends State<_DirectAudioBubble>{
  final player=AudioPlayer();bool loading=false;
+ String _time(Duration d)=>'${d.inMinutes.toString().padLeft(2,'0')}:${(d.inSeconds%60).toString().padLeft(2,'0')}';
  Future<void> _toggle() async{
   if(player.state==PlayerState.playing){await player.pause();return;}setState(()=>loading=true);
-  try{await player.play(UrlSource(await widget.signed(widget.path)));}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(widget.ar?'تعذر تشغيل الصوت':'Could not play audio')));}
+  try{await player.play(UrlSource(await widget.signed(widget.path)));}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(widget.ar?'تعذر تشغيل الصوت، تحقق من الاتصال':'Audio could not play. Check your connection')));}
   finally{if(mounted)setState(()=>loading=false);}
  }
  @override void dispose(){player.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>StreamBuilder<PlayerState>(stream:player.onPlayerStateChanged,initialData:player.state,builder:(c,s){
-  final playing=s.data==PlayerState.playing;return Row(mainAxisSize:MainAxisSize.min,children:[
-   IconButton(onPressed:loading?null:_toggle,icon:loading?SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2,color:widget.skin.accent)):Icon(playing?Icons.pause_circle_filled:Icons.play_circle_fill,color:widget.skin.accent,size:34)),
-   Text(widget.ar?(playing?'تشغيل الصوت…':'رسالة صوتية'):(playing?'Playing…':'Voice message'),style:const TextStyle(fontSize:12))
-  ]);
+ @override Widget build(BuildContext context)=>StreamBuilder<PlayerState>(stream:player.onPlayerStateChanged,initialData:player.state,builder:(c,state){
+  final playing=state.data==PlayerState.playing;return Container(width:250,padding:const EdgeInsets.symmetric(vertical:3),child:Row(mainAxisSize:MainAxisSize.min,children:[
+   IconButton(onPressed:loading?null:_toggle,padding:EdgeInsets.zero,constraints:const BoxConstraints.tightFor(width:42,height:42),icon:loading?SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2,color:widget.skin.accent)):Icon(playing?Icons.pause_circle_filled:Icons.play_circle_fill,color:widget.skin.accent,size:36)),
+   Expanded(child:StreamBuilder<Duration>(stream:player.onDurationChanged,initialData:Duration.zero,builder:(c,durationSnap){
+    final duration=durationSnap.data??Duration.zero;return StreamBuilder<Duration>(stream:player.onPositionChanged,initialData:Duration.zero,builder:(c,posSnap){
+     final position=posSnap.data??Duration.zero;final progress=duration.inMilliseconds==0?0.0:(position.inMilliseconds/duration.inMilliseconds).clamp(0.0,1.0);
+     return Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+      GestureDetector(onTapDown:(e){final box=context.findRenderObject() as RenderBox;final local=box.globalToLocal(e.globalPosition);final x=(local.dx/box.size.width).clamp(0.0,1.0);if(duration>Duration.zero)player.seek(Duration(milliseconds:(duration.inMilliseconds*x).round()));},child:SizedBox(height:26,child:CustomPaint(painter:_VoiceWavePainter(widget.skin.accent,progress)))),
+      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text(_time(position),style:TextStyle(color:widget.skin.accent,fontSize:10)),Text(_time(duration),style:TextStyle(color:widget.skin.accent.withValues(alpha:.65),fontSize:10))])
+     ]);
+    });
+   })),
+  ]));
  });
+}
+class _VoiceWavePainter extends CustomPainter{
+ final Color accent;final double progress;const _VoiceWavePainter(this.accent,this.progress);
+ @override void paint(Canvas canvas,Size size){const count=36;const gap=2.2;final barWidth=(size.width-gap*(count-1))/count;for(var i=0;i<count;i++){final value=(math.sin(i*.67).abs()*.48+math.cos(i*.23).abs()*.38+(i%7)*.025).clamp(.13,.95);final h=size.height*value;final rect=Rect.fromLTWH(i*(barWidth+gap), (size.height-h)/2,barWidth,h);canvas.drawRRect(RRect.fromRectAndRadius(rect,Radius.circular(barWidth)),Paint()..color=i/count<progress?accent:accent.withValues(alpha:.35));}}
+ @override bool shouldRepaint(covariant _VoiceWavePainter old)=>old.progress!=progress||old.accent!=accent;
 }
 
 class OursSelfChatPage extends StatefulWidget{
