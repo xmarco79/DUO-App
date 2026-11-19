@@ -435,7 +435,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>Dialog(backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
     Padding(padding:const EdgeInsets.all(12),child:Text(t('صورة مؤقتة','Temporary photo'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700))),
     Expanded(child:Center(child:InteractiveViewer(minScale:.5,maxScale:4,child:Image.network(url,fit:BoxFit.contain)))),
-    Padding(padding:const EdgeInsets.all(14),child:TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close',style:const TextStyle(color:Colors.white)))))
+    Padding(padding:const EdgeInsets.all(14),child:TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close'),style:const TextStyle(color:Colors.white)))))
    ])))));
    final row=await db.from('duo_direct_messages').select('view_count,max_views').eq('id',messageId).maybeSingle();
    final count=(row?['view_count'] as num?)?.toInt()??1,limit=(row?['max_views'] as num?)?.toInt()??1;
