@@ -163,7 +163,7 @@ class _OursWatchTogetherPageState extends State<OursWatchTogetherPage>{
  final db=Supabase.instance.client;List<Map<String,dynamic>> rooms=[];bool loading=false;RealtimeChannel? channel;
  @override void initState(){super.initState();_load();_subscribe();}
  Future<void> _load()async{if(widget.spaceId==null)return;setState(()=>loading=true);try{rooms=List<Map<String,dynamic>>.from(await db.from('duo_watch_rooms').select('id,title,video_url').eq('space_id',widget.spaceId!).order('created_at',ascending:false));}catch(_){}if(mounted)setState(()=>loading=false);}
- void _subscribe(){if(widget.spaceId==null)return;channel=db.channel('watchlist-'+widget.spaceId).onPostgresChanges(event:PostgresChangeEvent.all,schema:'public',table:'duo_watch_rooms',filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'space_id',value:widget.spaceId),callback:(_)=>_load()).subscribe();}
+ void _subscribe(){if(widget.spaceId==null)return;channel=db.channel('watchlist-'+widget.spaceId!).onPostgresChanges(event:PostgresChangeEvent.all,schema:'public',table:'duo_watch_rooms',filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'space_id',value:widget.spaceId),callback:(_)=>_load()).subscribe();}
  Future<void> _create() async{
  final titleController=TextEditingController();
  final urlController=TextEditingController();
