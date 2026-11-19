@@ -39,10 +39,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController(),picker=ImagePicker();
  final Map<String,Future<String>> urls={};final List<Map<String,dynamic>> messages=[];
  RealtimeChannel? channel;AudioRecorder? recorder;String? recordingPath;
- bool loading=true,sending=false,recording=false,uploading=false;_ChatSkin skin=_skins.first;
+ bool loading=true,sending=false,recording=false,uploading=false;int streakDays=0;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
- @override void initState(){super.initState();_loadSkin();_load();_listen();}
+ @override void initState(){super.initState();_loadSkin();_load();_loadStreak();_listen();}
  Future<void> _loadSkin() async{
   final p=await SharedPreferences.getInstance();final id=p.getString('ours_direct_skin_'+widget.conversationId)??'midnight';
   final found=_skins.where((s)=>s.id==id);if(mounted)setState(()=>skin=found.isEmpty?_skins.first:found.first);
@@ -64,6 +64,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Future<void> _openDetails() async{
   await Navigator.push(context,MaterialPageRoute(builder:(_)=>OursConversationDetailsPage(conversationId:widget.conversationId,partnerName:widget.partnerName)));
  }
+ Future<void> _loadStreak() async{
+  try{final row=await db.from('duo_direct_streaks').select('current_days').eq('conversation_id',widget.conversationId).maybeSingle();if(mounted)setState(()=>streakDays=(row?['current_days'] as num?)?.toInt()??0);}catch(_){}
+ }
  Future<void> _load() async{
   try{final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at');
    if(!mounted)return;setState((){messages..clear()..addAll(List<Map<String,dynamic>>.from(rows));loading=false;});_bottom();
@@ -72,11 +75,23 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  void _listen(){
   channel=db.channel('ours-direct-'+widget.conversationId).onPostgresChanges(event:PostgresChangeEvent.insert,schema:'public',table:'duo_direct_messages',
    filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'conversation_id',value:widget.conversationId),callback:(p){
-    final row=Map<String,dynamic>.from(p.newRecord);if(!mounted||messages.any((m)=>m['id']==row['id']))return;setState(()=>messages.add(row));_bottom();
+    final row=Map<String,dynamic>.from(p.newRecord);if(!mounted||messages.any((m)=>m['id']==row['id']))return;setState(()=>messages.add(row));_loadStreak();_bottom();
    }).subscribe();
  }
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
  void _show(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
+ Future<void> _sendSticker(String sticker) async{
+  try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':sticker,'message_type':'sticker'});}
+  catch(e){_show(t('تعذر إرسال الملصق: $e','Could not send sticker: $e'));}
+ }
+ Future<void> _chooseSticker() async{
+  const stickers=['🫶','💜','💗','🥹','✨','🌙','🫂','🐻','🐼','🐰','🦋','🌸','🍓','☁️','⭐','🎀','😽','🤍','💫','🧸','🙈','😂','😎','🥳','😭','💌','🍀','🌷','🫧','🪄'];
+  final selected=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF171523),showDragHandle:true,builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[
+   Text(t('ملصقات OURS','OURS stickers'),style:const TextStyle(color:_gold,fontSize:18,fontWeight:FontWeight.w700)),
+   const SizedBox(height:8),GridView.count(shrinkWrap:true,crossAxisCount:5,physics:const NeverScrollableScrollPhysics(),children:[for(final sticker in stickers)InkWell(onTap:()=>Navigator.pop(ctx,sticker),borderRadius:BorderRadius.circular(12),child:Center(child:Text(sticker,style:const TextStyle(fontSize:34))))])
+  ])))));
+  if(selected!=null)await _sendSticker(selected);
+ }
  Future<void> _sendText() async{
   final text=input.text.trim();if(text.isEmpty||sending)return;setState(()=>sending=true);
   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':text,'message_type':'text'});input.clear();}
@@ -187,7 +202,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  @override Widget build(BuildContext context){
   final me=db.auth.currentUser!.id;
   return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,centerTitle:true,
-   title:Column(mainAxisSize:MainAxisSize.min,children:[Text(widget.partnerName,style:const TextStyle(fontSize:16)),Text(t('محادثة خاصة بينكما','Private conversation'),style:TextStyle(color:skin.accent,fontSize:10))]),
+   title:Column(mainAxisSize:MainAxisSize.min,children:[Text(widget.partnerName,style:const TextStyle(fontSize:16)),Text(streakDays>0?'🔥 '+streakDays.toString()+' '+t('يوم متواصل','day streak'):t('محادثة خاصة بينكما','Private conversation'),style:TextStyle(color:streakDays>0?const Color(0xFFFFA65C):skin.accent,fontSize:10))]),
    actions:[
     IconButton(tooltip:t('الثيم','Theme'),onPressed:_chooseSkin,icon:Icon(Icons.palette_outlined,color:skin.accent)),
     IconButton(tooltip:'OURS AI',onPressed:_openAi,icon:Icon(Icons.auto_awesome_outlined,color:skin.accent)),
@@ -221,6 +236,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
          Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(path.split('/').last.replaceFirst(RegExp(r'^\d+_'),''),maxLines:2,overflow:TextOverflow.ellipsis),Text(t('اضغط لفتح الملف','Tap to open file'),style:TextStyle(color:skin.accent,fontSize:10))]))
         ]))
         else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
+        else if(type=='sticker')Text(path,style:const TextStyle(fontSize:48))
         else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
         const SizedBox(height:4),Align(alignment:AlignmentDirectional.centerEnd,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)))
        ])));
@@ -232,6 +248,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       IconButton(onPressed:sending?null:_sendRecording,icon:Icon(Icons.send,color:skin.accent))
      ]):Row(children:[
       IconButton(onPressed:uploading||sending?null:_chooseAttachment,icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.add_circle_outline_rounded,color:skin.accent)),
+      IconButton(onPressed:uploading||sending?null:_chooseSticker,tooltip:t('ملصقات','Stickers'),icon:Icon(Icons.emoji_emotions_outlined,color:skin.accent)),
       Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onSubmitted:(_)=>_sendText(),
        decoration:InputDecoration(hintText:t('اكتب رسالة…','Write a message…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:11)))),
       IconButton(onPressed:uploading||sending?null:_startRecording,icon:Icon(Icons.mic_none_rounded,color:skin.accent)),
