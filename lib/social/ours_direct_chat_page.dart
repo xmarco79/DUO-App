@@ -781,7 +781,7 @@ class _ImageMarkupDialogState extends State<_ImageMarkupDialog>{
 class _MarkupStroke{final List<Offset> points;final Color color;const _MarkupStroke(this.points,this.color);}
 class _MarkupPainter extends CustomPainter{
  final List<_MarkupStroke> strokes;const _MarkupPainter(this.strokes);
- @override void paint(Canvas canvas,Size size){for(final stroke in strokes){if(stroke.points.length<2)continue;final path=Path()..moveTo(stroke.points.first.dx*size.width,stroke.points.first.dy*size.height);for(final p in stroke.points.skip(1))path.lineTo(p.dx*size,p.dy*size);canvas.drawPath(path,Paint()..color=stroke.color..strokeWidth=4..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke);}}
+ @override void paint(Canvas canvas,Size size){for(final stroke in strokes){if(stroke.points.length<2)continue;final path=Path()..moveTo(stroke.points.first.dx*size.width,stroke.points.first.dy*size.height);for(final p in stroke.points.skip(1))path.lineTo(p.dx*size.width,p.dy*size.height);canvas.drawPath(path,Paint()..color=stroke.color..strokeWidth=4..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke);}}
  @override bool shouldRepaint(covariant _MarkupPainter old)=>old.strokes!=strokes;
 }
 class _ChatDetailsPage extends StatelessWidget{
