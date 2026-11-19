@@ -382,6 +382,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
        constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(10),
        decoration:BoxDecoration(color:mine?skin.mine:skin.partner,borderRadius:BorderRadius.circular(17),border:Border.all(color:skin.accent.withValues(alpha:.16))),
        child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+        if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString())) Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.45),borderRadius:BorderRadius.circular(8)),child:Text(messages.firstWhere((r)=>r['id'].toString()==m['reply_to'].toString())['body'].toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))),
         if(type=='sticker')Center(child:Text(path,style:const TextStyle(fontSize:42)))
         else if(type=='view_once'||type=='view_twice')
           (m['viewed_at']!=null || ((m['view_count'] as num?)?.toInt()??0)>=((m['max_views'] as num?)?.toInt()??1))
