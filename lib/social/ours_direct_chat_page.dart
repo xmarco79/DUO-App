@@ -432,11 +432,11 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    final path=await db.rpc('consume_ours_temporary_media',params:{'p_message_id':messageId}) as String?;
    if(path==null||path.isEmpty){_show(t('انتهت مرات مشاهدة هذه الصورة','This photo has no views left'));await _load();return;}
    final url=await _signed(path);
-   await showDialog<void>(context:context,builder:(ctx)=>Dialog(backgroundColor:Colors.black,child:Column(mainAxisSize:MainAxisSize.min,children:[
-    Padding(padding:const EdgeInsets.all(10),child:Text(t('صورة مؤقتة','Temporary photo'),style:const TextStyle(color:Colors.white))),
-    Flexible(child:Image.network(url,fit:BoxFit.contain)),
-    TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close')))
-   ])));
+   await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>Dialog(backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
+    Padding(padding:const EdgeInsets.all(12),child:Text(t('صورة مؤقتة','Temporary photo'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700))),
+    Expanded(child:Center(child:InteractiveViewer(minScale:.5,maxScale:4,child:Image.network(url,fit:BoxFit.contain)))),
+    Padding(padding:const EdgeInsets.all(14),child:TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close',style:const TextStyle(color:Colors.white)))))
+   ])))));
    final row=await db.from('duo_direct_messages').select('view_count,max_views').eq('id',messageId).maybeSingle();
    final count=(row?['view_count'] as num?)?.toInt()??1,limit=(row?['max_views'] as num?)?.toInt()??1;
    if(count>=limit){await db.storage.from(_bucket).remove([path]);}
@@ -547,14 +547,17 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  }
  Future<void> _openImageActions(String url) async{
   if(!mounted)return;
-  await showDialog<void>(context:context,builder:(ctx)=>Dialog(backgroundColor:const Color(0xFF08080C),insetPadding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[
-   Flexible(child:InteractiveViewer(minScale:.5,maxScale:4,child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Center(child:Text(t('تعذر تحميل الصورة','Image failed to load'),style:const TextStyle(color:Colors.white)))))),
-   Container(padding:const EdgeInsets.fromLTRB(10,8,10,10),decoration:BoxDecoration(color:skin.partner,borderRadius:const BorderRadius.vertical(bottom:Radius.circular(16))),child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-    TextButton.icon(onPressed:()=>Navigator.pop(ctx),icon:Icon(Icons.close,color:skin.accent),label:Text(t('إغلاق','Close'))),
-    TextButton.icon(onPressed:()async{Navigator.pop(ctx);await _saveImageLocally(url);},icon:Icon(Icons.download_rounded,color:skin.accent),label:Text(t('حفظ','Save'))),
-    TextButton.icon(onPressed:()async{Navigator.pop(ctx);try{final bytes=await _downloadImage(url);if(!mounted)return;await showDialog<void>(context:context,builder:(_)=>_ImageMarkupDialog(bytes:bytes,skin:skin,ar:ar));}catch(_){_show(t('تعذر فتح أدوات الرسم','Could not open drawing tools'));}},icon:Icon(Icons.draw_rounded,color:skin.accent),label:Text(t('الرسم','Draw')))
-   ]))
-  ])));
+  await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>Dialog(
+   backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,
+   child:SizedBox.expand(child:SafeArea(child:Column(children:[
+    Expanded(child:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Center(child:Text(t('تعذر تحميل الصورة','Image failed to load'),style:const TextStyle(color:Colors.white))))))),
+    Container(padding:const EdgeInsets.fromLTRB(10,8,10,12),decoration:BoxDecoration(color:skin.partner,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.18)))),child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+     TextButton.icon(onPressed:()=>Navigator.pop(ctx),icon:Icon(Icons.close,color:skin.accent),label:Text(t('إغلاق','Close'))),
+     TextButton.icon(onPressed:()async{Navigator.pop(ctx);await _saveImageLocally(url);},icon:Icon(Icons.download_rounded,color:skin.accent),label:Text(t('حفظ','Save'))),
+     TextButton.icon(onPressed:()async{Navigator.pop(ctx);try{final bytes=await _downloadImage(url);if(!mounted)return;await showDialog<void>(context:context,builder:(_)=>_ImageMarkupDialog(bytes:bytes,skin:skin,ar:ar));}catch(_){_show(t('تعذر فتح أدوات الرسم','Could not open drawing tools'));}},icon:Icon(Icons.draw_rounded,color:skin.accent),label:Text(t('الرسم','Draw')))
+    ]))
+   ])))
+  ));
  }
  Future<Uint8List> _downloadImage(String url)async{
   final client=HttpClient();try{final request=await client.getUrl(Uri.parse(url));final response=await request.close();if(response.statusCode<200||response.statusCode>=300)throw Exception('download');final chunks=<int>[];await for(final chunk in response)chunks.addAll(chunk);return Uint8List.fromList(chunks);}finally{client.close();}
