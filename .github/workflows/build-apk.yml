@@ -430,8 +430,10 @@ jobs:
             --ks-key-alias androiddebugkey \
             --ks-pass pass:android \
             --key-pass pass:android \
+            --min-sdk-version 23 \
             --v1-signing-enabled true \
             --v2-signing-enabled true \
+            --v3-signing-enabled true \
             --out "$APK.compat" "$APK"
           mv "$APK.compat" "$APK"
           echo "APK re-signed with both v1 and v2 schemes."
@@ -454,10 +456,9 @@ jobs:
           echo "$BADGING" | grep -F "package: name='com.ours.ours'"
           VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose "$APK")"
           echo "$VERIFY_OUTPUT"
+          echo "$VERIFY_OUTPUT" | grep -F "Verified using v1 scheme (JAR signing): true"
           echo "$VERIFY_OUTPUT" | grep -F "Verified using v2 scheme (APK Signature Scheme v2): true"
-          if ! echo "$VERIFY_OUTPUT" | grep -Fq "Verified using v1 scheme (JAR signing): true"; then
-            echo "::warning::V1 JAR signing is unavailable; V2 is verified and supports Android 7.0 and newer."
-          fi
+          echo "$VERIFY_OUTPUT" | grep -F "Verified using v3 scheme (APK Signature Scheme v3): true"
           echo "APK validation passed with a verified V2 signature."
 
       - name: Upload APK
