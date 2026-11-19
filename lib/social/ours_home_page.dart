@@ -108,13 +108,16 @@ class _StudioState extends State<_StudioView> {
   String scope = 'personal';
   List<Map<String, dynamic>> rows = [];
   bool loading = true;
+  bool studioOpened = false;
+  String canvasPreset = 'midnight';
+  String toolMode = 'pen';
   Color color = _l;
   double strokeWidth = 4;
   bool erasing = false;
   bool marker = false;
   bool showGrid = true;
   double opacity = 1.0;
-  static const Color canvasBackground = Color(0xFF171522);
+  Color canvasBackground = const Color(0xFF171522);
   List<Offset> points = [];
   final List<Map<String, dynamic>> redoStack = [];
   final TransformationController zoomController = TransformationController();
@@ -277,8 +280,31 @@ class _StudioState extends State<_StudioView> {
     super.dispose();
   }
 
+  Widget _studioLobby(BuildContext context) {
+    final presets=< (String,String,Color,bool)>[
+      ('midnight','ليل بنفسجي',const Color(0xFF171522),true),
+      ('paper','ورق عاجي',const Color(0xFFF2EBDD),true),
+      ('grid','شبكة هادئة',const Color(0xFF202838),true),
+      ('canvas','لوحة فاتحة',const Color(0xFFFAFAF7),false),
+    ];
+    return ListView(padding:const EdgeInsets.all(18),children:[
+      Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF34294B),Color(0xFF171725),Color(0xFF18343A)]),borderRadius:BorderRadius.circular(24),border:Border.all(color:_gold.withValues(alpha:.3))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Icon(Icons.draw_rounded,color:_gold,size:34),const SizedBox(height:14),
+        Text(_t(context,'مرسم OURS','OURS Studio'),style:const TextStyle(color:Colors.white,fontSize:24,fontWeight:FontWeight.w800)),
+        const SizedBox(height:6),Text(_t(context,'اختر نوع المرسم وأجواء اللوحة قبل البدء، ثم استخدم أدوات الرسم والتظليل والممحاة والتراجع والتكبير.','Choose your studio and canvas mood before drawing, then use brushes, marker, eraser, undo and zoom.'),style:const TextStyle(color:_lavender,height:1.6)),
+      ])),
+      const SizedBox(height:20),Text(_t(context,'مساحة الرسم','Drawing space'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold,fontSize:16)),
+      const SizedBox(height:10),SegmentedButton<String>(segments:[ButtonSegment(value:'personal',label:Text(_t(context,'مرسمي الخاص','Personal'))),ButtonSegment(value:'shared',label:Text(_t(context,'مرسمنا المشترك','Shared')))],selected:{scope},onSelectionChanged:(v){setState(()=>scope=v.first);_load();}),
+      const SizedBox(height:20),Text(_t(context,'خلفية اللوحة','Canvas background'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold)),
+      const SizedBox(height:10),GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:2,childAspectRatio:1.65,crossAxisSpacing:10,mainAxisSpacing:10,children:presets.map((p)=>InkWell(onTap:()=>setState(()=>{canvasPreset=p.$1,canvasBackground=p.$3,showGrid=p.$4}),borderRadius:BorderRadius.circular(14),child:Container(decoration:BoxDecoration(color:p.$3,borderRadius:BorderRadius.circular(14),border:Border.all(color:canvasPreset==p.$1?_gold:_lavender.withValues(alpha:.3),width:canvasPreset==p.$1?2:1)),child:Stack(children:[if(p.$4)Positioned.fill(child:CustomPaint(painter:_StudioPreviewGrid())),Align(alignment:Alignment.bottomLeft,child:Padding(padding:const EdgeInsets.all(10),child:Text(p.$2,style:TextStyle(color:p.$1=='paper'||p.$1=='canvas'?const Color(0xFF29213D):Colors.white,fontWeight:FontWeight.bold)))),if(canvasPreset==p.$1)const Positioned(top:7,right:7,child:Icon(Icons.check_circle,color:_gold))])))).toList()),
+      const SizedBox(height:18),FilledButton.icon(onPressed:(){setState(()=>studioOpened=true);_load();},icon:const Icon(Icons.add_rounded),label:Text(_t(context,'إنشاء لوحة وبدء الرسم','Create canvas and start drawing')),style:FilledButton.styleFrom(backgroundColor:_gold,foregroundColor:_navy,padding:const EdgeInsets.symmetric(vertical:15))),
+      const SizedBox(height:8),OutlinedButton.icon(onPressed:(){setState(()=>studioOpened=true);_load();},icon:const Icon(Icons.folder_open_outlined),label:Text(_t(context,'فتح أعمالي المحفوظة','Open saved work'))),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!studioOpened) return _studioLobby(context);
     return Column(
       children: [
         Padding(
@@ -306,6 +332,11 @@ class _StudioState extends State<_StudioView> {
             },
           ),
         ),
+        Padding(padding:const EdgeInsets.fromLTRB(12,4,12,0),child:Wrap(spacing:8,children:[
+          ChoiceChip(label:Text(_t(context,'قلم','Pen')),selected:toolMode=='pen',onSelected:(_){setState((){toolMode='pen';erasing=false;marker=false;});}),
+          ChoiceChip(label:Text(_t(context,'تظليل','Marker')),selected:toolMode=='marker',onSelected:(_){setState((){toolMode='marker';erasing=false;marker=true;});}),
+          ChoiceChip(label:Text(_t(context,'ممحاة','Eraser')),selected:toolMode=='eraser',onSelected:(_){setState((){toolMode='eraser';erasing=true;marker=false;});}),
+        ])),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -424,6 +455,7 @@ class _StudioState extends State<_StudioView> {
             ),
           ),
         ),
+        TextButton.icon(onPressed:()=>setState(()=>studioOpened=false),icon:const Icon(Icons.dashboard_outlined,color:_gold),label:Text(_t(context,'العودة لاختيار المرسم','Back to studio selection'))),
         Padding(
           padding: const EdgeInsets.all(8),
           child: Text(
