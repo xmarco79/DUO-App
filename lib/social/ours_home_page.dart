@@ -281,7 +281,7 @@ class _StudioState extends State<_StudioView> {
   }
 
   Widget _studioLobby(BuildContext context) {
-    final presets=< (String,String,Color,bool)>[
+    final presets=<(String,String,Color,bool)>[
       ('midnight','ليل بنفسجي',const Color(0xFF171522),true),
       ('paper','ورق عاجي',const Color(0xFFF2EBDD),true),
       ('grid','شبكة هادئة',const Color(0xFF202838),true),
@@ -296,7 +296,7 @@ class _StudioState extends State<_StudioView> {
       const SizedBox(height:20),Text(_t(context,'مساحة الرسم','Drawing space'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold,fontSize:16)),
       const SizedBox(height:10),SegmentedButton<String>(segments:[ButtonSegment(value:'personal',label:Text(_t(context,'مرسمي الخاص','Personal'))),ButtonSegment(value:'shared',label:Text(_t(context,'مرسمنا المشترك','Shared')))],selected:{scope},onSelectionChanged:(v){setState(()=>scope=v.first);_load();}),
       const SizedBox(height:20),Text(_t(context,'خلفية اللوحة','Canvas background'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold)),
-      const SizedBox(height:10),GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:2,childAspectRatio:1.65,crossAxisSpacing:10,mainAxisSpacing:10,children:presets.map((p)=>InkWell(onTap:()=>setState(()=>{canvasPreset=p.$1,canvasBackground=p.$3,showGrid=p.$4}),borderRadius:BorderRadius.circular(14),child:Container(decoration:BoxDecoration(color:p.$3,borderRadius:BorderRadius.circular(14),border:Border.all(color:canvasPreset==p.$1?_gold:_lavender.withValues(alpha:.3),width:canvasPreset==p.$1?2:1)),child:Stack(children:[if(p.$4)Positioned.fill(child:CustomPaint(painter:_StudioPreviewGrid())),Align(alignment:Alignment.bottomLeft,child:Padding(padding:const EdgeInsets.all(10),child:Text(p.$2,style:TextStyle(color:p.$1=='paper'||p.$1=='canvas'?const Color(0xFF29213D):Colors.white,fontWeight:FontWeight.bold)))),if(canvasPreset==p.$1)const Positioned(top:7,right:7,child:Icon(Icons.check_circle,color:_gold))])))).toList()),
+      const SizedBox(height:10),GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:2,childAspectRatio:1.65,crossAxisSpacing:10,mainAxisSpacing:10,children:presets.map((p)=>InkWell(onTap:(){setState((){canvasPreset=p.$1;canvasBackground=p.$3;showGrid=p.$4;});},borderRadius:BorderRadius.circular(14),child:Container(decoration:BoxDecoration(color:p.$3,borderRadius:BorderRadius.circular(14),border:Border.all(color:canvasPreset==p.$1?_gold:_lavender.withValues(alpha:.3),width:canvasPreset==p.$1?2:1)),child:Stack(children:[if(p.$4)Positioned.fill(child:CustomPaint(painter:_StudioPreviewGrid())),Align(alignment:Alignment.bottomLeft,child:Padding(padding:const EdgeInsets.all(10),child:Text(p.$2,style:TextStyle(color:p.$1=='paper'||p.$1=='canvas'?const Color(0xFF29213D):Colors.white,fontWeight:FontWeight.bold)))),if(canvasPreset==p.$1)const Positioned(top:7,right:7,child:Icon(Icons.check_circle,color:_gold))])))).toList()),
       const SizedBox(height:18),FilledButton.icon(onPressed:(){setState(()=>studioOpened=true);_load();},icon:const Icon(Icons.add_rounded),label:Text(_t(context,'إنشاء لوحة وبدء الرسم','Create canvas and start drawing')),style:FilledButton.styleFrom(backgroundColor:_gold,foregroundColor:_navy,padding:const EdgeInsets.symmetric(vertical:15))),
       const SizedBox(height:8),OutlinedButton.icon(onPressed:(){setState(()=>studioOpened=true);_load();},icon:const Icon(Icons.folder_open_outlined),label:Text(_t(context,'فتح أعمالي المحفوظة','Open saved work'))),
     ]);
@@ -471,6 +471,17 @@ class _StudioState extends State<_StudioView> {
       ],
     );
   }
+}
+
+class _StudioPreviewGrid extends CustomPainter {
+  @override
+  void paint(Canvas canvas,Size size){
+    final paint=Paint()..color=const Color(0xFFB9A2D5).withValues(alpha:.18)..strokeWidth=.7;
+    for(double x=0;x<size.width;x+=18){canvas.drawLine(Offset(x,0),Offset(x,size.height),paint);}
+    for(double y=0;y<size.height;y+=18){canvas.drawLine(Offset(0,y),Offset(size.width,y),paint);}
+  }
+  @override
+  bool shouldRepaint(covariant _StudioPreviewGrid oldDelegate)=>false;
 }
 
 class _CanvasPainter extends CustomPainter {
