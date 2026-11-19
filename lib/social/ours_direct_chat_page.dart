@@ -137,15 +137,40 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
  int _streakCount(){
-  final days=<DateTime>{};
-  for(final m in messages){final dt=DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal();if(dt!=null)days.add(DateTime(dt.year,dt.month,dt.day));}
-  if(days.isEmpty)return 0;
+  final participantsByDay=<DateTime,Set<String>>{};
+  for(final message in messages){
+   final body=(message['body']??'').toString().trim();
+   final type=(message['message_type']??'text').toString();
+   final sender=message['sender_id']?.toString()??'';
+   final date=DateTime.tryParse(message['created_at']?.toString()??'')?.toLocal();
+   if(date==null||sender.isEmpty||body.isEmpty||!const ['text','image','video','audio','file','sticker','view_once','view_twice'].contains(type))continue;
+   final day=DateTime(date.year,date.month,date.day);
+   participantsByDay.putIfAbsent(day,()=>{}).add(sender);
+  }
+  final activeDays=participantsByDay.entries.where((entry)=>entry.value.length>=2).map((entry)=>entry.key).toSet();
+  if(activeDays.isEmpty)return 0;
   final today=DateTime.now(),current=DateTime(today.year,today.month,today.day);
-  final latest=days.reduce((a,b)=>a.isAfter(b)?a:b);
+  final latest=activeDays.reduce((a,b)=>a.isAfter(b)?a:b);
   if(latest.isBefore(current.subtract(const Duration(days:1))))return 0;
   var count=0,day=latest;
-  while(days.contains(day)){count++;day=day.subtract(const Duration(days:1));}
-  return count >= 3 ? count : 0;
+  while(activeDays.contains(day)){count++;day=day.subtract(const Duration(days:1));}
+  return count>=3?count:0;
+ }
+ int _streakStage(){
+  final count=_streakCount();
+  if(count>=100)return 6;if(count>=60)return 5;if(count>=30)return 4;
+  if(count>=14)return 3;if(count>=7)return 2;if(count>=3)return 1;return 0;
+ }
+ String _streakStageName(){
+  switch(_streakStage()){
+   case 6:return t('أسطورة OURS','OURS Legend');
+   case 5:return t('أفق مشترك','Shared Horizon');
+   case 4:return t('مدار ثابت','Steady Orbit');
+   case 3:return t('وهج متنامٍ','Growing Glow');
+   case 2:return t('نبض متواصل','Steady Pulse');
+   case 1:return t('بداية الحكاية','The Beginning');
+   default:return '';
+  }
  }
  @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();_startLiveStatus();}
  Future<void> _changeLocalNickname() async{
@@ -570,7 +595,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       Text(_presenceLabel(),style:TextStyle(color:partnerOnline?const Color(0xFF70D9A0):skin.accent,fontSize:10)),
       const SizedBox(width:7),
       Text(t('· الملف الشخصي','· Profile'),style:TextStyle(color:skin.accent,fontSize:10)),
-      if(_streakCount()>0)Padding(padding:const EdgeInsetsDirectional.only(start:6),child:Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:const Color(0xFFB85A34).withValues(alpha:.16),borderRadius:BorderRadius.circular(10)),child:Text('🔥 ${_streakCount()}',style:const TextStyle(color:Color(0xFFFFB06A),fontSize:10,fontWeight:FontWeight.w800))))
+      if(_streakCount()>0)Padding(padding:const EdgeInsetsDirectional.only(start:6),child:Tooltip(message:_streakStageName()+t(' · يحتسب اليوم عند تفاعل كل منكما',' · counts when both of you interact'),child:AnimatedContainer(duration:const Duration(milliseconds:320),padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),decoration:BoxDecoration(gradient:LinearGradient(colors:switch(_streakStage()){1=>[const Color(0xFF467E88),const Color(0xFF6FAEAA)],2=>[const Color(0xFF3C9C8B),const Color(0xFF75C9A6)],3=>[const Color(0xFF5D75C8),const Color(0xFF9B7BDA)],4=>[const Color(0xFF9C62B6),const Color(0xFFD18BB4)],5=>[const Color(0xFFC27B46),const Color(0xFFE8BD77)],_=>[const Color(0xFFD7A84F),const Color(0xFFFFE3A2]]},borderRadius:BorderRadius.circular(12),boxShadow:[BoxShadow(color:skin.accent.withValues(alpha:.16),blurRadius:9)]),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.auto_awesome_rounded,color:Colors.white,size:11),const SizedBox(width:4),Text('${_streakCount()} · ${_streakStageName()}',style:const TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))]))))
      ])
     ]),
    ),
