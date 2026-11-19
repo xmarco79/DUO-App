@@ -23,15 +23,15 @@ class _ChatSkin{
  const _ChatSkin(this.id,this.ar,this.en,this.bg,this.mine,this.partner,this.accent);
 }
 const _skins=[
- _ChatSkin('ours','OURS · الهوية الرئيسية','OURS · Signature',Color(0xFF10101C),Color(0xFF29213D),Color(0xFF211D30),Color(0xFFD9BC86)),
- _ChatSkin('aurora','الشفق القطبي','Aurora',Color(0xFF091A27),Color(0xFF174A55),Color(0xFF142D3B),Color(0xFF75E0D0)),
- _ChatSkin('sunset','غروب دافئ','Sunset',Color(0xFF211329),Color(0xFF713C52),Color(0xFF38243E),Color(0xFFFFB28A)),
- _ChatSkin('sakura','حديقة ساكورا','Sakura',Color(0xFF251923),Color(0xFF75445C),Color(0xFF3E2B3A),Color(0xFFFFB9D0)),
- _ChatSkin('ocean','أعماق المحيط','Deep ocean',Color(0xFF071B30),Color(0xFF15577A),Color(0xFF12354D),Color(0xFF75D5F2)),
- _ChatSkin('forest','غابة مطيرة','Rainforest',Color(0xFF0D211D),Color(0xFF28664D),Color(0xFF1C3D32),Color(0xFFA8E6B7)),
- _ChatSkin('cosmos','فضاء نجمي','Cosmic night',Color(0xFF100F2A),Color(0xFF493A82),Color(0xFF242442),Color(0xFFC5B7FF)),
- _ChatSkin('desert','وهج الصحراء','Desert glow',Color(0xFF241B17),Color(0xFF795034),Color(0xFF443126),Color(0xFFFFD18B)),
- _ChatSkin('neon','مدينة نيون','Neon city',Color(0xFF130F25),Color(0xFF553A79),Color(0xFF2D2448),Color(0xFF8EF0FF)),
+ _ChatSkin('ours','OURS · نبض','OURS · Pulse',Color(0xFF10101C),Color(0xFF302044),Color(0xFF241B36),Color(0xFFFFD66B)),
+ _ChatSkin('aurora','أورورا لايف','Aurora live',Color(0xFF081C25),Color(0xFF116C78),Color(0xFF10384A),Color(0xFF70F2D2)),
+ _ChatSkin('sunset','فلامنكو','Flamenco',Color(0xFF271122),Color(0xFFB63C68),Color(0xFF56243F),Color(0xFFFFA36C)),
+ _ChatSkin('sakura','بلوم','Bloom',Color(0xFF261622),Color(0xFFB64E89),Color(0xFF4B2844),Color(0xFFFFC2DE)),
+ _ChatSkin('ocean','بلو لاجون','Blue lagoon',Color(0xFF061A2A),Color(0xFF167FB0),Color(0xFF123D58),Color(0xFF80E8FF)),
+ _ChatSkin('forest','إميرالد','Emerald',Color(0xFF0C1E1A),Color(0xFF168B67),Color(0xFF18473A),Color(0xFF91F5B8)),
+ _ChatSkin('cosmos','دريم سكيب','Dreamscape',Color(0xFF100C2A),Color(0xFF7045D8),Color(0xFF342458),Color(0xFFD6B7FF)),
+ _ChatSkin('desert','صن داست','Sun dust',Color(0xFF241813),Color(0xFFB66B35),Color(0xFF4C3024),Color(0xFFFFDA87)),
+ _ChatSkin('neon','سايبر بوب','Cyber pop',Color(0xFF140A22),Color(0xFF8144C7),Color(0xFF36234D),Color(0xFF7CFFF1)),
 ];
 
 class _ChatAtmospherePainter extends CustomPainter {
@@ -196,7 +196,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    hiddenIds..clear()..addAll(hidden.map((r)=>r['message_id'].toString()));
    final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at');
    if(!mounted)return;setState((){messages..clear()..addAll(List<Map<String,dynamic>>.from(rows).where((m)=>!hiddenIds.contains(m['id'].toString())));loading=false;});_bottom();
-  }catch(e){if(mounted){setState(()=>loading=false);_show(t('تعذر تحميل المحادثة: $e','Could not load conversation: $e'));}}
+  }catch(e){if(mounted){setState(()=>loading=false);_show(t('تعذر تحميل المحادثة. تحقق من الاتصال وحاول مجددًا.','Could not load conversation. Check your connection and try again.'));}}
  }
  void _listen(){
   final filter=PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'conversation_id',value:widget.conversationId);
@@ -216,7 +216,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Future<void> _sendText() async{
   final text=input.text.trim();if(text.isEmpty||sending)return;setState(()=>sending=true);
   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':text,'message_type':'text','reply_to':replyTo?['id']});input.clear();if(mounted)setState(()=>replyTo=null);}
-  catch(e){_show(t('تعذر إرسال الرسالة: $e','Could not send message: $e'));}finally{if(mounted)setState(()=>sending=false);}
+  catch(e){_show(t('تعذر إرسال الرسالة. حاول مرة أخرى.','Could not send message. Please try again.'));}finally{if(mounted)setState(()=>sending=false);}
  }
  String _mime(String name){
   const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','mp4':'video/mp4','mov':'video/quicktime','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
@@ -231,7 +231,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    await db.storage.from(_bucket).uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
    try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':type,'max_views':maxViews??1});}
    catch(_){await db.storage.from(_bucket).remove([path]);rethrow;}
-  }catch(e){_show(t('تعذر رفع المرفق: $e','Could not upload attachment: $e'));}finally{if(mounted)setState(()=>uploading=false);}
+  }catch(e){_show(t('تعذر رفع المرفق. تحقق من الاتصال.','Could not upload the attachment. Check your connection.'));}finally{if(mounted)setState(()=>uploading=false);}
  }
  Future<String?> _previewMedia({required Uint8List bytes,required String name,required bool video}) async{
   final isImage=!video;String mode='normal';
@@ -391,6 +391,24 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد نتائج','No results'))):ListView(children:found.map((m)=>ListTile(title:Text(m['body'].toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])))).toList()))
   ]))));
  }
+ Future<void> _openImageActions(String url) async{
+  if(!mounted)return;
+  await showDialog<void>(context:context,builder:(ctx)=>Dialog(backgroundColor:const Color(0xFF08080C),insetPadding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[
+   Flexible(child:InteractiveViewer(minScale:.5,maxScale:4,child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Center(child:Text(t('تعذر تحميل الصورة','Image failed to load'),style:const TextStyle(color:Colors.white)))))),
+   Container(padding:const EdgeInsets.fromLTRB(10,8,10,10),decoration:BoxDecoration(color:skin.partner,borderRadius:const BorderRadius.vertical(bottom:Radius.circular(16))),child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+    TextButton.icon(onPressed:()=>Navigator.pop(ctx),icon:Icon(Icons.close,color:skin.accent),label:Text(t('إغلاق','Close'))),
+    TextButton.icon(onPressed:()async{Navigator.pop(ctx);await _saveImageLocally(url);},icon:Icon(Icons.download_rounded,color:skin.accent),label:Text(t('حفظ','Save'))),
+    TextButton.icon(onPressed:()async{Navigator.pop(ctx);try{final bytes=await _downloadImage(url);if(!mounted)return;await showDialog<void>(context:context,builder:(_)=>_ImageMarkupDialog(bytes:bytes,skin:skin,ar:ar));}catch(_){_show(t('تعذر فتح أدوات الرسم','Could not open drawing tools'));}},icon:Icon(Icons.draw_rounded,color:skin.accent),label:Text(t('الرسم','Draw')))
+   ]))
+  ])));
+ }
+ Future<Uint8List> _downloadImage(String url)async{
+  final client=HttpClient();try{final request=await client.getUrl(Uri.parse(url));final response=await request.close();if(response.statusCode<200||response.statusCode>=300)throw Exception('download');final chunks=<int>[];await for(final chunk in response)chunks.addAll(chunk);return Uint8List.fromList(chunks);}finally{client.close();}
+ }
+ Future<void> _saveImageLocally(String url)async{
+  try{final bytes=await _downloadImage(url);final dir=await getApplicationDocumentsDirectory();final folder=Directory('${dir.path}/OURS_Saved_Media');await folder.create(recursive:true);final file=File('${folder.path}/image_${DateTime.now().millisecondsSinceEpoch}.jpg');await file.writeAsBytes(bytes,flush:true);_show(t('تم حفظ الصورة داخل مجلد OURS_Saved_Media','Image saved in OURS_Saved_Media inside app storage'));}
+  catch(_){_show(t('تعذر حفظ الصورة، تحقق من الاتصال','Could not save image. Check your connection'));}
+ }
  Future<void> _openLibraryItem(Map<String,dynamic> message) async{
   final type=message['message_type']?.toString()??'';
   final path=message['body']?.toString()??'';
@@ -443,7 +461,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       return GestureDetector(onLongPress:()=>_messageActions(m,mine,type,path),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
        constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(10),
        decoration:BoxDecoration(color:mine?skin.mine:skin.partner,borderRadius:BorderRadius.circular(17),border:Border.all(color:skin.accent.withValues(alpha:.16))),
-       child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+       child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
         if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString())) Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.45),borderRadius:BorderRadius.circular(8)),child:Text(messages.firstWhere((r)=>r['id'].toString()==m['reply_to'].toString())['body'].toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))),
         if(type=='sticker')Center(child:_OursCatSticker(stickerId:path,size:82))
         else if(type=='view_once'||type=='view_twice')
@@ -458,8 +476,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
         else if(type=='image')FutureBuilder<String>(future:_signed(path),builder:(c,s){
          if(s.hasError)return Text(t('تعذر تحميل الصورة','Could not load image'),style:TextStyle(color:skin.accent));
          if(!s.hasData)return SizedBox(width:190,height:125,child:Center(child:CircularProgressIndicator(color:skin.accent)));
-         return GestureDetector(onTap:()=>showDialog<void>(context:context,builder:(_)=>Dialog(backgroundColor:Colors.transparent,child:InteractiveViewer(child:Image.network(s.data!,fit:BoxFit.contain)))),
-          child:ClipRRect(borderRadius:BorderRadius.circular(11),child:Image.network(s.data!,width:230,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Text(t('تعذر عرض الصورة','Image unavailable')))));
+         return GestureDetector(onTap:()=>_openImageActions(s.data!),
+          child:ClipRRect(borderRadius:BorderRadius.circular(13),child:Stack(children:[Image.network(s.data!,width:230,height:230,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Text(t('تعذر عرض الصورة','Image unavailable'))),Positioned(bottom:8,right:8,child:Container(padding:const EdgeInsets.all(6),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.58),borderRadius:BorderRadius.circular(30)),child:Icon(Icons.zoom_out_map_rounded,color:Colors.white,size:17)))])));
         })
         else if(type=='file')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[
          Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),
@@ -468,7 +486,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
         else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
         else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
         const SizedBox(height:4),Align(alignment:AlignmentDirectional.centerEnd,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)))
-       ]))));
+       ])))));
      })),
     SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(7,8,7,10),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.2)))),
      child:recording?Row(children:[
