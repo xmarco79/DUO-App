@@ -17,10 +17,16 @@ class _ChatSkin{
  const _ChatSkin(this.id,this.ar,this.en,this.bg,this.mine,this.partner,this.accent);
 }
 const _skins=[
- _ChatSkin('midnight','ليلي','Midnight',Color(0xFF10101C),Color(0xFF342B4C),Color(0xFF211D30),_gold),
+ _ChatSkin('signature','OURS Signature','OURS Signature',Color(0xFF10101C),Color(0xFF342B4C),Color(0xFF211D30),_gold),
+ _ChatSkin('midnight','ليلي','Midnight',Color(0xFF080D1A),Color(0xFF283B62),Color(0xFF17243C),Color(0xFF8DAFFF)),
  _ChatSkin('ocean','المحيط','Ocean',Color(0xFF0B1B2A),Color(0xFF174A66),Color(0xFF173244),Color(0xFF75C8D8)),
  _ChatSkin('rose','وردي هادئ','Soft rose',Color(0xFF24151F),Color(0xFF63364D),Color(0xFF382331),Color(0xFFF0AFC4)),
  _ChatSkin('forest','الغابة','Forest',Color(0xFF101F1A),Color(0xFF285342),Color(0xFF1D332B),Color(0xFF9CC9A8)),
+ _ChatSkin('aurora','الشفق','Aurora',Color(0xFF101323),Color(0xFF433D72),Color(0xFF252D49),Color(0xFF88E4C4)),
+ _ChatSkin('cafe','دفء القهوة','Warm Café',Color(0xFF211A16),Color(0xFF5A4030),Color(0xFF3B2B22),Color(0xFFE1B98B)),
+ _ChatSkin('crimson','قرمزي','Crimson',Color(0xFF1C1016),Color(0xFF682B40),Color(0xFF38202B),Color(0xFFFF8098)),
+ _ChatSkin('lavender','لافندر','Lavender Dream',Color(0xFF1A1628),Color(0xFF57446D),Color(0xFF30263F),Color(0xFFC9B2F1)),
+ _ChatSkin('monochrome','أحادي','Monochrome',Color(0xFF111111),Color(0xFF414141),Color(0xFF252525),Color(0xFFE5E5E5)),
 ];
 
 class OursDirectChatPage extends StatefulWidget{
@@ -41,14 +47,21 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final found=_skins.where((s)=>s.id==id);if(mounted)setState(()=>skin=found.isEmpty?_skins.first:found.first);
  }
  Future<void> _chooseSkin() async{
-  final selected=await showModalBottomSheet<_ChatSkin>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,
-   builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    Padding(padding:const EdgeInsets.all(12),child:Text(t('مظهر المحادثة','Chat appearance'),style:const TextStyle(color:_gold,fontSize:18))),
-    for(final s in _skins) ListTile(
-     leading:Container(width:42,height:30,decoration:BoxDecoration(color:s.bg,borderRadius:BorderRadius.circular(8),border:Border.all(color:s.accent)),child:Align(alignment:Alignment.centerRight,child:Container(width:19,height:10,margin:const EdgeInsets.all(4),decoration:BoxDecoration(color:s.mine,borderRadius:BorderRadius.circular(8))))),
-     title:Text(ar?s.ar:s.en),trailing:skin.id==s.id?const Icon(Icons.check_circle,color:_gold):null,onTap:()=>Navigator.pop(ctx,s))
-   ])));
+  final selected=await showModalBottomSheet<_ChatSkin>(context:context,backgroundColor:const Color(0xFF171523),showDragHandle:true,isScrollControlled:true,
+   builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,18),child:Column(mainAxisSize:MainAxisSize.min,children:[
+    Text(t('ثيمات OURS','OURS themes'),style:const TextStyle(color:_gold,fontSize:19,fontWeight:FontWeight.w700)),
+    const SizedBox(height:5),Text(t('اختر هوية محادثتك','Choose your conversation style'),style:TextStyle(color:_lavender.withValues(alpha:.8))),
+    const SizedBox(height:12),Flexible(child:ListView(shrinkWrap:true,children:[for(final s in _skins)
+     Card(color:s.bg,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16),side:BorderSide(color:s.id==skin.id?s.accent:Colors.white12,width:s.id==skin.id?1.5:1)),
+      child:ListTile(
+       leading:Container(width:48,height:34,decoration:BoxDecoration(color:s.bg,borderRadius:BorderRadius.circular(10),border:Border.all(color:s.accent.withValues(alpha:.8))),child:Stack(children:[Align(alignment:Alignment.centerLeft,child:Container(width:22,height:12,margin:const EdgeInsets.all(4),decoration:BoxDecoration(color:s.partner,borderRadius:BorderRadius.circular(6)))),Align(alignment:Alignment.centerRight,child:Container(width:22,height:12,margin:const EdgeInsets.all(4),decoration:BoxDecoration(color:s.mine,borderRadius:BorderRadius.circular(6))))])),
+       title:Text(ar?s.ar:s.en,style:const TextStyle(color:Colors.white)),subtitle:Text(s.id=='signature'?t('الثيم الرسمي لهوية OURS','OURS official signature theme'):t('ثيم محادثة','Conversation theme'),style:TextStyle(color:s.accent,fontSize:11)),
+       trailing:skin.id==s.id?Icon(Icons.check_circle,color:s.accent):null,onTap:()=>Navigator.pop(ctx,s)))]))
+   ]))));
   if(selected==null)return;setState(()=>skin=selected);final p=await SharedPreferences.getInstance();await p.setString('ours_direct_skin_'+widget.conversationId,selected.id);
+ }
+ Future<void> _openDetails() async{
+  await Navigator.push(context,MaterialPageRoute(builder:(_)=>OursConversationDetailsPage(conversationId:widget.conversationId,partnerName:widget.partnerName)));
  }
  Future<void> _load() async{
   try{final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at');
@@ -69,25 +82,49 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   catch(e){_show(t('تعذر إرسال الرسالة: $e','Could not send message: $e'));}finally{if(mounted)setState(()=>sending=false);}
  }
  String _mime(String name){
-  const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','webm':'audio/webm','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
+  const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','mp4':'video/mp4','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','webm':'audio/webm','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
   return types[name.split('.').last.toLowerCase()]??'';
  }
- Future<void> _upload(Uint8List bytes,String name,String type) async{
+ Future<void> _upload(Uint8List bytes,String name,String type,{String viewMode='normal'}) async{
   if(bytes.isEmpty)return;if(bytes.length>20*1024*1024){_show(t('الحد الأقصى 20 ميجابايت','Maximum size is 20 MB'));return;}
   final mime=_mime(name);if(mime.isEmpty){_show(t('نوع الملف غير مدعوم','Unsupported file type'));return;}setState(()=>uploading=true);
   final safe=name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
   final path=widget.conversationId+'/'+uid+'/'+DateTime.now().microsecondsSinceEpoch.toString()+'_'+safe;
   try{
    await db.storage.from(_bucket).uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
-   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':type});}
+   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':type,'media_view_mode':type=='image'||type=='file'?viewMode:'normal'});}
    catch(_){await db.storage.from(_bucket).remove([path]);rethrow;}
   }catch(e){_show(t('تعذر رفع المرفق: $e','Could not upload attachment: $e'));}finally{if(mounted)setState(()=>uploading=false);}
  }
- Future<void> _pickImage() async{
-  try{final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:86,maxWidth:1600,maxHeight:1600);if(f==null)return;
+ Future<void> _pickImage({ImageSource source=ImageSource.gallery}) async{
+  try{final f=await picker.pickImage(source:source,imageQuality:92,maxWidth:2200,maxHeight:2200);if(f==null)return;
    final ext=f.name.split('.').last.toLowerCase();final name=['png','webp'].contains(ext)?f.name:'photo_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
-   await _upload(await f.readAsBytes(),name,'image');
+   final bytes=await f.readAsBytes();final draft=await Navigator.push<_MediaDraft>(context,MaterialPageRoute(builder:(_)=>OursMediaPreviewPage(bytes:bytes,name:name,kind:'image',accent:skin.accent)));
+   if(draft==null)return;await _upload(draft.bytes,draft.name,'image',viewMode:draft.viewMode);
   }catch(e){_show(t('تعذر اختيار الصورة: $e','Could not select image: $e'));}
+ }
+ Future<void> _pickVideo({ImageSource source=ImageSource.gallery}) async{
+  try{final f=await picker.pickVideo(source:source,maxDuration:const Duration(minutes:5));if(f==null)return;
+   if(f.name.split('.').last.toLowerCase()!='mp4'){_show(t('اختر فيديو بصيغة MP4 حاليًا.','Please choose an MP4 video for now.'));return;}
+   final bytes=await f.readAsBytes();final draft=await Navigator.push<_MediaDraft>(context,MaterialPageRoute(builder:(_)=>OursMediaPreviewPage(bytes:bytes,name:f.name,kind:'video',accent:skin.accent)));
+   if(draft==null)return;await _upload(draft.bytes,draft.name,'file',viewMode:draft.viewMode);
+  }catch(e){_show(t('تعذر اختيار الفيديو: $e','Could not select video: $e'));}
+ }
+ Future<void> _chooseMedia() async{
+  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   ListTile(leading:Icon(Icons.photo_outlined,color:skin.accent),title:Text(t('صورة من المعرض','Photo from gallery')),onTap:()=>Navigator.pop(c,'photo')),
+   ListTile(leading:Icon(Icons.videocam_outlined,color:skin.accent),title:Text(t('فيديو من المعرض','Video from gallery')),onTap:()=>Navigator.pop(c,'video')),
+   ListTile(leading:Icon(Icons.camera_alt_outlined,color:skin.accent),title:Text(t('التقاط صورة','Take a photo')),onTap:()=>Navigator.pop(c,'camera')),
+   ListTile(leading:Icon(Icons.video_camera_back_outlined,color:skin.accent),title:Text(t('تسجيل فيديو','Record video')),onTap:()=>Navigator.pop(c,'record'))
+  ]))));
+  if(choice=='photo')await _pickImage();else if(choice=='video')await _pickVideo();else if(choice=='camera')await _pickImage(source:ImageSource.camera);else if(choice=='record')await _pickVideo(source:ImageSource.camera);
+ }
+ Future<void> _chooseAttachment() async{
+  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   ListTile(leading:Icon(Icons.folder_open,color:skin.accent),title:Text(t('ملف أو مستند','File or document')),onTap:()=>Navigator.pop(c,'file')),
+   ListTile(leading:Icon(Icons.photo_library_outlined,color:skin.accent),title:Text(t('وسائط: صورة أو فيديو','Media: photo or video')),onTap:()=>Navigator.pop(c,'media')),
+  ]))));
+  if(choice=='file')await _pickFile();if(choice=='media')await _chooseMedia();
  }
  Future<void> _pickFile() async{
   try{final r=await FilePicker.platform.pickFiles(withData:true);if(r==null||r.files.isEmpty)return;final f=r.files.single;
@@ -138,7 +175,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     IconButton(tooltip:t('الثيم','Theme'),onPressed:_chooseSkin,icon:Icon(Icons.palette_outlined,color:skin.accent)),
     IconButton(tooltip:'OURS AI',onPressed:_openAi,icon:Icon(Icons.auto_awesome_outlined,color:skin.accent)),
     IconButton(tooltip:t('اتصال صوتي','Voice call'),onPressed:()=>_callInfo(false),icon:Icon(Icons.call_outlined,color:skin.accent)),
-    IconButton(tooltip:t('اتصال مرئي','Video call'),onPressed:()=>_callInfo(true),icon:Icon(Icons.videocam_outlined,color:skin.accent))
+    IconButton(tooltip:t('اتصال مرئي','Video call'),onPressed:()=>_callInfo(true),icon:Icon(Icons.videocam_outlined,color:skin.accent)),
+    IconButton(tooltip:t('معلومات المحادثة','Conversation details'),onPressed:_openDetails,icon:Icon(Icons.more_horiz_rounded,color:skin.accent))
    ]),
    body:Column(children:[
     Expanded(child:loading?Center(child:CircularProgressIndicator(color:skin.accent)):messages.isEmpty
@@ -173,8 +211,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       Expanded(child:Text(t('جارٍ تسجيل الرسالة الصوتية…','Recording voice message…'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))),
       IconButton(onPressed:sending?null:_sendRecording,icon:Icon(Icons.send,color:skin.accent))
      ]):Row(children:[
-      IconButton(onPressed:uploading||sending?null:_pickFile,icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.attach_file,color:skin.accent)),
-      IconButton(onPressed:uploading||sending?null:_pickImage,icon:Icon(Icons.image_outlined,color:skin.accent)),
+      IconButton(onPressed:uploading||sending?null:_chooseAttachment,icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.add_circle_outline_rounded,color:skin.accent)),
       Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onSubmitted:(_)=>_sendText(),
        decoration:InputDecoration(hintText:t('اكتب رسالة…','Write a message…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:11)))),
       IconButton(onPressed:uploading||sending?null:_startRecording,icon:Icon(Icons.mic_none_rounded,color:skin.accent)),
@@ -184,6 +221,45 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  }
 }
 
+class _MediaDraft{final Uint8List bytes;final String name,kind,viewMode;const _MediaDraft({required this.bytes,required this.name,required this.kind,required this.viewMode});}
+class OursMediaPreviewPage extends StatefulWidget{
+ final Uint8List bytes;final String name,kind;final Color accent;
+ const OursMediaPreviewPage({super.key,required this.bytes,required this.name,required this.kind,required this.accent});
+ @override State<OursMediaPreviewPage> createState()=>_OursMediaPreviewPageState();
+}
+class _OursMediaPreviewPageState extends State<OursMediaPreviewPage>{
+ String viewMode='normal';bool hd=true;
+ bool get ar=>Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF10101C),appBar:AppBar(backgroundColor:const Color(0xFF10101C),title:Text(t('معاينة قبل الإرسال','Preview before sending')),actions:[IconButton(onPressed:()=>setState(()=>hd=!hd),tooltip:'HD',icon:Icon(Icons.high_quality,color:hd?widget.accent:Colors.white54))]),
+ body:SafeArea(child:Column(children:[
+  Expanded(child:Center(child:Padding(padding:const EdgeInsets.all(16),child:widget.kind=='image'?ClipRRect(borderRadius:BorderRadius.circular(20),child:Image.memory(widget.bytes,fit:BoxFit.contain)):Container(width:280,height:300,decoration:BoxDecoration(color:const Color(0xFF211D30),borderRadius:BorderRadius.circular(22),border:Border.all(color:widget.accent.withValues(alpha:.4))),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(Icons.movie_outlined,size:72,color:widget.accent),const SizedBox(height:12),Padding(padding:const EdgeInsets.all(12),child:Text(widget.name,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white)))]))))),
+  Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:Row(children:[Text(t('المشاهدة','Viewing'),style:TextStyle(color:widget.accent,fontWeight:FontWeight.w600)),const Spacer(),Text('HD '+(hd?t('مفعّل','on'):t('غير مفعّل','off')),style:TextStyle(color:widget.accent,fontSize:12))])),
+  Padding(padding:const EdgeInsets.all(12),child:Wrap(spacing:8,runSpacing:8,children:[_modeChip('normal',t('عادي','Normal')),_modeChip('once',t('لمرة واحدة','Once')),_modeChip('twice',t('لمرتين','Twice'))])),
+  Padding(padding:const EdgeInsets.fromLTRB(16,4,16,14),child:Row(children:[Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(context),child:Text(t('إلغاء','Cancel')))),const SizedBox(width:12),Expanded(child:FilledButton.icon(onPressed:()=>Navigator.pop(context,_MediaDraft(bytes:widget.bytes,name:widget.name,kind:widget.kind,viewMode:viewMode)),icon:const Icon(Icons.send_rounded),label:Text(t('إرسال','Send'))))]))
+ ])));
+ Widget _modeChip(String value,String label)=>ChoiceChip(label:Text(label),selected:viewMode==value,selectedColor:widget.accent.withValues(alpha:.25),backgroundColor:const Color(0xFF29213D),labelStyle:TextStyle(color:viewMode==value?widget.accent:Colors.white),onSelected:(_)=>setState(()=>viewMode=value));
+}
+class OursConversationDetailsPage extends StatefulWidget{
+ final String conversationId,partnerName;const OursConversationDetailsPage({super.key,required this.conversationId,required this.partnerName});
+ @override State<OursConversationDetailsPage> createState()=>_OursConversationDetailsPageState();
+}
+class _OursConversationDetailsPageState extends State<OursConversationDetailsPage> with SingleTickerProviderStateMixin{
+ final db=Supabase.instance.client;late TabController tabs;late Future<List<Map<String,dynamic>>> future;
+ bool get ar=>Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
+ @override void initState(){super.initState();tabs=TabController(length:3,vsync:this);future=_load();}
+ Future<List<Map<String,dynamic>>> _load()async{final r=await db.from('duo_direct_messages').select('id,body,message_type,created_at,sender_id,media_view_mode,media_views_used').eq('conversation_id',widget.conversationId).order('created_at',ascending:false);return List<Map<String,dynamic>>.from(r);}
+ Future<String> _signed(String path)=>db.storage.from(_bucket).createSignedUrl(path,300);
+ Future<void> _open(Map<String,dynamic> m)async{final path=m['body']?.toString()??'';try{final url=await _signed(path);await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication);}catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تعذر فتح الملف','Unable to open item'))));}}
+ bool _isVideo(String p)=>p.toLowerCase().endsWith('.mp4')||p.toLowerCase().endsWith('.mov');
+ @override void dispose(){tabs.dispose();super.dispose();}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_navy,appBar:AppBar(backgroundColor:_navy,title:Text(t('معلومات المحادثة','Conversation info')),bottom:TabBar(controller:tabs,indicatorColor:_gold,labelColor:_gold,unselectedLabelColor:_lavender,tabs:[Tab(text:t('الوسائط','Media')),Tab(text:t('الملفات','Files')),Tab(text:t('الصوتيات','Audio'))])),
+ body:FutureBuilder<List<Map<String,dynamic>>>(future:future,builder:(c,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(color:_gold));if(s.hasError)return Center(child:Text(t('تعذر تحميل المحتوى','Could not load items')));final rows=s.data??[];
+ final media=rows.where((m)=>m['message_type']=='image'||(m['message_type']=='file'&&_isVideo(m['body']?.toString()??''))).toList();final files=rows.where((m)=>m['message_type']=='file'&&!_isVideo(m['body']?.toString()??'')).toList();final audio=rows.where((m)=>m['message_type']=='audio').toList();
+ return Column(children:[Padding(padding:const EdgeInsets.fromLTRB(16,18,16,14),child:Column(children:[CircleAvatar(radius:36,backgroundColor:const Color(0xFF29213D),child:Icon(Icons.person_rounded,color:_gold,size:38)),const SizedBox(height:10),Text(widget.partnerName,style:const TextStyle(fontSize:19,fontWeight:FontWeight.w700)),Text(t('محادثة خاصة','Private chat'),style:TextStyle(color:_lavender,fontSize:12))])),Expanded(child:TabBarView(controller:tabs,children:[_list(media,t('لا توجد وسائط بعد','No media yet'),Icons.photo_library_outlined),_list(files,t('لا توجد ملفات','No files'),Icons.folder_outlined),_list(audio,t('لا توجد صوتيات','No audio'),Icons.mic_none_rounded)]))]);
+ }),
+ );
+ Widget _list(List<Map<String,dynamic>> rows,String empty,IconData icon)=>rows.isEmpty?Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(icon,color:_lavender,size:45),const SizedBox(height:8),Text(empty,style:TextStyle(color:_lavender))])):ListView.builder(padding:const EdgeInsets.all(12),itemCount:rows.length,itemBuilder:(c,i){final m=rows[i];final p=m['body']?.toString()??'';final type=m['message_type'];final video=type=='file'&&_isVideo(p);return Card(color:const Color(0xFF211D30),child:ListTile(leading:Icon(type=='image'?Icons.image_outlined:video?Icons.movie_outlined:type=='audio'?Icons.audiotrack:Icons.insert_drive_file_outlined,color:_gold),title:Text(video?t('مقطع فيديو','Video'):p.split('/').last.replaceFirst(RegExp(r'^\d+_'),''),maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(DateFormat(ar?'d MMM yyyy':'MMM d, yyyy').format(DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal()??DateTime.now()),style:const TextStyle(color:_lavender,fontSize:11)),onTap:()=>_open(m)));});
+}
 class OursAiPage extends StatefulWidget{
  final String conversationId;const OursAiPage({super.key,required this.conversationId});
  @override State<OursAiPage> createState()=>_OursAiPageState();
