@@ -802,7 +802,7 @@ class _ChatDetailsPage extends StatelessWidget{
   tile(Icons.search_rounded,t('البحث في الرسائل','Search messages'),t('اعثر على رسالة بسرعة','Find a message quickly'),search),
   tile(Icons.person_pin_rounded,t('اسم خاص للطرف الآخر','Private nickname'),t('اسم يظهر في جهازك فقط','Only on your device'),nickname),
   tile(Icons.palette_rounded,t('أجواء المحادثة','Chat atmosphere'),t('ثيمات حية وألوان مميزة','Vibrant themes and colors'),()=>themes()),
- ]);
+ ]));
  }
 }
 class _ChatDetailTile extends StatelessWidget{
