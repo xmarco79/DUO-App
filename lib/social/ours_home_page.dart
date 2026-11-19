@@ -17,9 +17,9 @@ class OursSocialHomePage extends StatefulWidget {
  const OursSocialHomePage({super.key,required this.onProfileTap,required this.onChatTap});
  @override State<OursSocialHomePage> createState()=>_OursSocialHomePageState();
 }
-class _OursSocialHomePageState extends State<OursSocialHomePage>{
- final db=Supabase.instance.client; int tab=0,unreadMessages=0; String? spaceId,error,conversationId,partnerId,partnerName,partnerAlias,partnerAvatarUrl; bool loading=true;RealtimeChannel? unreadChannel;
- @override void initState(){super.initState();_load();}
+class _OursSocialHomePageState extends State<OursSocialHomePage> with WidgetsBindingObserver{
+ final db=Supabase.instance.client; int tab=0,unreadMessages=0; String? spaceId,error,conversationId,partnerId,partnerName,partnerAlias,partnerAvatarUrl; bool loading=true;RealtimeChannel? unreadChannel,presenceChannel;
+ @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);_load();}
  Future<void> _load() async {try{
   final raw=await db.rpc('ensure_ours_pair_space'); final m=Map<String,dynamic>.from(raw as Map);
   final me=db.auth.currentUser!.id;
@@ -40,6 +40,7 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
   final alias=foundPartner==null?null:prefs.getString('ours_partner_alias_${me}_$foundPartner');
   if(mounted)setState(() { spaceId=m['space_id'].toString(); conversationId=foundConversation; partnerId=foundPartner; partnerName=foundName; partnerAlias=alias; partnerAvatarUrl=foundAvatar; loading=false; });
   if(foundConversation!=null){await _refreshUnread();_listenUnread();}
+  _startPresence();
  }catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}}
  Future<void> _refreshUnread()async{
   final id=conversationId;if(id==null||db.auth.currentUser==null)return;
@@ -55,7 +56,26 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
    .onPostgresChanges(event:PostgresChangeEvent.all,schema:'public',table:'duo_direct_messages',filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'conversation_id',value:id),callback:(_)=>_refreshUnread())
    .subscribe();
  }
- @override void dispose(){if(unreadChannel!=null)db.removeChannel(unreadChannel!);super.dispose();}
+ void _startPresence(){
+  final id=spaceId;if(id==null||db.auth.currentUser==null)return;
+  if(presenceChannel!=null)db.removeChannel(presenceChannel!);
+  presenceChannel=db.channel('duo-space:${id}:live',opts:const RealtimeChannelConfig(private:true));
+  presenceChannel!.subscribe((status,error)async{
+   if(status==RealtimeSubscribeStatus.subscribed){
+    await presenceChannel?.track({'user_id':db.auth.currentUser!.id,'online_at':DateTime.now().toIso8601String()});
+    await db.rpc('touch_ours_presence');
+   }
+  });
+ }
+ @override void didChangeAppLifecycleState(AppLifecycleState state){
+  if(state==AppLifecycleState.paused||state==AppLifecycleState.inactive||state==AppLifecycleState.detached){
+   if(presenceChannel!=null)unawaited(presenceChannel!.untrack().then<void>((_){}));
+   unawaited(db.rpc('touch_ours_presence').then<void>((_){}));
+  }else if(state==AppLifecycleState.resumed){
+   _startPresence();
+  }
+ }
+ @override void dispose(){WidgetsBinding.instance.removeObserver(this);if(unreadChannel!=null)db.removeChannel(unreadChannel!);if(presenceChannel!=null)db.removeChannel(presenceChannel!);super.dispose();}
  String get _partnerLabel=>partnerAlias?.trim().isNotEmpty==true?partnerAlias!.trim():(partnerName??'zoi');
  Future<void> _editPartnerAlias() async{
   if(partnerId==null)return;
