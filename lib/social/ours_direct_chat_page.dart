@@ -6,6 +6,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' show ImageFilter;
+import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -748,6 +749,39 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
 }
 
 
+class _ImageMarkupDialog extends StatefulWidget{
+ final Uint8List bytes;final _ChatSkin skin;final bool ar;
+ const _ImageMarkupDialog({required this.bytes,required this.skin,required this.ar});
+ @override State<_ImageMarkupDialog> createState()=>_ImageMarkupDialogState();
+}
+class _ImageMarkupDialogState extends State<_ImageMarkupDialog>{
+ final List<List<Offset>> strokes=[];List<Offset> current=[];Color color=const Color(0xFFFFD66B);bool saving=false;
+ String t(String a,String e)=>widget.ar?a:e;
+ Future<void> _save()async{
+  if(saving)return;setState(()=>saving=true);
+  try{
+   final decoded=await ui.decodeImageFromList(widget.bytes);final recorder=ui.PictureRecorder();final canvas=Canvas(recorder);
+   canvas.drawImage(decoded,Offset.zero,Paint());
+   final sx=decoded.width.toDouble(),sy=decoded.height.toDouble();
+   final all=[...strokes,if(current.isNotEmpty)current];
+   for(final stroke in all){if(stroke.length<2)continue;final path=Path()..moveTo(stroke.first.dx*sx,stroke.first.dy*sy);for(final p in stroke.skip(1))path.lineTo(p.dx*sx,p.dy*sy);canvas.drawPath(path,Paint()..color=color..strokeWidth=math.max(5,decoded.width/180)..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke);}
+   final image=await recorder.endRecording().toImage(decoded.width,decoded.height);final data=await image.toByteData(format:ui.ImageByteFormat.png);if(data==null)throw Exception('encode');
+   final dir=await getApplicationDocumentsDirectory();final folder=Directory('${dir.path}/OURS_Saved_Media');await folder.create(recursive:true);final file=File('${folder.path}/drawing_${DateTime.now().millisecondsSinceEpoch}.png');await file.writeAsBytes(data.buffer.asUint8List(),flush:true);
+   if(mounted){Navigator.pop(context);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تم حفظ الرسم في ملفات OURS','Drawing saved in OURS files'))));}
+  }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تعذر حفظ الرسم','Could not save drawing'))));}
+  finally{if(mounted)setState(()=>saving=false);}
+ }
+ @override Widget build(BuildContext context)=>Dialog(backgroundColor:widget.skin.bg,insetPadding:const EdgeInsets.all(8),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.max,children:[
+  Padding(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),child:Row(children:[Icon(Icons.draw_rounded,color:widget.skin.accent),const SizedBox(width:8),Expanded(child:Text(t('مرسم الصورة','Image studio'),style:TextStyle(color:widget.skin.accent,fontWeight:FontWeight.w800))),IconButton(onPressed:()=>setState(()=>strokes.clear()),tooltip:t('مسح الرسم','Clear'),icon:Icon(Icons.delete_outline,color:widget.skin.accent)),IconButton(onPressed:()=>setState(()=>strokes.isNotEmpty?strokes.removeLast():null),tooltip:t('تراجع','Undo'),icon:Icon(Icons.undo,color:widget.skin.accent))])),
+  Expanded(child:Center(child:LayoutBuilder(builder:(ctx,box){final decoded=ui.decodeImageFromList(widget.bytes);return FutureBuilder<ui.Image>(future:decoded, builder:(ctx,s){if(!s.hasData)return const CircularProgressIndicator();final img=s.data!;final ratio=img.width/img.height;final w=math.min(box.maxWidth,box.maxHeight*ratio);final h=w/ratio;return SizedBox(width:w,height:h,child:Stack(fit:StackFit.expand,children:[Image.memory(widget.bytes,fit:BoxFit.fill),CustomPaint(painter:_MarkupPainter([...strokes,if(current.isNotEmpty)current],color)),GestureDetector(behavior:HitTestBehavior.translucent,onPanStart:(e)=>setState(()=>current=[Offset(e.localPosition.dx/w,e.localPosition.dy/h)]),onPanUpdate:(e)=>setState(()=>current.add(Offset((e.localPosition.dx/w).clamp(0,1),(e.localPosition.dy/h).clamp(0,1)))),onPanEnd:(_){if(current.length>1)strokes.add(List<Offset>.from(current));current.clear();setState((){});})]));});}))),
+  Padding(padding:const EdgeInsets.all(10),child:Row(children:[for(final c in [const Color(0xFFFFD66B),const Color(0xFFFF5C8A),const Color(0xFF7CFFF1),Colors.white,const Color(0xFF8B72FF)])IconButton(onPressed:()=>setState(()=>color=c),icon:Icon(Icons.circle,color:c,size:24)),const Spacer(),FilledButton.icon(onPressed:saving?null:_save,icon:saving?const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.save_alt),label:Text(t('حفظ الرسم','Save drawing')))]))
+ ])));
+}
+class _MarkupPainter extends CustomPainter{
+ final List<List<Offset>> strokes;final Color color;const _MarkupPainter(this.strokes,this.color);
+ @override void paint(Canvas canvas,Size size){for(final stroke in strokes){if(stroke.length<2)continue;final path=Path()..moveTo(stroke.first.dx*size.width,stroke.first.dy*size.height);for(final p in stroke.skip(1))path.lineTo(p.dx*size,p.dy*size);canvas.drawPath(path,Paint()..color=color..strokeWidth=4..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke);}}
+ @override bool shouldRepaint(covariant _MarkupPainter old)=>old.strokes!=strokes||old.color!=color;
+}
 class _ChatDetailsPage extends StatelessWidget{
  final String partnerId,partnerName;final _ChatSkin skin;final Widget Function() profile;final VoidCallback nickname,search,media,files;final Future<void> Function() themes;
  const _ChatDetailsPage({required this.partnerId,required this.partnerName,required this.skin,required this.profile,required this.nickname,required this.search,required this.media,required this.files,required this.themes});
