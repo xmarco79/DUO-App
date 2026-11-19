@@ -197,11 +197,11 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   try{
    await db.rpc('touch_ours_presence');
    await _loadPartnerLastSeen();
-   liveChannel=db.channel('ours-direct:${widget.conversationId}:live');
+   liveChannel=db.channel('ours-direct:${widget.conversationId}:live',opts:const RealtimeChannelConfig(private:true));
    liveChannel!
     .onPresenceSync((_){
-     final state=liveChannel?.presenceState()??{};
-     final online=state.values.expand((items)=>items).any((presence)=>presence.payload['user_id']?.toString()==widget.partnerId);
+     final state=liveChannel?.presenceState()??<SinglePresenceState>[];
+     final online=state.any((client)=>client.presences.any((presence)=>presence.payload['user_id']?.toString()==widget.partnerId));
      if(mounted)setState(()=>partnerOnline=online);
      if(!online)_loadPartnerLastSeen();
     })
