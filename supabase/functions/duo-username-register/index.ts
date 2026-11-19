@@ -24,6 +24,10 @@ Deno.serve(async (req: Request) => {
     if (!/^[a-z0-9_]{3,20}$/.test(username)) {
       return json({ error: "اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا إنجليزيًا أو رقمًا أو _" }, 400);
     }
+    // OURS is a closed, fixed two-account app. Both allowed usernames already exist.
+    if (username !== "naif" && username !== "zoi") {
+      return json({ error: "OURS تطبيق خاص بحسابَي naif و zoi فقط، وإنشاء حسابات جديدة مغلق." }, 403);
+    }
     if (password.length < 8 || password.length > 72) {
       return json({ error: "كلمة المرور يجب أن تكون من 8 إلى 72 حرفًا" }, 400);
     }

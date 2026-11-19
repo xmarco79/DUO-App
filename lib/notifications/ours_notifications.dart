@@ -8,7 +8,8 @@ String _notificationText(BuildContext context, String ar, String en) => Localiza
 
 class OursNotificationBell extends StatefulWidget {
   final String? spaceId;
-  const OursNotificationBell({super.key, required this.spaceId});
+  final VoidCallback? onOpenMessage;
+  const OursNotificationBell({super.key, required this.spaceId, this.onOpenMessage});
 
   @override
   State<OursNotificationBell> createState() => _OursNotificationBellState();
@@ -86,7 +87,10 @@ class _OursNotificationBellState extends State<OursNotificationBell> {
       tooltip: _notificationText(context, 'الإشعارات', 'Notifications'),
       onPressed: () async {
         await Navigator.push(context, MaterialPageRoute(
-          builder: (_) => OursNotificationsPage(spaceId: widget.spaceId!),
+          builder: (_) => OursNotificationsPage(
+            spaceId: widget.spaceId!,
+            onOpenMessage: widget.onOpenMessage,
+          ),
         ));
         _loadCount();
       },
@@ -112,7 +116,8 @@ class _OursNotificationBellState extends State<OursNotificationBell> {
 
 class OursNotificationsPage extends StatefulWidget {
   final String spaceId;
-  const OursNotificationsPage({super.key, required this.spaceId});
+  final VoidCallback? onOpenMessage;
+  const OursNotificationsPage({super.key, required this.spaceId, this.onOpenMessage});
 
   @override
   State<OursNotificationsPage> createState() => _OursNotificationsPageState();
@@ -160,8 +165,24 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { loading = false; error = 'تعذر تحميل الإشعارات'; });
+      setState(() {
+        loading = false;
+        error = _notificationText(context, 'تعذر تحميل الإشعارات. تحقق من اتصالك وحاول مجددًا.', 'Could not load notifications. Check your connection and try again.');
+      });
     }
+  }
+
+  Future<void> _openNotification(Map<String, dynamic> item) async {
+    await _markRead(item);
+    if (!mounted) return;
+    if (item['notification_type']?.toString() == 'message') {
+      widget.onOpenMessage?.call();
+    }
+  }
+
+  void _showMessage(String value) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
   }
 
   Future<void> _markRead(Map<String, dynamic> item) async {
@@ -175,7 +196,9 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
         final index = notifications.indexWhere((row) => row['id'] == item['id']);
         if (index >= 0) notifications[index]['read_at'] = DateTime.now().toIso8601String();
       });
-    } catch (_) {}
+    } catch (_) {
+      _showMessage(_notificationText(context, 'تعذر تحديث الإشعار.', 'Could not update notification.'));
+    }
   }
 
   Future<void> _markAllRead() async {
@@ -191,7 +214,9 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
           row['read_at'] ??= DateTime.now().toIso8601String();
         }
       });
-    } catch (_) {}
+    } catch (_) {
+      _showMessage(_notificationText(context, 'تعذر تحديث الإشعارات.', 'Could not update notifications.'));
+    }
   }
 
   @override
@@ -216,10 +241,10 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
         : error != null
           ? Center(child: Text(error!))
           : notifications.isEmpty
-            ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.notifications_off_outlined, color: _oursLavender, size: 42),
-                SizedBox(height: 10),
-                Text('لا توجد إشعارات حتى الآن'),
+            ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.notifications_off_outlined, color: _oursLavender, size: 42),
+                const SizedBox(height: 10),
+                Text(_notificationText(context, 'لا توجد إشعارات حتى الآن', 'No notifications yet')),
               ]))
             : RefreshIndicator(
                 onRefresh: _load,
@@ -233,7 +258,7 @@ class _OursNotificationsPageState extends State<OursNotificationsPage> {
                     return Card(
                       color: _oursPurple,
                       child: ListTile(
-                        onTap: () => _markRead(item),
+                        onTap: () => _openNotification(item),
                         leading: CircleAvatar(
                           backgroundColor: _oursGold.withOpacity(.15),
                           child: Icon(
