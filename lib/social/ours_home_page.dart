@@ -47,7 +47,7 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
    IndexedStack(index:tab,children:[
     _SpaceView(partnerName:partnerName??'zoi',onChat:_openChat,onPartnerProfile:partnerId==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:partnerId!))),onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(spaceId:spaceId!)))),
     _StudioView(spaceId:spaceId!),
-    _WatchView(spaceId:spaceId!),
+    _WatchView(spaceId:spaceId!,active:tab==2),
     const OursMusicPage(),
     const _ReportView(),
    ]),
@@ -120,6 +120,16 @@ class _StudioState extends State<_StudioView> {
   final TransformationController zoomController = TransformationController();
   Size canvasSize = Size.zero;
   RealtimeChannel? channel;
+
+  @override
+  void didUpdateWidget(covariant _WatchView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.active && widget.active && session != null) {
+      _ensurePlayer(session!);
+    } else if (oldWidget.active && !widget.active && player?.value.isPlaying == true) {
+      player!.pause();
+    }
+  }
 
   @override
   void initState() {
@@ -519,7 +529,7 @@ class _CanvasPainter extends CustomPainter {
       oldDelegate.showGrid != showGrid;
 }
 
-class _WatchView extends StatefulWidget{final String spaceId;const _WatchView({required this.spaceId});@override State<_WatchView> createState()=>_WatchState();}
+class _WatchView extends StatefulWidget{final String spaceId;final bool active;const _WatchView({required this.spaceId,required this.active});@override State<_WatchView> createState()=>_WatchState();}
 class _WatchState extends State<_WatchView> {
   final db = Supabase.instance.client;
   final title = TextEditingController();
@@ -573,7 +583,7 @@ class _WatchState extends State<_WatchView> {
         final old = player;
         player = null;
         if (old != null) await old.dispose();
-      } else {
+      } else if (widget.active) {
         await _ensurePlayer(Map<String, dynamic>.from(result));
       }
     } catch (error) {
@@ -641,7 +651,7 @@ class _WatchState extends State<_WatchView> {
   Future<void> _syncPlaybackPosition() async {
     final current = session;
     final controller = player;
-    if (current == null || controller == null || !controller.value.isInitialized ||
+    if (!widget.active || current == null || controller == null || !controller.value.isInitialized ||
         current['is_playing'] != true ||
         current['created_by']?.toString() != db.auth.currentUser?.id ||
         !controller.value.isPlaying) return;
