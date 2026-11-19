@@ -133,6 +133,17 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  bool loading=true,sending=false,recording=false,uploading=false;String? localPartnerName;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
+ int _streakCount(){
+  final days=<DateTime>{};
+  for(final m in messages){final dt=DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal();if(dt!=null)days.add(DateTime(dt.year,dt.month,dt.day));}
+  if(days.isEmpty)return 0;
+  final today=DateTime.now(),current=DateTime(today.year,today.month,today.day);
+  final latest=days.reduce((a,b)=>a.isAfter(b)?a:b);
+  if(latest.isBefore(current.subtract(const Duration(days:1))))return 0;
+  var count=0,day=latest;
+  while(days.contains(day)){count++;day=day.subtract(const Duration(days:1));}
+  return count;
+ }
  @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();}
  Future<void> _changeLocalNickname() async{
   final prefs=await SharedPreferences.getInstance();final key='ours_partner_alias_${uid}_${widget.partnerId}';
@@ -402,7 +413,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:widget.partnerId))),
     child:Column(mainAxisSize:MainAxisSize.min,children:[
      Text(localPartnerName??widget.partnerName,style:const TextStyle(fontSize:16)),
-     Text(t('اضغط لعرض الملف الشخصي','Tap to view profile'),style:TextStyle(color:skin.accent,fontSize:10))
+     Row(mainAxisSize:MainAxisSize.min,children:[
+      Text(t('اضغط لعرض الملف الشخصي','Tap to view profile'),style:TextStyle(color:skin.accent,fontSize:10)),
+      if(_streakCount()>0)Padding(padding:const EdgeInsetsDirectional.only(start:6),child:Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:const Color(0xFFB85A34).withValues(alpha:.16),borderRadius:BorderRadius.circular(10)),child:Text('🔥 ${_streakCount()}',style:const TextStyle(color:Color(0xFFFFB06A),fontSize:10,fontWeight:FontWeight.w800))))
+     ])
     ]),
    ),
    actions:[
