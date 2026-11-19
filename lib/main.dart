@@ -441,9 +441,13 @@ class _LoginPageState extends State<LoginPage> {
 
       // OursAuthGate observes the authenticated session and opens HomePage.
     } catch (e) {
-      showMessage(
-        e.toString().replaceFirst('Exception: ', ''),
-      );
+      final raw = e.toString().toLowerCase();
+      final message = raw.contains('invalid login') || raw.contains('invalid credentials') || raw.contains('password')
+          ? oursText(context, 'اسم المستخدم أو كلمة المرور غير صحيحة', 'Username or password is incorrect')
+          : raw.contains('socket') || raw.contains('network') || raw.contains('connection') || raw.contains('timeout')
+              ? oursText(context, 'تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مجددًا.', 'Could not connect. Check your internet and retry.')
+              : oursText(context, 'تعذر تسجيل الدخول الآن. حاول مرة أخرى.', 'Login failed. Please try again.');
+      showMessage(message);
     } finally {
       if (mounted) {
         setState(() => loading = false);
@@ -1978,7 +1982,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => loading = false);
-      showMessage(oursText(context, 'تعذر تحميل الملف الشخصي: $e', 'Could not load profile: $e'));
+      showMessage(oursText(context, 'تعذر تحميل الملف الشخصي. تحقق من الاتصال ثم أعد المحاولة.', 'Could not load profile. Check your connection and retry.'));
     }
   }
 
@@ -2046,7 +2050,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       setState(() => avatarUrl = db.storage.from('ours-avatars').getPublicUrl(path) + '?v=' + DateTime.now().millisecondsSinceEpoch.toString());
       showMessage(oursText(context, 'تم تحديث الصورة الشخصية', 'Profile photo updated'));
     } catch (e) {
-      showMessage(oursText(context, 'تعذر تحديث الصورة: $e', 'Could not update photo: $e'));
+      showMessage(oursText(context, 'تعذر تحديث الصورة الشخصية. حاول مرة أخرى.', 'Could not update profile photo. Please retry.'));
     } finally {
       if (mounted) setState(() => uploadingAvatar = false);
     }
@@ -2086,7 +2090,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       if (!mounted) return;
       showMessage(oursText(context, 'تم حفظ الملف الشخصي', 'Profile saved'));
     } catch (e) {
-      showMessage(oursText(context, 'تعذر حفظ التغييرات: $e', 'Could not save changes: $e'));
+      showMessage(oursText(context, 'تعذر حفظ التغييرات. تحقق من الاتصال وحاول مجددًا.', 'Could not save changes. Check your connection and retry.'));
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -2113,7 +2117,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
-      showMessage('تعذر تسجيل الخروج: $e');
+      showMessage(oursText(context, 'تعذر تسجيل الخروج. حاول مرة أخرى.', 'Could not log out. Please retry.'));
     }
   }
 
@@ -2155,7 +2159,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       await db.auth.updateUser(UserAttributes(password: password));
       showMessage(oursText(context, 'تم تحديث كلمة المرور', 'Password updated'));
     } catch (e) {
-      showMessage(oursText(context, 'تعذر تغيير كلمة المرور: $e', 'Could not change password: $e'));
+      showMessage(oursText(context, 'تعذر تغيير كلمة المرور. تحقق من اتصالك وحاول مجددًا.', 'Could not change password. Check your connection and retry.'));
     }
   }
 
