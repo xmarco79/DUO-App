@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ours_direct_chat_page.dart';
+import 'ours_music_page.dart';
 import '../worlds/world_hub_page.dart';
 import '../notifications/ours_notifications.dart';
 
@@ -60,6 +61,11 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
         title: const Text('OURS', style: TextStyle(color: _gold, letterSpacing: 5)),
         centerTitle: true,
         actions: [
+          IconButton(
+            tooltip: _oursText(context, 'الموسيقى', 'Music'),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OursMusicPage())),
+            icon: const Icon(Icons.music_note_rounded, color: _gold),
+          ),
           OursNotificationBell(spaceId: spaceId),
           IconButton(onPressed: widget.onProfileTap,
             icon: const Icon(Icons.person_outline, color: _lavender)),
