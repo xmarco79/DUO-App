@@ -92,7 +92,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final path=widget.conversationId+'/'+uid+'/'+DateTime.now().microsecondsSinceEpoch.toString()+'_'+safe;
   try{
    await db.storage.from(_bucket).uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
-   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':type,'media_view_mode':type=='image'||type=='file'?viewMode:'normal'});}
+   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':viewMode=='once'?'view_once':viewMode=='twice'?'view_twice':type,'max_views':viewMode=='twice'?2:1,'view_count':0});}
    catch(_){await db.storage.from(_bucket).remove([path]);rethrow;}
   }catch(e){_show(t('تعذر رفع المرفق: $e','Could not upload attachment: $e'));}finally{if(mounted)setState(()=>uploading=false);}
  }
@@ -107,7 +107,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   try{final f=await picker.pickVideo(source:source,maxDuration:const Duration(minutes:5));if(f==null)return;
    if(f.name.split('.').last.toLowerCase()!='mp4'){_show(t('اختر فيديو بصيغة MP4 حاليًا.','Please choose an MP4 video for now.'));return;}
    final bytes=await f.readAsBytes();final draft=await Navigator.push<_MediaDraft>(context,MaterialPageRoute(builder:(_)=>OursMediaPreviewPage(bytes:bytes,name:f.name,kind:'video',accent:skin.accent)));
-   if(draft==null)return;await _upload(draft.bytes,draft.name,'file',viewMode:draft.viewMode);
+   if(draft==null)return;await _upload(draft.bytes,draft.name,'video',viewMode:draft.viewMode);
   }catch(e){_show(t('تعذر اختيار الفيديو: $e','Could not select video: $e'));}
  }
  Future<void> _chooseMedia() async{
@@ -201,6 +201,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
        decoration:BoxDecoration(color:mine?skin.mine:skin.partner,borderRadius:BorderRadius.circular(17),border:Border.all(color:skin.accent.withValues(alpha:.16))),
        child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
         if(type=='view_once'||type=='view_twice')InkWell(onTap:()=>_openLimitedMedia(m),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.45),borderRadius:BorderRadius.circular(13)),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(path.toLowerCase().endsWith('.mp4')?Icons.movie_outlined:Icons.visibility_outlined,color:skin.accent,size:28),const SizedBox(width:8),Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(type=='view_once'?t('وسائط لمرة واحدة','View once'):t('وسائط لمرتين','View twice'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w600)),Text((m['view_count']??0).toString()+'/'+(m['max_views']??1).toString(),style:TextStyle(color:skin.accent,fontSize:10))])])))
+        else if(type=='view_once'||type=='view_twice')InkWell(onTap:()=>_openLimitedMedia(m),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.45),borderRadius:BorderRadius.circular(13)),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(path.toLowerCase().endsWith('.mp4')?Icons.movie_outlined:Icons.visibility_outlined,color:skin.accent,size:28),const SizedBox(width:8),Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(type=='view_once'?t('وسائط لمرة واحدة','View once'):t('وسائط لمرتين','View twice'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w600)),Text((m['view_count']??0).toString()+'/'+(m['max_views']??1).toString(),style:TextStyle(color:skin.accent,fontSize:10))])])))
         else if(type=='image')FutureBuilder<String>(future:_signed(path),builder:(c,s){
          if(s.hasError)return Text(t('تعذر تحميل الصورة','Could not load image'),style:TextStyle(color:skin.accent));
          if(!s.hasData)return SizedBox(width:190,height:125,child:Center(child:CircularProgressIndicator(color:skin.accent)));
