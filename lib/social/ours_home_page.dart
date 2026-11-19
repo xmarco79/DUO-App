@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'ours_direct_chat_page.dart';
 import 'ours_profile_page.dart';
 import 'ours_music_page.dart';
@@ -17,7 +18,7 @@ class OursSocialHomePage extends StatefulWidget {
  @override State<OursSocialHomePage> createState()=>_OursSocialHomePageState();
 }
 class _OursSocialHomePageState extends State<OursSocialHomePage>{
- final db=Supabase.instance.client; int tab=0; String? spaceId,error,conversationId,partnerId,partnerName; bool loading=true;
+ final db=Supabase.instance.client; int tab=0; String? spaceId,error,conversationId,partnerId,partnerName,partnerAlias; bool loading=true;
  @override void initState(){super.initState();_load();}
  Future<void> _load() async {try{
   final raw=await db.rpc('ensure_ours_pair_space'); final m=Map<String,dynamic>.from(raw as Map);
@@ -33,11 +34,23 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
     foundName=display.isNotEmpty?display:(profile?['username']?.toString()??'zoi');
    }
   }
-  if(mounted)setState(() { spaceId=m['space_id'].toString(); conversationId=foundConversation; partnerId=foundPartner; partnerName=foundName; loading=false; });
+  final prefs=await SharedPreferences.getInstance();
+  final alias=foundPartner==null?null:prefs.getString('ours_partner_alias_${me}_$foundPartner');
+  if(mounted)setState(() { spaceId=m['space_id'].toString(); conversationId=foundConversation; partnerId=foundPartner; partnerName=foundName; partnerAlias=alias; loading=false; });
  }catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}}
+ String get _partnerLabel=>partnerAlias?.trim().isNotEmpty==true?partnerAlias!.trim():(partnerName??'zoi');
+ Future<void> _editPartnerAlias() async{
+  if(partnerId==null)return;
+  final controller=TextEditingController(text:partnerAlias??'');
+  final value=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:_p,title:Text(_t(context,'تخصيص اسم الطرف الآخر','Set a nickname')),content:TextField(controller:controller,maxLength:24,autofocus:true,decoration:InputDecoration(hintText:_t(context,'اسم يظهر لك فقط','Only visible to you'))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(_t(context,'إلغاء','Cancel'))),TextButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:Text(_t(context,'حفظ','Save')))]));
+  controller.dispose();if(value==null)return;
+  final prefs=await SharedPreferences.getInstance();final key='ours_partner_alias_${db.auth.currentUser!.id}_$partnerId';
+  if(value.isEmpty)await prefs.remove(key);else await prefs.setString(key,value);
+  if(mounted)setState(()=>partnerAlias=value.isEmpty?null:value);
+ }
  void _openChat(){
   if(conversationId!=null&&partnerId!=null){
-   Navigator.push(context,MaterialPageRoute(builder:(_)=>OursDirectChatPage(conversationId:conversationId!,partnerId:partnerId!,partnerName:partnerName??'OURS',spaceId:spaceId)));
+   Navigator.push(context,MaterialPageRoute(builder:(_)=>OursDirectChatPage(conversationId:conversationId!,partnerId:partnerId!,partnerName:_partnerLabel,spaceId:spaceId)));
   }else if(spaceId!=null){widget.onChatTap(spaceId!);}
  }
  @override Widget build(BuildContext context){
@@ -46,7 +59,7 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
   return Scaffold(appBar:AppBar(title:const Text('OURS',style:TextStyle(color:_g,letterSpacing:5)),actions:[if(spaceId!=null) OursNotificationBell(spaceId:spaceId,onOpenMessage:_openChat),IconButton(onPressed:widget.onProfileTap,icon:const Icon(Icons.tune,color:_l))]),
    body:loading?const Center(child:CircularProgressIndicator(color:_g)):error!=null?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Text(_t(context,'تعذر تجهيز مساحتنا','Could not load space')),Text(error!,style:const TextStyle(color:_l)),TextButton(onPressed:()=>setState(() { loading=true; error=null; _load(); }),child:Text(_t(context,'إعادة المحاولة','Retry')))])):
    IndexedStack(index:tab,children:[
-    _SpaceView(partnerName:partnerName??'zoi',onChat:_openChat,onPartnerProfile:partnerId==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:partnerId!))),onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(spaceId:spaceId!)))),
+    _SpaceView(partnerName:_partnerLabel,username:partnerName??'zoi',onChat:_openChat,onPartnerProfile:partnerId==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:partnerId!))),onEditAlias:_editPartnerAlias,onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(spaceId:spaceId!)))),
     _StudioView(spaceId:spaceId!),
     _WatchView(spaceId:spaceId!,active:tab==2),
     const OursMusicPage(),
@@ -56,37 +69,26 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
  }
 }
 class _SpaceView extends StatelessWidget{
- final String partnerName;
- final VoidCallback onChat,onSelf,onAi;
+ final String partnerName,username;
+ final VoidCallback onChat,onSelf,onAi,onEditAlias;
  final VoidCallback? onPartnerProfile;
- const _SpaceView({required this.partnerName,required this.onChat,required this.onSelf,required this.onAi,this.onPartnerProfile});
+ const _SpaceView({required this.partnerName,required this.username,required this.onChat,required this.onSelf,required this.onAi,required this.onEditAlias,this.onPartnerProfile});
  @override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.fromLTRB(18,18,18,26),children:[
-  Container(
-   padding:const EdgeInsets.all(22),
-   decoration:BoxDecoration(
-    gradient:const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF302544),Color(0xFF171725),Color(0xFF17323A)]),
-    borderRadius:BorderRadius.circular(26),
-    border:Border.all(color:_g.withValues(alpha:.32)),
-    boxShadow:[BoxShadow(color:_g.withValues(alpha:.07),blurRadius:26,spreadRadius:1)],
-   ),
-   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-    Row(children:[const Icon(Icons.all_inclusive_rounded,color:_g,size:30),const Spacer(),Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:Colors.white.withValues(alpha:.07),borderRadius:BorderRadius.circular(20)),child:Text(_t(c,'مساحة خاصة','PRIVATE SPACE'),style:const TextStyle(color:_l,fontSize:9,letterSpacing:1.1)))]),
-    const SizedBox(height:18),
-    Text(_t(c,'عالمكما يبدأ هنا','YOUR WORLD, TOGETHER'),style:const TextStyle(color:Colors.white,fontSize:24,fontWeight:FontWeight.w800)),
-    const SizedBox(height:6),
-    Text(_t(c,'مكان واحد يجمع محادثاتكما وأفكاركما ولحظاتكما.','One place for your conversations, ideas and moments.'),style:const TextStyle(color:_l,height:1.6,fontSize:12)),
-    const SizedBox(height:18),
-    Row(children:[
-     Expanded(child:FilledButton.icon(onPressed:onChat,icon:const Icon(Icons.chat_bubble_outline_rounded),label:Text(_t(c,'افتح المحادثة','Open chat')))),
-     if(onPartnerProfile!=null) ...[const SizedBox(width:8),IconButton.filledTonal(onPressed:onPartnerProfile,tooltip:_t(c,'ملف $partnerName','View $partnerName profile'),icon:const Icon(Icons.account_circle_outlined))]
-    ])
-   ]),
-  ),
-  const SizedBox(height:24),
-  Text(_t(c,'محادثاتك','YOUR CONVERSATIONS'),style:const TextStyle(color:_g,fontSize:12,fontWeight:FontWeight.w800,letterSpacing:1.5)),
+  InkWell(onTap:onPartnerProfile,borderRadius:BorderRadius.circular(25),child:Container(
+   padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF3A2C50),Color(0xFF171725),Color(0xFF18343A)]),borderRadius:BorderRadius.circular(25),border:Border.all(color:_g.withValues(alpha:.35)),boxShadow:[BoxShadow(color:_g.withValues(alpha:.08),blurRadius:24)]),
+   child:Row(children:[
+    Container(width:66,height:66,decoration:BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[_g.withValues(alpha:.35),_l.withValues(alpha:.2)]),border:Border.all(color:_g,width:1.4)),child:const Icon(Icons.person_rounded,color:Colors.white,size:34)),
+    const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Text(partnerName,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:19),maxLines:1,overflow:TextOverflow.ellipsis),
+     const SizedBox(height:3),Text('@$username',style:const TextStyle(color:_l,fontSize:12)),
+     const SizedBox(height:8),Text(_t(c,'مساحتكما الخاصة','Your private space'),style:const TextStyle(color:_g,fontSize:11,letterSpacing:.3))
+    ])),
+    Column(children:[IconButton(tooltip:_t(c,'تخصيص الاسم عندك فقط','Set your private nickname'),onPressed:onEditAlias,icon:const Icon(Icons.edit_rounded,color:_g)),IconButton(tooltip:_t(c,'فتح المحادثة','Open chat'),onPressed:onChat,icon:const Icon(Icons.chat_bubble_outline_rounded,color:_l))])
+   ])
+  )),
+  const SizedBox(height:24),Text(_t(c,'مساحاتك','YOUR SPACES'),style:const TextStyle(color:_g,fontSize:12,fontWeight:FontWeight.w800,letterSpacing:1.5)),
   const SizedBox(height:10),
-  _conversationTile(c,icon:Icons.person_outline_rounded,title:partnerName,subtitle:_t(c,'محادثتك الخاصة مع الطرف الآخر','Your private conversation with your partner'),accent:const Color(0xFF8DD9CF),onTap:onChat,onAvatarTap:onPartnerProfile),
-  _conversationTile(c,icon:Icons.bookmark_outline_rounded,title:_t(c,'مراسلة نفسي','Saved messages'),subtitle:_t(c,'مساحة خاصة للملاحظات والرسائل المحفوظة','A private place for notes and saved messages'),accent:const Color(0xFFE6C28B),onTap:onSelf),
+  _conversationTile(c,icon:Icons.bookmark_outline_rounded,title:_t(c,'مراسلة نفسي','Saved messages'),subtitle:_t(c,'ملاحظاتك ورسائلك المحفوظة — خاصة بك','Your private notes and saved messages'),accent:const Color(0xFFE6C28B),onTap:onSelf),
   _conversationTile(c,icon:Icons.auto_awesome_rounded,title:'OURS AI',subtitle:_t(c,'مساعدك الذكي داخل عالمك','Your AI companion inside OURS'),accent:const Color(0xFFC3A5F3),onTap:onAi),
  ]);
 }
@@ -315,10 +317,11 @@ class _StudioState extends State<_StudioView> {
         Text(_t(context,'مرسم OURS','OURS Studio'),style:const TextStyle(color:Colors.white,fontSize:24,fontWeight:FontWeight.w800)),
         const SizedBox(height:6),Text(_t(context,'اختر نوع المرسم وأجواء اللوحة قبل البدء، ثم استخدم أدوات الرسم والتظليل والممحاة والتراجع والتكبير.','Choose your studio and canvas mood before drawing, then use brushes, marker, eraser, undo and zoom.'),style:const TextStyle(color:_lavender,height:1.6)),
       ])),
-      const SizedBox(height:20),Text(_t(context,'مساحة الرسم','Drawing space'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold,fontSize:16)),
-      const SizedBox(height:10),SegmentedButton<String>(segments:[ButtonSegment(value:'personal',label:Text(_t(context,'مرسمي الخاص','Personal'))),ButtonSegment(value:'shared',label:Text(_t(context,'مرسمنا المشترك','Shared')))],selected:{scope},onSelectionChanged:(v){setState(()=>scope=v.first);_load();}),
-      const SizedBox(height:20),Text(_t(context,'خلفية اللوحة','Canvas background'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold)),
+      const SizedBox(height:20),Text(_t(context,'اختر مساحة العمل','Choose your workspace'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold,fontSize:16)),
+      const SizedBox(height:10),GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:2,childAspectRatio:2.15,crossAxisSpacing:9,mainAxisSpacing:9,children:[_StudioChoice(icon:Icons.person_outline_rounded,title:_t(context,'مرسمي الخاص','Personal studio'),subtitle:_t(context,'لوحاتك وحدك','Only you'),selected:scope=='personal',onTap:()=>setState(()=>scope='personal')),_StudioChoice(icon:Icons.people_alt_outlined,title:_t(context,'مرسمنا المشترك','Shared studio'),subtitle:_t(context,'ارسم مع الطرف الآخر','Draw together'),selected:scope=='shared',onTap:()=>setState(()=>scope='shared'))]),
+      const SizedBox(height:18),Text(_t(context,'اختر خلفية البداية','Choose a canvas preset'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold)),
       const SizedBox(height:10),GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:2,childAspectRatio:1.65,crossAxisSpacing:10,mainAxisSpacing:10,children:presets.map((p)=>InkWell(onTap:(){setState((){canvasPreset=p.$1;canvasBackground=p.$3;showGrid=p.$4;});},borderRadius:BorderRadius.circular(14),child:Container(decoration:BoxDecoration(color:p.$3,borderRadius:BorderRadius.circular(14),border:Border.all(color:canvasPreset==p.$1?_gold:_lavender.withValues(alpha:.3),width:canvasPreset==p.$1?2:1)),child:Stack(children:[if(p.$4)Positioned.fill(child:CustomPaint(painter:_StudioPreviewGrid())),Align(alignment:Alignment.bottomLeft,child:Padding(padding:const EdgeInsets.all(10),child:Text(p.$2,style:TextStyle(color:p.$1=='paper'||p.$1=='canvas'?const Color(0xFF29213D):Colors.white,fontWeight:FontWeight.bold)))),if(canvasPreset==p.$1)const Positioned(top:7,right:7,child:Icon(Icons.check_circle,color:_gold))])))).toList()),
+      const SizedBox(height:18),Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:_p.withValues(alpha:.65),borderRadius:BorderRadius.circular(16),border:Border.all(color:_l.withValues(alpha:.2))),child:Wrap(spacing:12,runSpacing:10,children:[_StudioFeature(Icons.gesture_rounded,_t(context,'رسم حر','Freehand')),_StudioFeature(Icons.shape_line_rounded,_t(context,'أشكال هندسية','Shapes')),_StudioFeature(Icons.brush_rounded,_t(context,'فرش وتظليل','Brushes')),_StudioFeature(Icons.undo_rounded,_t(context,'تراجع وإعادة','Undo / redo')),_StudioFeature(Icons.zoom_in_rounded,_t(context,'تكبير اللوحة','Canvas zoom'))])),
       const SizedBox(height:18),FilledButton.icon(onPressed:(){setState(()=>studioOpened=true);_load();},icon:const Icon(Icons.add_rounded),label:Text(_t(context,'إنشاء لوحة وبدء الرسم','Create canvas and start drawing')),style:FilledButton.styleFrom(backgroundColor:_gold,foregroundColor:_navy,padding:const EdgeInsets.symmetric(vertical:15))),
       const SizedBox(height:8),OutlinedButton.icon(onPressed:(){setState(()=>studioOpened=true);_load();},icon:const Icon(Icons.folder_open_outlined),label:Text(_t(context,'فتح أعمالي المحفوظة','Open saved work'))),
     ]);
@@ -503,6 +506,12 @@ class _StudioState extends State<_StudioView> {
   }
 }
 
+class _StudioChoice extends StatelessWidget{
+ final IconData icon;final String title,subtitle;final bool selected;final VoidCallback onTap;
+ const _StudioChoice({required this.icon,required this.title,required this.subtitle,required this.selected,required this.onTap});
+ @override Widget build(BuildContext c)=>InkWell(onTap:onTap,borderRadius:BorderRadius.circular(14),child:Container(padding:const EdgeInsets.all(11),decoration:BoxDecoration(color:_p,borderRadius:BorderRadius.circular(14),border:Border.all(color:selected?_g:_l.withValues(alpha:.22),width:selected?1.6:1)),child:Row(children:[Icon(icon,color:selected?_g:_l,size:22),const SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.center,children:[Text(title,style:const TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.bold)),Text(subtitle,style:const TextStyle(color:_l,fontSize:9))])),if(selected)const Icon(Icons.check_circle,color:_g,size:17)])));
+}
+class _StudioFeature extends StatelessWidget{final IconData icon;final String title;const _StudioFeature(this.icon,this.title);@override Widget build(BuildContext c)=>Row(mainAxisSize:MainAxisSize.min,children:[Icon(icon,color:_g,size:16),const SizedBox(width:5),Text(title,style:const TextStyle(color:_l,fontSize:10))]);}
 class _StudioPreviewGrid extends CustomPainter {
   @override
   void paint(Canvas canvas,Size size){
