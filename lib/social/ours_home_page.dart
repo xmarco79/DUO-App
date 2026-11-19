@@ -122,16 +122,6 @@ class _StudioState extends State<_StudioView> {
   RealtimeChannel? channel;
 
   @override
-  void didUpdateWidget(covariant _WatchView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!oldWidget.active && widget.active && session != null) {
-      _ensurePlayer(session!);
-    } else if (oldWidget.active && !widget.active && player?.value.isPlaying == true) {
-      player!.pause();
-    }
-  }
-
-  @override
   void initState() {
     super.initState();
     _load();
@@ -544,6 +534,16 @@ class _WatchState extends State<_WatchView> {
 
   int get _positionMs => (session?['position_ms'] as num?)?.toInt() ?? 0;
   bool get _isPlaying => session?['is_playing'] == true;
+
+  @override
+  void didUpdateWidget(covariant _WatchView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.active && widget.active && session != null) {
+      _ensurePlayer(session!);
+    } else if (oldWidget.active && !widget.active && player?.value.isPlaying == true) {
+      player!.pause();
+    }
+  }
 
   @override
   void initState() {
