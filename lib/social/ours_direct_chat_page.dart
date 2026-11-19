@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -664,8 +665,8 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  @override void initState(){super.initState();_load();}
  Future<void> _load()async{try{final data=await db.from('ours_self_messages').select().order('created_at');if(mounted)setState(()=>rows=List<Map<String,dynamic>>.from(data));}catch(e){_notice(t('تعذر تحميل الرسائل المحفوظة. تحقق من الاتصال.','Could not load saved messages. Check your connection.'));}finally{if(mounted)setState(()=>loading=false);}}
  Future<void> _noteActions(Map<String,dynamic> row)async{
-  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:_p,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-   ListTile(leading:const Icon(Icons.push_pin_outlined,color:_g),title:Text(t('تثبيت / إلغاء التثبيت','Pin / unpin')),onTap:()=>Navigator.pop(ctx,'pin')),
+  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:_navy,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   ListTile(leading:const Icon(Icons.push_pin_outlined,color:_gold),title:Text(t('تثبيت / إلغاء التثبيت','Pin / unpin')),onTap:()=>Navigator.pop(ctx,'pin')),
    ListTile(leading:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent),title:Text(t('حذف الرسالة','Delete note')),onTap:()=>Navigator.pop(ctx,'delete'))
   ])));
   if(choice=='pin')await _togglePin(row);if(choice=='delete')await _delete(row);
@@ -702,33 +703,19 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
        padding:const EdgeInsets.fromLTRB(14,14,14,18),
        itemCount:rows.length,
        itemBuilder:(c,i){
-        final row=rows[rows.length-1-i];
-        final date=DateTime.tryParse(row['created_at']?.toString()??'')?.toLocal();
-        final time=date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);
-        return Align(
-         alignment:AlignmentDirectional.centerEnd,
-         child:GestureDetector(onLongPress:()=>_noteActions(row),child:Container(
-          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.84),
-          margin:const EdgeInsets.symmetric(vertical:5),
-          padding:const EdgeInsets.fromLTRB(14,11,9,8),
-          decoration:BoxDecoration(
-           color:const Color(0xFF342B4C),
-           borderRadius:BorderRadius.circular(18),
-           border:Border.all(color:_gold.withValues(alpha:.15)),
-          ),
-          child:IntrinsicWidth(child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+         final row=rows[rows.length-1-i];
+         final date=DateTime.tryParse(row['created_at']?.toString()??'')?.toLocal();
+         final time=date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);
+         return Align(alignment:AlignmentDirectional.centerEnd,child:GestureDetector(onLongPress:()=>_noteActions(row),child:Container(
+          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.84),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.fromLTRB(14,11,14,8),
+          decoration:BoxDecoration(color:const Color(0xFF342B4C),borderRadius:BorderRadius.circular(18),border:Border.all(color:_gold.withValues(alpha:.15))),
+          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
            SelectableText(row['body'].toString(),style:const TextStyle(color:Colors.white,height:1.5)),
            const SizedBox(height:5),
-           Row(mainAxisSize:MainAxisSize.min,children:[
-            if(row['pinned']==true)const Icon(Icons.push_pin_rounded,color:_gold,size:13),
-            Text(time,style:const TextStyle(color:_lavender,fontSize:10)),
-            const SizedBox(width:4),
-
-           ])),
-          ]),
-         ),
-        );
-       },
+           Row(mainAxisSize:MainAxisSize.min,children:[if(row['pinned']==true)const Icon(Icons.push_pin_rounded,color:_gold,size:13),Text(time,style:const TextStyle(color:_lavender,fontSize:10))]),
+          ])),
+         )));
+        },
       ),
    ),
    SafeArea(
@@ -761,6 +748,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
 }
 
 
+Future<ui.Image> _decodeUiImage(Uint8List bytes){final completer=Completer<ui.Image>();ui.decodeImageFromList(bytes,completer.complete);return completer.future;}
 class _ImageMarkupDialog extends StatefulWidget{
  final Uint8List bytes;final _ChatSkin skin;final bool ar;
  const _ImageMarkupDialog({required this.bytes,required this.skin,required this.ar});
@@ -768,12 +756,12 @@ class _ImageMarkupDialog extends StatefulWidget{
 }
 class _ImageMarkupDialogState extends State<_ImageMarkupDialog>{
  final List<_MarkupStroke> strokes=[];List<Offset> current=[];Color color=const Color(0xFFFFD66B);bool saving=false;late final Future<ui.Image> decodedFuture;
- @override void initState(){super.initState();decodedFuture=ui.decodeImageFromList(widget.bytes);}
+ @override void initState(){super.initState();decodedFuture=_decodeUiImage(widget.bytes);}
  String t(String a,String e)=>widget.ar?a:e;
  Future<void> _save()async{
   if(saving)return;setState(()=>saving=true);
   try{
-   final decoded=await ui.decodeImageFromList(widget.bytes);final recorder=ui.PictureRecorder();final canvas=Canvas(recorder);
+   final decoded=await _decodeUiImage(widget.bytes);final recorder=ui.PictureRecorder();final canvas=Canvas(recorder);
    canvas.drawImage(decoded,Offset.zero,Paint());
    final sx=decoded.width.toDouble(),sy=decoded.height.toDouble();
    final all=[...strokes,if(current.length>1)_MarkupStroke(List<Offset>.from(current),color)];
@@ -786,7 +774,7 @@ class _ImageMarkupDialogState extends State<_ImageMarkupDialog>{
  }
  @override Widget build(BuildContext context)=>Dialog(backgroundColor:widget.skin.bg,insetPadding:const EdgeInsets.all(8),child:SafeArea(child:Column(mainAxisSize:MainAxisSize.max,children:[
   Padding(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),child:Row(children:[Icon(Icons.draw_rounded,color:widget.skin.accent),const SizedBox(width:8),Expanded(child:Text(t('مرسم الصورة','Image studio'),style:TextStyle(color:widget.skin.accent,fontWeight:FontWeight.w800))),IconButton(onPressed:()=>setState(()=>strokes.clear()),tooltip:t('مسح الرسم','Clear'),icon:Icon(Icons.delete_outline,color:widget.skin.accent)),IconButton(onPressed:()=>setState(()=>strokes.isNotEmpty?strokes.removeLast():null),tooltip:t('تراجع','Undo'),icon:Icon(Icons.undo,color:widget.skin.accent))])),
-  Expanded(child:Center(child:LayoutBuilder(builder:(ctx,box){return FutureBuilder<ui.Image>(future:decodedFuture, builder:(ctx,s){if(!s.hasData)return const CircularProgressIndicator();final img=s.data!;final ratio=img.width/img.height;final w=math.min(box.maxWidth,box.maxHeight*ratio);final h=w/ratio;return SizedBox(width:w,height:h,child:Stack(fit:StackFit.expand,children:[Image.memory(widget.bytes,fit:BoxFit.fill),CustomPaint(painter:_MarkupPainter([...strokes,if(current.length>1)_MarkupStroke(current,color)])),GestureDetector(behavior:HitTestBehavior.translucent,onPanStart:(e)=>setState(()=>current=[Offset(e.localPosition.dx/w,e.localPosition.dy/h)]),onPanUpdate:(e)=>setState(()=>current.add(Offset((e.localPosition.dx/w).clamp(0,1),(e.localPosition.dy/h).clamp(0,1)))),onPanEnd:(_){if(current.length>1)strokes.add(_MarkupStroke(List<Offset>.from(current),color));current.clear();setState((){});})]));});}))),
+  Expanded(child:Center(child:LayoutBuilder(builder:(ctx,box){return FutureBuilder<ui.Image>(future:decodedFuture, builder:(ctx,s){if(!s.hasData)return const CircularProgressIndicator();final img=s.data!;final ratio=img.width/img.height;final w=math.min<double>(box.maxWidth,box.maxHeight*ratio);final h=w/ratio;return SizedBox(width:w,height:h,child:Stack(fit:StackFit.expand,children:[Image.memory(widget.bytes,fit:BoxFit.fill),CustomPaint(painter:_MarkupPainter([...strokes,if(current.length>1)_MarkupStroke(current,color)])),GestureDetector(behavior:HitTestBehavior.translucent,onPanStart:(e)=>setState(()=>current=[Offset(e.localPosition.dx/w,e.localPosition.dy/h)]),onPanUpdate:(e)=>setState(()=>current.add(Offset((e.localPosition.dx/w).clamp(0,1),(e.localPosition.dy/h).clamp(0,1)))),onPanEnd:(_){if(current.length>1)strokes.add(_MarkupStroke(List<Offset>.from(current),color));current.clear();setState((){});})]));});}))),
   Padding(padding:const EdgeInsets.all(10),child:Row(children:[for(final c in [const Color(0xFFFFD66B),const Color(0xFFFF5C8A),const Color(0xFF7CFFF1),Colors.white,const Color(0xFF8B72FF)])IconButton(onPressed:()=>setState(()=>color=c),icon:Icon(Icons.circle,color:c,size:24)),const Spacer(),FilledButton.icon(onPressed:saving?null:_save,icon:saving?const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.save_alt),label:Text(t('حفظ الرسم','Save drawing')))]))
  ])));
 }
