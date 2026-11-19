@@ -57,7 +57,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
        leading:Container(width:48,height:34,decoration:BoxDecoration(color:s.bg,borderRadius:BorderRadius.circular(10),border:Border.all(color:s.accent.withValues(alpha:.8))),child:Stack(children:[Align(alignment:Alignment.centerLeft,child:Container(width:22,height:12,margin:const EdgeInsets.all(4),decoration:BoxDecoration(color:s.partner,borderRadius:BorderRadius.circular(6)))),Align(alignment:Alignment.centerRight,child:Container(width:22,height:12,margin:const EdgeInsets.all(4),decoration:BoxDecoration(color:s.mine,borderRadius:BorderRadius.circular(6))))])),
        title:Text(ar?s.ar:s.en,style:const TextStyle(color:Colors.white)),subtitle:Text(s.id=='signature'?t('الثيم الرسمي لهوية OURS','OURS official signature theme'):t('ثيم محادثة','Conversation theme'),style:TextStyle(color:s.accent,fontSize:11)),
        trailing:skin.id==s.id?Icon(Icons.check_circle,color:s.accent):null,onTap:()=>Navigator.pop(ctx,s)))]))
-   ]))));
+   ])));
   if(selected==null)return;setState(()=>skin=selected);final p=await SharedPreferences.getInstance();await p.setString('ours_direct_skin_'+widget.conversationId,selected.id);
  }
  Future<void> _openDetails() async{
@@ -116,14 +116,14 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    ListTile(leading:Icon(Icons.videocam_outlined,color:skin.accent),title:Text(t('فيديو من المعرض','Video from gallery')),onTap:()=>Navigator.pop(c,'video')),
    ListTile(leading:Icon(Icons.camera_alt_outlined,color:skin.accent),title:Text(t('التقاط صورة','Take a photo')),onTap:()=>Navigator.pop(c,'camera')),
    ListTile(leading:Icon(Icons.video_camera_back_outlined,color:skin.accent),title:Text(t('تسجيل فيديو','Record video')),onTap:()=>Navigator.pop(c,'record'))
-  ]))));
+  ])));
   if(choice=='photo')await _pickImage();else if(choice=='video')await _pickVideo();else if(choice=='camera')await _pickImage(source:ImageSource.camera);else if(choice=='record')await _pickVideo(source:ImageSource.camera);
  }
  Future<void> _chooseAttachment() async{
   final choice=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
    ListTile(leading:Icon(Icons.folder_open,color:skin.accent),title:Text(t('ملف أو مستند','File or document')),onTap:()=>Navigator.pop(c,'file')),
    ListTile(leading:Icon(Icons.photo_library_outlined,color:skin.accent),title:Text(t('وسائط: صورة أو فيديو','Media: photo or video')),onTap:()=>Navigator.pop(c,'media')),
-  ]))));
+  ])));
   if(choice=='file')await _pickFile();if(choice=='media')await _chooseMedia();
  }
  Future<void> _pickFile() async{
