@@ -144,7 +144,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(latest.isBefore(current.subtract(const Duration(days:1))))return 0;
   var count=0,day=latest;
   while(days.contains(day)){count++;day=day.subtract(const Duration(days:1));}
-  return count;
+  return count >= 3 ? count : 0;
  }
  @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();}
  Future<void> _changeLocalNickname() async{
@@ -197,7 +197,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    final hidden=await db.from('ours_direct_message_hides').select('message_id').eq('user_id',uid);
    hiddenIds..clear()..addAll(hidden.map((r)=>r['message_id'].toString()));
    final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at');
-   if(!mounted)return;setState((){messages..clear()..addAll(List<Map<String,dynamic>>.from(rows).where((m)=>!hiddenIds.contains(m['id'].toString())));loading=false;});_bottom();
+   if(!mounted)return;setState((){messages..clear()..addAll(List<Map<String,dynamic>>.from(rows).where((m)=>!hiddenIds.contains(m['id'].toString())));loading=false;});
+   await db.rpc('mark_ours_direct_messages_read',params:{'p_conversation_id':widget.conversationId});
+   _bottom();
   }catch(e){if(mounted){setState(()=>loading=false);_show(t('تعذر تحميل المحادثة. تحقق من الاتصال وحاول مجددًا.','Could not load conversation. Check your connection and try again.'));}}
  }
  void _listen(){
@@ -205,6 +207,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   channel=db.channel('ours-direct-'+widget.conversationId)
    .onPostgresChanges(event:PostgresChangeEvent.insert,schema:'public',table:'duo_direct_messages',filter:filter,callback:(p){
     final row=Map<String,dynamic>.from(p.newRecord);if(!mounted||hiddenIds.contains(row['id'].toString())||messages.any((m)=>m['id']==row['id']))return;setState(()=>messages.add(row));_bottom();
+    if(row['sender_id']?.toString()!=uid){db.rpc('mark_ours_direct_messages_read',params:{'p_conversation_id':widget.conversationId});}
    })
    .onPostgresChanges(event:PostgresChangeEvent.delete,schema:'public',table:'duo_direct_messages',callback:(p){
     final id=p.oldRecord['id']?.toString();if(!mounted||id==null)return;setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));
@@ -272,20 +275,29 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){_show(t('تعذر اختيار الفيديو: $e','Could not select video: $e'));}
  }
  Future<void> _sendSticker() async{
-  const stickers=[
-   ('ours_cat_love','حب'),('ours_cat_happy','سعادة'),('ours_cat_cry','بكاء'),
-   ('ours_cat_sleep','نعاس'),('ours_cat_shock','صدمة'),('ours_cat_angry','زعل'),
-   ('ours_cat_wink','غمزة'),('ours_cat_blush','خجل'),('ours_cat_chef','الشيف'),
-   ('ours_cat_party','احتفال'),('ours_cat_hug','حضن'),('ours_cat_cool','كشخة'),
-  ];
+  final recent=messages.where((m)=>m['message_type']=='sticker' && (m['body']??'').toString().isNotEmpty && m['body']!='[viewed]').toList().reversed.toList();
   final chosen=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF211D30),showDragHandle:true,isScrollControlled:true,
-   builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.58,child:Column(children:[
-    Padding(padding:const EdgeInsets.all(14),child:Text(t('ملصقات قطط OURS','OURS Cat Stickers'),style:const TextStyle(color:_gold,fontSize:17,fontWeight:FontWeight.w800))),
-    Expanded(child:GridView.builder(padding:const EdgeInsets.fromLTRB(14,0,14,16),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,childAspectRatio:.9,crossAxisSpacing:10,mainAxisSpacing:10),itemCount:stickers.length,itemBuilder:(ctx,i){
-     final sticker=stickers[i];return InkWell(borderRadius:BorderRadius.circular(16),onTap:()=>Navigator.pop(ctx,sticker.$1),child:Container(decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(16),border:Border.all(color:skin.accent.withValues(alpha:.2))),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[_OursCatSticker(stickerId:sticker.$1,size:70),const SizedBox(height:4),Text(sticker.$2,style:TextStyle(color:skin.accent,fontSize:11,fontWeight:FontWeight.w700))])));
-    }))
+   builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.62,child:Column(children:[
+    Padding(padding:const EdgeInsets.all(14),child:Row(children:[
+     Expanded(child:Text(t('ملصقاتنا','Our stickers'),style:const TextStyle(color:_gold,fontSize:17,fontWeight:FontWeight.w800))),
+     TextButton.icon(onPressed:()=>Navigator.pop(ctx,'__add__'),icon:const Icon(Icons.add_photo_alternate_outlined),label:Text(t('إضافة من المعرض','Add from gallery')))
+    ])),
+    Expanded(child:recent.isEmpty
+      ?Center(child:Text(t('أضف أول ملصق من معرض الصور','Add your first sticker from the gallery'),style:const TextStyle(color:_lavender)))
+      :GridView.builder(padding:const EdgeInsets.fromLTRB(14,0,14,16),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,childAspectRatio:.9,crossAxisSpacing:10,mainAxisSpacing:10),itemCount:recent.length,itemBuilder:(ctx,i){
+       final path=recent[i]['body'].toString();
+       return InkWell(borderRadius:BorderRadius.circular(16),onTap:()=>Navigator.pop(ctx,path),child:Container(decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(16),border:Border.all(color:skin.accent.withValues(alpha:.2))),padding:const EdgeInsets.all(6),child:FutureBuilder<String>(future:_signed(path),builder:(c,s)=>s.hasData?Image.network(s.data!,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent)):Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:2)))));
+      }))
    ]))));
   if(chosen==null)return;
+  if(chosen=='__add__'){
+   try{
+    final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:95,maxWidth:1600,maxHeight:1600);
+    if(f==null)return;
+    await _upload(await f.readAsBytes(),'sticker_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+f.name.split('.').last.toLowerCase(),'sticker');
+   }catch(e){_show(t('تعذر إضافة الملصق: $e','Could not add sticker: $e'));}
+   return;
+  }
   try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':chosen,'message_type':'sticker'});}
   catch(e){_show(t('تعذر إرسال الملصق: $e','Could not send sticker: $e'));}
  }
@@ -310,7 +322,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
     ListTile(leading:Icon(Icons.photo_library_outlined,color:skin.accent),title:Text(t('الوسائط','Media')),subtitle:Text(t('صور ومقاطع فيديو','Photos and videos')),onTap:()=>Navigator.pop(ctx,'media')),
     ListTile(leading:Icon(Icons.insert_drive_file_outlined,color:skin.accent),title:Text(t('ملف','File')),onTap:()=>Navigator.pop(ctx,'file')),
-    ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:skin.accent),title:Text(t('ملصقات القطط','Cat stickers')),onTap:()=>Navigator.pop(ctx,'sticker')),
+    ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:skin.accent),title:Text(t('ملصقاتنا','Our stickers')),onTap:()=>Navigator.pop(ctx,'sticker')),
    ])));
   if(choice==null)return;
   switch(choice){case 'media':await _pickMedia();break;case 'image':await _pickImageWithMode();break;case 'video':await _pickVideo();break;case 'file':await _pickFile();break;case 'sticker':await _sendSticker();break;}
@@ -355,6 +367,12 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   catch(e){_show(t('تعذر فتح الملف: $e','Could not open file: $e'));}
  }
  String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();return d==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(d);}
+ String _dateLabel(DateTime date){
+  final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);
+  if(day==today)return t('اليوم','Today');
+  if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');
+  return DateFormat(ar?'d MMMM y':'MMM d, y').format(day);
+ }
  Future<void> _callInfo(bool video) async{
   await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:const Color(0xFF29213D),icon:Icon(video?Icons.videocam_outlined:Icons.call_outlined,color:_gold),
    title:Text(t('المكالمات قيد التجهيز','Calls are being prepared')),
@@ -382,6 +400,14 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    }
   }catch(e){_show(t('تعذر حذف الرسالة: $e','Could not delete message: $e'));}
  }
+ void _jumpToMessage(String id){
+  final index=messages.indexWhere((m)=>m['id'].toString()==id);
+  if(index<0||!scroll.hasClients)return;
+  final target=(index*150.0).clamp(0.0,scroll.position.maxScrollExtent);
+  scroll.animateTo(target,duration:const Duration(milliseconds:320),curve:Curves.easeOutCubic);
+  setState(()=>highlightedMessageId=id);
+  Future<void>.delayed(const Duration(seconds:2),(){if(mounted&&highlightedMessageId==id)setState(()=>highlightedMessageId=null);});
+ }
  Future<void> _searchMessages() async{
   final controller=TextEditingController();
   final query=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:const Color(0xFF211D30),title:Text(t('البحث في المحادثة','Search chat')),content:TextField(controller:controller,autofocus:true,decoration:InputDecoration(hintText:t('اكتب كلمة للبحث','Search for a word'))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:Text(t('بحث','Search')))]));
@@ -390,7 +416,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(!mounted)return;
   await showModalBottomSheet<void>(context:context,isScrollControlled:true,backgroundColor:const Color(0xFF211D30),builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.65,child:Column(children:[
    Padding(padding:const EdgeInsets.all(16),child:Text(t('نتائج البحث','Search results')+' ('+found.length.toString()+')',style:const TextStyle(color:_gold,fontWeight:FontWeight.bold))),
-   Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد نتائج','No results'))):ListView(children:found.map((m)=>ListTile(title:Text(m['body'].toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])))).toList()))
+   Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد نتائج','No results'))):ListView(children:found.map((m)=>ListTile(title:Text(m['body'].toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])),onTap:(){Navigator.pop(ctx);_jumpToMessage(m['id'].toString());})).toList()))
   ]))));
  }
  Future<void> _openImageActions(String url) async{
@@ -460,35 +486,54 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      ])))
      :ListView.builder(controller:scroll,padding:const EdgeInsets.all(12),itemCount:messages.length,itemBuilder:(ctx,i){
       final m=messages[i];final mine=m['sender_id']==me;final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';
-      return GestureDetector(onLongPress:()=>_messageActions(m,mine,type,path),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
-       constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(10),
-       decoration:BoxDecoration(color:mine?skin.mine:skin.partner,borderRadius:BorderRadius.circular(17),border:Border.all(color:skin.accent.withValues(alpha:.16))),
-       child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-        if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString())) Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.45),borderRadius:BorderRadius.circular(8)),child:Text(messages.firstWhere((r)=>r['id'].toString()==m['reply_to'].toString())['body'].toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))),
-        if(type=='sticker')Center(child:_OursCatSticker(stickerId:path,size:82))
-        else if(type=='view_once'||type=='view_twice')
-          (m['viewed_at']!=null || ((m['view_count'] as num?)?.toInt()??0)>=((m['max_views'] as num?)?.toInt()??1))
+      final createdAt=DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal();
+      final previousAt=i>0?DateTime.tryParse(messages[i-1]['created_at']?.toString()??'')?.toLocal():null;
+      final showDate=createdAt!=null&&(previousAt==null||DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt));
+      return Column(mainAxisSize:MainAxisSize.min,children:[
+       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:6),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.82),borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.18))),child:Text(_dateLabel(createdAt),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700))))),
+       GestureDetector(
+        onLongPress:()=>_messageActions(m,mine,type,path),
+        onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
+        child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(10),
+         decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),borderRadius:BorderRadius.circular(17),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
+         child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+          if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
+           Builder(builder:(context){
+            final original=messages.firstWhere((r)=>r['id'].toString()==m['reply_to'].toString());
+            final originalBody=(original['body']??'').toString();
+            return InkWell(onTap:()=>_jumpToMessage(original['id'].toString()),borderRadius:BorderRadius.circular(8),child:Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.45),borderRadius:BorderRadius.circular(8)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+             Text(original['sender_id']==uid?t('أنت', 'You'):(localPartnerName??widget.partnerName),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w800)),
+             Text(originalBody,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))
+            ])));
+           }),
+          if(type=='sticker')FutureBuilder<String>(future:_signed(path),builder:(c,s)=>s.hasData?Center(child:Image.network(s.data!,width:150,height:150,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:42))):SizedBox(width:110,height:90,child:Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:2))))
+          else if(type=='view_once'||type=='view_twice')
+           ((m['view_count'] as num?)?.toInt()??0)>=((m['max_views'] as num?)?.toInt()??1)||m['viewed_at']!=null
             ?Text(t('انتهت مشاهدات الصورة','No views left'),style:TextStyle(color:skin.accent,fontSize:12))
-            :mine
-              ?Text(type=='view_twice'?t('أرسلت صورة لمشاهدتين','You sent a two-view photo'):t('أرسلت صورة لمرة واحدة','You sent a one-view photo'),style:TextStyle(color:skin.accent,fontSize:12))
-              :FutureBuilder<String>(future:_signed(path),builder:(c,s)=>s.hasData
-                ?Column(mainAxisSize:MainAxisSize.min,children:[ClipRRect(borderRadius:BorderRadius.circular(11),child:ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:13,sigmaY:13),child:Image.network(s.data!,width:210,height:130,fit:BoxFit.cover))),const SizedBox(height:7),TextButton.icon(onPressed:()=>_consumeTemporaryMedia(m['id'].toString()),icon:Icon(Icons.visibility_outlined,color:skin.accent),label:Text(type=='view_twice'?t('فتح الصورة · مشاهدتان','Open photo · two views'):t('فتح الصورة · مرة واحدة','Open photo · once')))])
-                :Text(t('صورة مؤقتة','Temporary photo'),style:TextStyle(color:skin.accent,fontSize:12)))
-        else if(type=='video')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.play_circle_fill,color:skin.accent,size:36),const SizedBox(width:8),Text(t('مقطع فيديو · تشغيل','Video · Play'))]))
-        else if(type=='image')FutureBuilder<String>(future:_signed(path),builder:(c,s){
-         if(s.hasError)return Text(t('تعذر تحميل الصورة','Could not load image'),style:TextStyle(color:skin.accent));
-         if(!s.hasData)return SizedBox(width:190,height:125,child:Center(child:CircularProgressIndicator(color:skin.accent)));
-         return GestureDetector(onTap:()=>_openImageActions(s.data!),
-          child:ClipRRect(borderRadius:BorderRadius.circular(13),child:Stack(children:[Image.network(s.data!,width:230,height:230,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Text(t('تعذر عرض الصورة','Image unavailable'))),Positioned(bottom:8,right:8,child:Container(padding:const EdgeInsets.all(6),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.58),borderRadius:BorderRadius.circular(30)),child:Icon(Icons.zoom_out_map_rounded,color:Colors.white,size:17)))])));
-        })
-        else if(type=='file')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[
-         Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),
-         Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(path.split('/').last.replaceFirst(RegExp(r'^\d+_'),''),maxLines:2,overflow:TextOverflow.ellipsis),Text(t('اضغط لفتح الملف','Tap to open file'),style:TextStyle(color:skin.accent,fontSize:10))]))
-        ]))
-        else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
-        else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
-        const SizedBox(height:4),Align(alignment:AlignmentDirectional.centerEnd,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)))
-       ])))));
+            :FutureBuilder<String>(future:_signed(path),builder:(c,s)=>s.hasData
+             ?Column(mainAxisSize:MainAxisSize.min,children:[ClipRRect(borderRadius:BorderRadius.circular(11),child:ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:13,sigmaY:13),child:Image.network(s.data!,width:210,height:130,fit:BoxFit.cover))),const SizedBox(height:7),TextButton.icon(onPressed:()=>_consumeTemporaryMedia(m['id'].toString()),icon:Icon(Icons.visibility_outlined,color:skin.accent),label:Text((m['max_views']==2)?t('فتح الصورة · مشاهدتان','Open photo · two views'):t('فتح الصورة · مرة واحدة','Open photo · once')))])
+             :Text(t('صورة مؤقتة','Temporary photo'),style:TextStyle(color:skin.accent,fontSize:12)))
+          else if(type=='video')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.play_circle_fill,color:skin.accent,size:36),const SizedBox(width:8),Text(t('مقطع فيديو · تشغيل','Video · Play'))]))
+          else if(type=='image')FutureBuilder<String>(future:_signed(path),builder:(c,s){
+           if(s.hasError)return Text(t('تعذر تحميل الصورة','Could not load image'),style:TextStyle(color:skin.accent));
+           if(!s.hasData)return SizedBox(width:190,height:125,child:Center(child:CircularProgressIndicator(color:skin.accent)));
+           return GestureDetector(onTap:()=>_openImageActions(s.data!),child:ClipRRect(borderRadius:BorderRadius.circular(13),child:Stack(children:[Image.network(s.data!,width:230,height:230,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Text(t('تعذر عرض الصورة','Image unavailable'))),Positioned(bottom:8,right:8,child:Container(padding:const EdgeInsets.all(6),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.58),borderRadius:BorderRadius.circular(30)),child:Icon(Icons.zoom_out_map_rounded,color:Colors.white,size:17)))])));
+          })
+          else if(type=='file')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[
+           Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),
+           Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(path.split('/').last.replaceFirst(RegExp(r'^\\d+_'),''),maxLines:2,overflow:TextOverflow.ellipsis),Text(t('اضغط لفتح الملف','Tap to open file'),style:TextStyle(color:skin.accent,fontSize:10))]))
+          ]))
+          else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
+          else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
+          const SizedBox(height:4),Align(alignment:AlignmentDirectional.centerEnd,child:Row(mainAxisSize:MainAxisSize.min,children:[
+           Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)),
+           if(mine)Padding(padding:const EdgeInsetsDirectional.only(start:5),child:Icon(m['read_at']!=null?Icons.done_all_rounded:Icons.done_rounded,color:m['read_at']!=null?skin.accent:skin.accent.withValues(alpha:.55),size:13))
+          ]))
+         ]))
+        ))
+       )
+      ]);
      })),
     SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(7,8,7,10),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.2)))),
      child:recording?Row(children:[
@@ -557,65 +602,6 @@ class _OursAiPageState extends State<OursAiPage>{
     IconButton(onPressed:sending?null:()=>_send(),icon:const Icon(Icons.send_rounded,color:_gold))
    ]))
   ])));
-}
-
-class _OursCatSticker extends StatelessWidget{
- final String stickerId;final double size;
- const _OursCatSticker({required this.stickerId,this.size=76});
- @override Widget build(BuildContext context)=>CustomPaint(size:Size.square(size),painter:_OursCatStickerPainter(stickerId));
-}
-
-class _OursCatStickerPainter extends CustomPainter{
- final String id;
- const _OursCatStickerPainter(this.id);
- @override void paint(Canvas canvas,Size size){
-  final w=size.width,h=size.height;
-  final fill=Paint()..color=id.contains('cool')?const Color(0xFFB9D9E8):id.contains('chef')?const Color(0xFFFFE2B5):const Color(0xFFFFD8E5);
-  final edge=Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=4..strokeJoin=StrokeJoin.round;
-  final earLeft=Path()..moveTo(w*.20,h*.43)..lineTo(w*.23,h*.08)..quadraticBezierTo(w*.45,h*.12,w*.47,h*.34)..close();
-  final earRight=Path()..moveTo(w*.53,h*.34)..quadraticBezierTo(w*.58,h*.12,w*.80,h*.08)..lineTo(w*.82,h*.43)..close();
-  canvas.drawPath(earLeft,fill);canvas.drawPath(earLeft,edge);canvas.drawPath(earRight,fill);canvas.drawPath(earRight,edge);
-  final head=Rect.fromCenter(center:Offset(w*.5,h*.52),width:w*.68,height:h*.64);
-  canvas.drawOval(head,fill);canvas.drawOval(head,edge);
-  final pink=Paint()..color=const Color(0xFFF29AB5);
-  canvas.drawCircle(Offset(w*.31,h*.27),w*.055,pink);canvas.drawCircle(Offset(w*.69,h*.27),w*.055,pink);
-  final eye=Paint()..color=const Color(0xFF33283B);
-  if(id.contains('sleep')) {
-   final p=Paint()..color=const Color(0xFF33283B)..style=PaintingStyle.stroke..strokeWidth=2.5..strokeCap=StrokeCap.round;
-   canvas.drawArc(Rect.fromCenter(center:Offset(w*.38,h*.48),width:w*.14,height:h*.08),0,math.pi,false,p);
-   canvas.drawArc(Rect.fromCenter(center:Offset(w*.62,h*.48),width:w*.14,height:h*.08),0,math.pi,false,p);
-  }else{
-   canvas.drawCircle(Offset(w*.38,h*.47),w*.035,eye);
-   canvas.drawCircle(Offset(w*.62,h*.47),w*.035,eye);
-   if(id.contains('wink')){canvas.drawLine(Offset(w*.55,h*.45),Offset(w*.69,h*.46),Paint()..color=const Color(0xFF33283B)..strokeWidth=2.5..strokeCap=StrokeCap.round);}
-  }
-  final nose=Path()..moveTo(w*.47,h*.56)..quadraticBezierTo(w*.5,h*.52,w*.53,h*.56)..quadraticBezierTo(w*.5,h*.60,w*.47,h*.56);
-  canvas.drawPath(nose,Paint()..color=const Color(0xFFB96B86));
-  final mouth=Paint()..color=const Color(0xFF5B3A4A)..style=PaintingStyle.stroke..strokeWidth=2..strokeCap=StrokeCap.round;
-  if(id.contains('shock')){canvas.drawCircle(Offset(w*.5,h*.65),w*.045,mouth..style=PaintingStyle.stroke);}
-  else{final smile=Path()..moveTo(w*.5,h*.59)..quadraticBezierTo(w*.43,h*.69,w*.37,h*.63)..moveTo(w*.5,h*.59)..quadraticBezierTo(w*.57,h*.69,w*.63,h*.63);canvas.drawPath(smile,mouth);}
-  final blush=Paint()..color=const Color(0xFFF39CB5).withValues(alpha:.72);
-  canvas.drawOval(Rect.fromCenter(center:Offset(w*.29,h*.60),width:w*.12,height:h*.06),blush);
-  canvas.drawOval(Rect.fromCenter(center:Offset(w*.71,h*.60),width:w*.12,height:h*.06),blush);
-  final whisker=Paint()..color=const Color(0xFF9B7483)..strokeWidth=1.4..strokeCap=StrokeCap.round;
-  for(var i=0;i<2;i++){
-   final y=h*(.58+i*.07);
-   canvas.drawLine(Offset(w*.19,y),Offset(w*.34,y+(i==0?-.025:.025)*h),whisker);
-   canvas.drawLine(Offset(w*.66,y+(i==0?-.025:.025)*h),Offset(w*.81,y),whisker);
-  }
-  if(id.contains('love')||id.contains('party')||id.contains('hug')){
-   final heart=Path()..moveTo(w*.76,h*.16)..cubicTo(w*.68,h*.08,w*.58,h*.17,w*.76,h*.31)..cubicTo(w*.94,h*.17,w*.84,h*.08,w*.76,h*.16)..close();
-   canvas.drawPath(heart,Paint()..color=id.contains('party')?const Color(0xFFFFC857):const Color(0xFFFF668C));
-  }
-  if(id.contains('cry')){
-   final tear=Paint()..color=const Color(0xFF75C9F3);
-   canvas.drawOval(Rect.fromCenter(center:Offset(w*.36,h*.56),width:w*.045,height:h*.11),tear);
-   canvas.drawOval(Rect.fromCenter(center:Offset(w*.64,h*.56),width:w*.045,height:h*.11),tear);
-  }
-  if(id.contains('angry')){canvas.drawLine(Offset(w*.31,h*.39),Offset(w*.44,h*.43),eye..strokeWidth=2.5);canvas.drawLine(Offset(w*.56,h*.43),Offset(w*.69,h*.39),eye..strokeWidth=2.5);}
-  if(id.contains('chef')){final hat=Paint()..color=Colors.white;canvas.drawOval(Rect.fromLTWH(w*.31,h*.02,w*.38,h*.14),hat);canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(w*.35,h*.10,w*.30,h*.10),const Radius.circular(5)),hat);}
- }
- @override bool shouldRepaint(covariant _OursCatStickerPainter old)=>old.id!=id;
 }
 
 class _DirectAudioBubble extends StatefulWidget{
