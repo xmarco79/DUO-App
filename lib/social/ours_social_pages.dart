@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ours_direct_chat_page.dart';
+import 'ours_music_page.dart';
+import 'ours_extra_pages.dart';
 import '../worlds/world_hub_page.dart';
 import '../notifications/ours_notifications.dart';
 
@@ -60,6 +62,28 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> {
         title: const Text('OURS', style: TextStyle(color: _gold, letterSpacing: 5)),
         centerTitle: true,
         actions: [
+          IconButton(
+            tooltip: _oursText(context, 'الموسيقى', 'Music'),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OursMusicPage())),
+            icon: const Icon(Icons.music_note_rounded, color: _gold),
+          ),
+          PopupMenuButton<String>(
+            tooltip: _oursText(context, 'ميزات إضافية', 'More features'),
+            icon: const Icon(Icons.more_vert, color: _lavender),
+            onSelected: (value) {
+              final page = value == 'studio'
+                  ? OursDrawingStudioPage(spaceId: spaceId)
+                  : value == 'watch'
+                      ? OursWatchTogetherPage(spaceId: spaceId)
+                      : OursReportPage(spaceId: spaceId);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'studio', child: Text(_oursText(context, 'مرسمنا', 'Our studio'))),
+              PopupMenuItem(value: 'watch', child: Text(_oursText(context, 'المشاهدة معًا', 'Watch together'))),
+              PopupMenuItem(value: 'report', child: Text(_oursText(context, 'تقرير OURS', 'OURS report'))),
+            ],
+          ),
           OursNotificationBell(spaceId: spaceId),
           IconButton(onPressed: widget.onProfileTap,
             icon: const Icon(Icons.person_outline, color: _lavender)),
