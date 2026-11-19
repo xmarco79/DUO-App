@@ -36,6 +36,12 @@ const _skins=[
  _ChatSkin('neon','سايبر بوب','Cyber pop',Color(0xFF140A22),Color(0xFF8144C7),Color(0xFF36234D),Color(0xFF7CFFF1)),
 ];
 
+String _oursDate(DateTime date,bool arabic,{bool withYear=true}){
+ const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+ if(arabic)return '${date.day} ${months[date.month-1]}${withYear?' ${date.year}':''}';
+ return DateFormat(withYear?'MMM d, y':'MMM d').format(date);
+}
+
 class _ChatAtmospherePainter extends CustomPainter {
  final _ChatSkin skin;
  const _ChatAtmospherePainter(this.skin);
@@ -275,7 +281,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(elapsed.inMinutes<1)return t('آخر ظهور للتو','Last seen just now');
   if(elapsed.inMinutes<60)return t('آخر ظهور منذ ${elapsed.inMinutes} دقيقة','Last seen ${elapsed.inMinutes}m ago');
   if(elapsed.inHours<24)return t('آخر ظهور منذ ${elapsed.inHours} ساعة','Last seen ${elapsed.inHours}h ago');
-  return t('آخر ظهور ${DateFormat('d MMM', 'ar').format(seen)}','Last seen ${DateFormat('MMM d').format(seen)}');
+  return t('آخر ظهور ${_oursDate(seen,true,withYear:false)}','Last seen ${_oursDate(seen,false,withYear:false)}');
  }
  Future<void> _chooseWallpaper() async{
   var opacity=wallpaperOpacity;
@@ -542,7 +548,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);
   if(day==today)return t('اليوم','Today');
   if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');
-  return DateFormat(ar?'d MMMM y':'MMM d, y').format(day);
+  return _oursDate(day,ar);
  }
  Future<void> _callInfo(bool video) async{
   await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:const Color(0xFF29213D),icon:Icon(video?Icons.videocam_outlined:Icons.call_outlined,color:_gold),
@@ -792,7 +798,7 @@ class _OursAiPageState extends State<OursAiPage>{
  void _notice(String text){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(text)));}
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
  String _time(String? value){final date=DateTime.tryParse(value??'')?.toLocal();return date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);}
- String _dateLabel(DateTime date){final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);if(day==today)return t('اليوم','Today');if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');return DateFormat(ar?'d MMMM y':'MMM d, y').format(day);}
+ String _dateLabel(DateTime date){final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);if(day==today)return t('اليوم','Today');if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');return _oursDate(day,ar);}
  void _jumpToMessage(int index){if(!scroll.hasClients)return;scroll.animateTo((index*155.0).clamp(0.0,scroll.position.maxScrollExtent),duration:const Duration(milliseconds:320),curve:Curves.easeOutCubic);}
  Future<void> _search()async{
   final controller=TextEditingController();
@@ -1068,7 +1074,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  }
  void _jumpSelfMessage(String id){
   final index=rows.indexWhere((r)=>r['id'].toString()==id);if(index<0||!scroll.hasClients)return;
-  scroll.animateTo((index*150.0).clamp(0.0,scroll.position.maxScrollExtent),duration:const Duration(milliseconds:320),curve:Curves.easeOutCubic);
+  scroll.animateTo(((rows.length-1-index)*150.0).clamp(0.0,scroll.position.maxScrollExtent),duration:const Duration(milliseconds:320),curve:Curves.easeOutCubic);
  }
  Future<void> _searchSelf()async{
   final controller=TextEditingController();
@@ -1079,7 +1085,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   await showModalBottomSheet<void>(context:context,backgroundColor:skin.bg,isScrollControlled:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.6,child:ListView(children:found.map((r)=>ListTile(title:Text((r['file_name']??r['body']).toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(_selfTime(r['created_at'])),onTap:(){Navigator.pop(ctx);_jumpSelfMessage(r['id'].toString());})).toList()))));
  }
  String _selfTime(dynamic value){final date=DateTime.tryParse(value?.toString()??'')?.toLocal();return date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);}
- String _selfDate(DateTime date){final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);if(day==today)return t('اليوم','Today');if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');return DateFormat(ar?'d MMMM y':'MMM d, y').format(day);}
+ String _selfDate(DateTime date){final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);if(day==today)return t('اليوم','Today');if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');return _oursDate(day,ar);}
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(0,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
  @override void dispose(){if(channel!=null)db.removeChannel(channel!);recorder?.dispose();input.dispose();scroll.dispose();super.dispose();}
  @override Widget build(BuildContext context){
