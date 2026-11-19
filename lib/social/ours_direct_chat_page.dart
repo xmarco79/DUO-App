@@ -139,7 +139,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Map<String,dynamic>? replyTo;
  RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
  Timer? typingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId;
- bool loading=true,sending=false,recording=false,uploading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22;_ChatSkin skin=_skins.first;
+ bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
  int _streakCount(){
@@ -550,7 +550,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    final request=await client.getUrl(Uri.parse(url));final response=await request.close();
    if(response.statusCode<200||response.statusCode>=300)throw Exception('Download failed');
    final total=response.contentLength;var received=0;final bytes=BytesBuilder(copy:false);
-   if(mounted)setState(()=>downloadProgress=total>0?0.0:null);
+   if(mounted)setState(()=>{downloadProgress=total>0?0.0:null;downloading=true;});
    await for(final chunk in response){
     bytes.add(chunk);received+=chunk.length;
     if(mounted)setState(()=>downloadProgress=total>0?(received/total).clamp(0.0,1.0):null);
@@ -558,7 +558,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    final saved=await FilePicker.platform.saveFile(fileName:(name?.trim().isNotEmpty==true?name!:path.split('/').last),bytes:bytes.takeBytes());
    if(saved!=null)_show(t('تم حفظ الملف في الموقع الذي اخترته','File saved to your selected location'));
   }catch(e){_show(t('تعذر تحميل الملف. حاول مجددًا.','Could not download file. Try again.'));}
-  finally{client?.close(force:true);if(mounted)setState(()=>downloadProgress=null);}
+  finally{client?.close(force:true);if(mounted)setState(()=>{downloadProgress=null;downloading=false;});}
  }
 String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();return d==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(d);}
  String _dateLabel(DateTime date){
@@ -746,6 +746,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       Expanded(child:Text(t('جارٍ تسجيل الرسالة الصوتية…','Recording voice message…'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))),
       IconButton(onPressed:sending?null:_sendRecording,icon:Icon(Icons.send,color:skin.accent))
      ]):Column(mainAxisSize:MainAxisSize.min,children:[
+      if(downloading)Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:4),child:LinearProgressIndicator(value:downloadProgress,color:skin.accent,minHeight:2)),
       if(partnerTyping)Padding(padding:const EdgeInsetsDirectional.fromSTEB(16,0,16,6),child:Align(alignment:AlignmentDirectional.centerStart,child:Text(t('يكتب الآن…','Typing…'),style:TextStyle(color:skin.accent,fontSize:11,fontStyle:FontStyle.italic)))),
       if(replyTo!=null)Container(margin:const EdgeInsets.fromLTRB(12,0,12,6),padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(12)),child:Row(children:[Icon(Icons.reply,color:skin.accent,size:18),const SizedBox(width:8),Expanded(child:Text((replyTo!['body']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:12))),IconButton(onPressed:()=>setState(()=>replyTo=null),icon:const Icon(Icons.close,size:17))])),
       Row(children:[
