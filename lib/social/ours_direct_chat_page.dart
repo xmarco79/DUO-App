@@ -922,7 +922,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   finally{if(mounted)setState(()=>sending=false);}
  }
  String _selfMime(String name){
-  const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
+  const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
   return types[name.split('.').last.toLowerCase()]??'';
  }
  Future<void> _uploadSelf(Uint8List bytes,String name,String type)async{
@@ -942,9 +942,18 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   finally{if(mounted)setState(()=>uploading=false);}
  }
  Future<void> _pickImage({bool sticker=false})async{
-  try{final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:94,maxWidth:2400,maxHeight:2400);if(f==null)return;
-   final ext=f.name.split('.').last.toLowerCase(),name=['png','webp'].contains(ext)?f.name:'self_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
-   await _uploadSelf(await f.readAsBytes(),name,sticker?'sticker':'image');
+  try{
+   if(sticker){
+    final result=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['png','jpg','jpeg','webp','gif'],withData:true);
+    if(result==null||result.files.isEmpty)return;
+    final file=result.files.single,bytes=file.bytes??(file.path==null?null:await File(file.path!).readAsBytes());
+    if(bytes==null)throw Exception('sticker');
+    await _uploadSelf(bytes,'self_sticker_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+file.name.split('.').last.toLowerCase(),'sticker');
+   }else{
+    final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:94,maxWidth:2400,maxHeight:2400);if(f==null)return;
+    final ext=f.name.split('.').last.toLowerCase(),name=['png','webp'].contains(ext)?f.name:'self_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
+    await _uploadSelf(await f.readAsBytes(),name,'image');
+   }
   }catch(_){_notice(t('تعذر اختيار الصورة','Could not select image'));}
  }
  Future<void> _pickFile()async{
