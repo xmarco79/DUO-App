@@ -779,9 +779,9 @@ class _ImageMarkupDialogState extends State<_ImageMarkupDialog>{
    canvas.drawImage(decoded,Offset.zero,Paint());
    final sx=decoded.width.toDouble(),sy=decoded.height.toDouble();
    final all=[...strokes,if(current.length>1)_MarkupStroke(List<Offset>.from(current),color)];
-   for(final stroke in all){if(stroke.points.length<2)continue;final path=Path()..moveTo(stroke.points.first.dx*sx,stroke.points.first.dy*sy);for(final p in stroke.points.skip(1))path.lineTo(p.dx*sx,p.dy*sy);canvas.drawPath(path,Paint()..color=stroke.color..strokeWidth=math.max(5,decoded.width/180)..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke);}
+   for(final stroke in all){if(stroke.points.length<2)continue;final path=Path()..moveTo(stroke.points.first.dx*sx,stroke.points.first.dy*sy);for(final p in stroke.points.skip(1))path.lineTo(p.dx*sx,p.dy*sy);canvas.drawPath(path,Paint()..color=stroke.color..strokeWidth=math.max(5.0,decoded.width/180.0)..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke);}
    final image=await recorder.endRecording().toImage(decoded.width,decoded.height);final data=await image.toByteData(format:ui.ImageByteFormat.png);if(data==null)throw Exception('encode');
-   final dir=await getApplicationDocumentsDirectory();final folder=Directory('${dir.path}/OURS_Saved_Media');await folder.create(recursive:true);final output=data.buffer.asUint8List();final saved=await FilePicker.platform.saveFile(fileName:'OURS_drawing_${DateTime.now().millisecondsSinceEpoch}.png',type:FileType.image,bytes:output);if(saved==null)return;
+   final output=data.buffer.asUint8List();final saved=await FilePicker.platform.saveFile(fileName:'OURS_drawing_${DateTime.now().millisecondsSinceEpoch}.png',type:FileType.image,bytes:output);if(saved==null)return;
    if(mounted){Navigator.pop(context);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تم حفظ الرسم في المكان الذي اخترته','Drawing saved to your selected location'))));}
   }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تعذر حفظ الرسم','Could not save drawing'))));}
   finally{if(mounted)setState(()=>saving=false);}
