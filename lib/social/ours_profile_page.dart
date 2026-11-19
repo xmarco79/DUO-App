@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _profileBg = Color(0xFF10101C);
@@ -30,7 +31,7 @@ class _OursProfilePageState extends State<OursProfilePage> {
     try {
       final row = await _db
           .from('duo_profiles')
-          .select('user_id, username, display_name, avatar_path, bio, created_at')
+          .select('user_id, username, display_name, avatar_path, bio, created_at, birth_date, show_age')
           .eq('user_id', widget.userId)
           .maybeSingle();
       if (!mounted) return;
@@ -47,6 +48,60 @@ class _OursProfilePageState extends State<OursProfilePage> {
     }
   }
 
+  int _age(DateTime birthDate) {
+    final today = DateTime.now();
+    var value = today.year - birthDate.year;
+    if (today.month < birthDate.month ||
+        (today.month == birthDate.month && today.day < birthDate.day)) {
+      value--;
+    }
+    return value;
+  }
+
+  Future<void> _editBirthday() async {
+    final current = DateTime.tryParse(_profile?['birth_date']?.toString() ?? '');
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current ?? DateTime(2008, 1, 1),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      helpText: Localizations.localeOf(context).languageCode == 'ar'
+          ? 'اختر تاريخ الميلاد'
+          : 'Choose birthday',
+    );
+    if (picked == null) return;
+    try {
+      final value = DateFormat('yyyy-MM-dd').format(picked);
+      await _db.from('duo_profiles').update({'birth_date': value})
+          .eq('user_id', widget.userId);
+      if (mounted) setState(() => _profile?['birth_date'] = value);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Localizations.localeOf(context).languageCode == 'ar'
+              ? 'تعذر حفظ تاريخ الميلاد'
+              : 'Could not save birthday'),
+        ));
+      }
+    }
+  }
+
+  Future<void> _toggleAgeVisibility(bool value) async {
+    try {
+      await _db.from('duo_profiles').update({'show_age': value})
+          .eq('user_id', widget.userId);
+      if (mounted) setState(() => _profile?['show_age'] = value);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Localizations.localeOf(context).languageCode == 'ar'
+              ? 'تعذر تحديث إعداد الخصوصية'
+              : 'Could not update privacy setting'),
+        ));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ar = Localizations.localeOf(context).languageCode == 'ar';
@@ -56,6 +111,9 @@ class _OursProfilePageState extends State<OursProfilePage> {
     final username = _profile?['username']?.toString() ?? '';
     final bio = _profile?['bio']?.toString().trim() ?? '';
     final avatarPath = _profile?['avatar_path']?.toString();
+    final birthDate = DateTime.tryParse(_profile?['birth_date']?.toString() ?? '');
+    final showAge = _profile?['show_age'] == true;
+    final isOwnProfile = _db.auth.currentUser?.id == widget.userId;
     final avatarUrl = avatarPath == null || avatarPath.isEmpty
         ? null
         : _db.storage.from('ours-avatars').getPublicUrl(avatarPath);
@@ -161,6 +219,57 @@ class _OursProfilePageState extends State<OursProfilePage> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 18),
+                        if (birthDate != null || isOwnProfile)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: _profilePanel,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: _profileGold.withValues(alpha: .16)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(children: [
+                                  const Icon(Icons.cake_outlined, color: _profileGold),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: Text(ar ? 'عيد الميلاد' : 'Birthday',
+                                      style: const TextStyle(color: _profileGold, fontWeight: FontWeight.w700))),
+                                  if (birthDate != null)
+                                    Text(DateFormat(ar ? 'd MMMM' : 'MMMM d', ar ? 'ar' : 'en')
+                                        .format(birthDate), style: const TextStyle(color: Colors.white)),
+                                ]),
+                                if (showAge && birthDate != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(ar ? 'العمر: ${_age(birthDate)} سنة' : 'Age: ${_age(birthDate)}',
+                                      style: const TextStyle(color: _profileLilac, fontSize: 12)),
+                                ],
+                                if (isOwnProfile) ...[
+                                  const SizedBox(height: 10),
+                                  Align(alignment: AlignmentDirectional.centerStart,
+                                    child: TextButton.icon(
+                                      onPressed: _editBirthday,
+                                      icon: const Icon(Icons.edit_calendar_outlined),
+                                      label: Text(birthDate == null
+                                          ? (ar ? 'إضافة تاريخ الميلاد' : 'Add birthday')
+                                          : (ar ? 'تعديل تاريخ الميلاد' : 'Edit birthday')),
+                                    )),
+                                  SwitchListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    value: showAge,
+                                    activeColor: _profileGold,
+                                    title: Text(ar ? 'إظهار عمري للطرف الآخر' : 'Show my age to my partner',
+                                        style: const TextStyle(color: Colors.white, fontSize: 13)),
+                                    subtitle: Text(ar ? 'يمكنك إخفاء العمر مع إبقاء يوم وشهر الميلاد ظاهرين'
+                                        : 'Hide your age while keeping your birthday visible',
+                                        style: const TextStyle(color: _profileLilac, fontSize: 11)),
+                                    onChanged: _toggleAgeVisibility,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         const SizedBox(height: 18),
                         Container(
                           padding: const EdgeInsets.all(16),
