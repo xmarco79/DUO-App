@@ -237,8 +237,7 @@ class _OursProfilePageState extends State<OursProfilePage> {
                                   Expanded(child: Text(ar ? 'عيد الميلاد' : 'Birthday',
                                       style: const TextStyle(color: _profileGold, fontWeight: FontWeight.w700))),
                                   if (birthDate != null)
-                                    Text(DateFormat(ar ? 'd MMMM' : 'MMMM d', ar ? 'ar' : 'en')
-                                        .format(birthDate), style: const TextStyle(color: Colors.white)),
+                                    Text((ar ? '${birthDate.day} ${const ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'][birthDate.month - 1]}' : DateFormat('MMMM d').format(birthDate)), style: const TextStyle(color: Colors.white)),
                                 ]),
                                 if (showAge && birthDate != null) ...[
                                   const SizedBox(height: 8),
