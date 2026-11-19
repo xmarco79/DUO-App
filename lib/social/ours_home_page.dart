@@ -1036,7 +1036,7 @@ class _ReportState extends State<_ReportView>{
   if(loading)return const Center(child:CircularProgressIndicator(color:_g));
   if(error!=null)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.cloud_off_outlined,color:_g,size:36),const SizedBox(height:10),Text(_t(c,'تعذر تحميل تقرير OURS. تحقق من اتصالك ثم أعد المحاولة.','Could not load OURS report. Check your connection and retry.'),style:const TextStyle(color:_l),textAlign:TextAlign.center),TextButton.icon(onPressed:_refresh,icon:const Icon(Icons.refresh),label:Text(_t(c,'إعادة المحاولة','Retry')))])));
   final n=Map<String,dynamic>.from(data?['naif'] as Map? ?? {}),z=Map<String,dynamic>.from(data?['zoi'] as Map? ?? {}),s=Map<String,dynamic>.from(data?['shared'] as Map? ?? {});
-  final total=_number(s,'messages')+_number(n,'messages')+_number(z,'messages');
+  final total=_number(s,'messages')>0?_number(s,'messages'):_number(n,'messages')+_number(z,'messages');
   return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,28),children:[
    Container(padding:const EdgeInsets.all(21),decoration:BoxDecoration(gradient:const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF6543A3),Color(0xFF2D2450),Color(0xFF173B4B)]),borderRadius:BorderRadius.circular(26),border:Border.all(color:_g.withValues(alpha:.3))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Row(children:[const Icon(Icons.auto_awesome_rounded,color:_g,size:28),const Spacer(),IconButton(onPressed:_refresh,tooltip:_t(c,'تحديث','Refresh'),icon:const Icon(Icons.refresh,color:Colors.white))]),
