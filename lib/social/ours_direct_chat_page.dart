@@ -34,6 +34,13 @@ const _skins=[
  _ChatSkin('cosmos','دريم سكيب','Dreamscape',Color(0xFF100C2A),Color(0xFF7045D8),Color(0xFF342458),Color(0xFFD6B7FF)),
  _ChatSkin('desert','صن داست','Sun dust',Color(0xFF241813),Color(0xFFB66B35),Color(0xFF4C3024),Color(0xFFFFDA87)),
  _ChatSkin('neon','سايبر بوب','Cyber pop',Color(0xFF140A22),Color(0xFF8144C7),Color(0xFF36234D),Color(0xFF7CFFF1)),
+ _ChatSkin('rose','روز كوارتر','Rose quartz',Color(0xFF25101F),Color(0xFFB95380),Color(0xFF5D2E4D),Color(0xFFFFC7DA)),
+ _ChatSkin('mint','مينت بريز','Mint breeze',Color(0xFF0B1F20),Color(0xFF218B7C),Color(0xFF184B4B),Color(0xFF9AF0D6)),
+ _ChatSkin('glacier','آيس بلو','Ice blue',Color(0xFF0A1729),Color(0xFF3973B5),Color(0xFF1C3A5C),Color(0xFFA6D7FF)),
+ _ChatSkin('ember','إمبر','Ember',Color(0xFF24110C),Color(0xFFB9502C),Color(0xFF63301E),Color(0xFFFFC078)),
+ _ChatSkin('mono','مونوكروم','Monochrome',Color(0xFF111216),Color(0xFF4C505B),Color(0xFF282B32),Color(0xFFE3E5EA)),
+ _ChatSkin('lavender','لافندر دريم','Lavender dream',Color(0xFF1C1530),Color(0xFF7857B7),Color(0xFF382A57),Color(0xFFC8B4FF)),
+ _ChatSkin('candy','كاندي','Candy',Color(0xFF240F2B),Color(0xFFB44FA2),Color(0xFF532C67),Color(0xFFFFB6E7)),
 ];
 
 String _oursDate(DateTime date,bool arabic,{bool withYear=true}){
@@ -118,6 +125,29 @@ class _ChatAtmospherePainter extends CustomPainter {
     for(var x=0.0;x<size.width;x+=34.0){canvas.drawLine(Offset(x,0),Offset(x,size.height),line);}
     for(var y=0.0;y<size.height;y+=34.0){canvas.drawLine(Offset(0,y),Offset(size.width,y),line);}
     canvas.drawLine(Offset(size.width*.08,size.height*.72),Offset(size.width*.92,size.height*.18),Paint()..color=accent.withValues(alpha:.15)..strokeWidth=3..maskFilter=const MaskFilter.blur(BlurStyle.normal,8));
+    break;
+   case 'rose':
+    for(var i=0;i<9;i++){final x=size.width*((i*113)%997)/997,y=size.height*((i*191)%991)/991;canvas.drawCircle(Offset(x,y),18+(i%3)*9,Paint()..color=accent.withValues(alpha:.035));}
+    for(var i=0;i<4;i++){canvas.drawOval(Rect.fromCenter(center:Offset(size.width*.72,size.height*.24),width:size.width*(.22+i*.08),height:size.height*(.09+i*.05)),line);}
+    break;
+   case 'mint':
+    for(var i=0;i<14;i++){final x=size.width*((i*67)%997)/997,y=size.height*((i*131)%991)/991;canvas.save();canvas.translate(x,y);canvas.rotate((i%5)*.45);canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:12+(i%3)*5,height:30+(i%4)*6),soft);canvas.restore();}
+    break;
+   case 'glacier':
+    for(var i=0;i<6;i++){final path=Path()..moveTo(0,size.height*(.18+i*.13))..cubicTo(size.width*.25,size.height*(.02+i*.13),size.width*.7,size.height*(.34+i*.08),size.width,size.height*(.14+i*.12));canvas.drawPath(path,line);}
+    break;
+   case 'ember':
+    for(var i=0;i<6;i++){canvas.drawCircle(Offset(size.width*.78,size.height*.23),size.width*(.08+i*.055),Paint()..color=accent.withValues(alpha:.045)..style=PaintingStyle.stroke..strokeWidth=2);}
+    break;
+   case 'mono':
+    for(var x=0.0;x<size.width;x+=38.0){canvas.drawLine(Offset(x,0),Offset(x,size.height),line);}
+    for(var y=0.0;y<size.height;y+=38.0){canvas.drawLine(Offset(0,y),Offset(size.width,y),line);}
+    break;
+   case 'lavender':
+    for(var i=0;i<7;i++){canvas.drawOval(Rect.fromCenter(center:Offset(size.width*.34,size.height*.44),width:size.width*(.25+i*.09),height:size.height*(.12+i*.06)),line);}
+    break;
+   case 'candy':
+    for(var i=0;i<7;i++){final x=size.width*((i*139)%997)/997,y=size.height*((i*83)%991)/991;canvas.drawCircle(Offset(x,y),20+(i%3)*12,soft);}
     break;
   }
  }
@@ -215,6 +245,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
          clipBehavior:Clip.antiAlias,
          child:Stack(children:[
           Positioned.fill(child:CustomPaint(painter:_ChatAtmospherePainter(item))),
+          Positioned(left:10,top:10,child:Container(width:50,height:15,decoration:BoxDecoration(color:item.mine,borderRadius:BorderRadius.circular(9)))),
+          Positioned(right:10,top:30,child:Container(width:62,height:15,decoration:BoxDecoration(color:item.partner,borderRadius:BorderRadius.circular(9),border:Border.all(color:item.accent.withValues(alpha:.45))))),
           Positioned(left:10,right:10,bottom:10,child:Text(ar?item.ar:item.en,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:12))),
           if(active)const Positioned(top:8,right:8,child:Icon(Icons.check_circle,color:_gold,size:18)),
          ]),
