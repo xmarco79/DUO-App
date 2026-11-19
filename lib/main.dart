@@ -1919,6 +1919,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   SupabaseClient get db => Supabase.instance.client;
 
   String username = '';
+  DateTime? birthDate;
   String email = '';
   String? avatarUrl;
   String languageCode = 'ar';
@@ -1958,7 +1959,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       email = user.email ?? '';
       final profile = await db
           .from('duo_profiles')
-          .select('username, display_name, avatar_path, bio')
+          .select('username, display_name, avatar_path, bio, birth_date')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -1969,6 +1970,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       displayNameController.text =
           profile?['display_name']?.toString() ?? '';
       bioController.text = profile?['bio']?.toString() ?? '';
+      final birthRaw = profile?['birth_date']?.toString();
+      birthDate = birthRaw == null ? null : DateTime.tryParse(birthRaw);
       setState(() => loading = false);
     } catch (e) {
       if (!mounted) return;
@@ -2072,6 +2075,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           .update({
             'display_name': value.isEmpty ? null : value,
             'bio': bio,
+            'birth_date': birthDate?.toIso8601String().split('T').first,
           })
           .eq('user_id', userId);
 
@@ -2379,6 +2383,24 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                         counterStyle: const TextStyle(color: lavender, fontSize: 10),
                       ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.cake_outlined),
+                      label: Text(birthDate == null
+                        ? oursText(context, 'إضافة تاريخ الميلاد', 'Add birthday')
+                        : oursText(context, 'تاريخ الميلاد: ${DateFormat('yyyy/MM/dd').format(birthDate!)}', 'Birthday: ${DateFormat('yyyy/MM/dd').format(birthDate!)}')),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: birthDate ?? DateTime(2008, 1, 1),
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null && mounted) setState(() => birthDate = picked);
+                      },
                     ),
                   ),
                   Padding(
