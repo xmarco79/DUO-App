@@ -400,35 +400,78 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    await _upload(await f.readAsBytes(),f.name,'video');
   }catch(e){_show(t('تعذر اختيار الفيديو: $e','Could not select video: $e'));}
  }
- Future<void> _sendSticker() async{
-  final recent=messages.where((m)=>m['message_type']=='sticker' && (m['body']??'').toString().isNotEmpty && m['body']!='[viewed]').toList().reversed.toList();
-  final chosen=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF211D30),showDragHandle:true,isScrollControlled:true,
-   builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.62,child:Column(children:[
-    Padding(padding:const EdgeInsets.all(14),child:Row(children:[
-     Expanded(child:Text(t('ملصقاتنا','Our stickers'),style:const TextStyle(color:_gold,fontSize:17,fontWeight:FontWeight.w800))),
-     TextButton.icon(onPressed:()=>Navigator.pop(ctx,'__add__'),icon:const Icon(Icons.add_photo_alternate_outlined),label:Text(t('إضافة من المعرض','Add from gallery')))
-    ])),
-    Expanded(child:recent.isEmpty
-      ?Center(child:Text(t('أضف أول ملصق من معرض الصور','Add your first sticker from the gallery'),style:const TextStyle(color:_lavender)))
-      :GridView.builder(padding:const EdgeInsets.fromLTRB(14,0,14,16),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,childAspectRatio:.9,crossAxisSpacing:10,mainAxisSpacing:10),itemCount:recent.length,itemBuilder:(ctx,i){
-       final path=recent[i]['body'].toString();
-       return InkWell(borderRadius:BorderRadius.circular(16),onTap:()=>Navigator.pop(ctx,path),child:Container(decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(16),border:Border.all(color:skin.accent.withValues(alpha:.2))),padding:const EdgeInsets.all(6),child:FutureBuilder<String>(future:_signed(path),builder:(c,s)=>s.hasData?Image.network(s.data!,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent)):Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:2)))));
-      }))
-   ]))));
-  if(chosen==null)return;
-  if(chosen=='__add__'){
+  Future<String> _signedSticker(String path){
+   if(widget.spaceId!=null&&path.startsWith('\${widget.spaceId}/'))return db.storage.from('ours-stickers').createSignedUrl(path,900);
+   return _signed(path);
+  }
+  Future<void> _createSharedSticker()async{
+   if(widget.spaceId==null){_show(t('تعذر تحديد مساحتكما','Could not find your shared space'));return;}
    try{
     final result=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['png','jpg','jpeg','webp','gif'],withData:true);
     if(result==null||result.files.isEmpty)return;
     final file=result.files.single,bytes=file.bytes??(file.path==null?null:await File(file.path!).readAsBytes());
     if(bytes==null)throw Exception('Sticker data unavailable');
-    await _upload(bytes,'sticker_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+file.name.split('.').last.toLowerCase(),'sticker');
+    final controller=TextEditingController(text:t('ملصقاتنا','OURS'));
+    final pack=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('إضافة إلى حزمة','Add to a pack')),content:TextField(controller:controller,maxLength:32,decoration:InputDecoration(labelText:t('اسم الحزمة','Pack name'))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:Text(t('إضافة','Add')))]));
+    controller.dispose();if(pack==null||pack.isEmpty)return;
+    final mime=_mime(file.name);if(mime.isEmpty)throw Exception('Unsupported image type');
+    final safe=file.name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
+    final path='\${widget.spaceId}/\${uid}/\${DateTime.now().microsecondsSinceEpoch}_\${safe}';
+    await db.storage.from('ours-stickers').uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
+    try{
+     await db.from('duo_stickers').insert({'space_id':widget.spaceId,'created_by':uid,'sticker_type':'image','content':'OURS sticker','storage_path':path,'pack_name':pack,'display_name':file.name,'is_animated':file.name.toLowerCase().endsWith('.gif')});
+     _show(t('تمت إضافة الملصق إلى الحزمة','Sticker added to the pack'));
+    }catch(_){await db.storage.from('ours-stickers').remove([path]);rethrow;}
    }catch(e){_show(t('تعذر إضافة الملصق: $e','Could not add sticker: $e'));}
-   return;
   }
-  try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':chosen,'message_type':'sticker'});}
-  catch(e){_show(t('تعذر إرسال الملصق: $e','Could not send sticker: $e'));}
- }
+  Future<void> _sendSticker() async{
+   if(widget.spaceId==null){
+    final recent=messages.where((m)=>m['message_type']=='sticker'&&(m['body']??'').toString().isNotEmpty&&m['body']!='[viewed]').toList().reversed.toList();
+    final chosen=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+     ListTile(leading:Icon(Icons.add_photo_alternate_outlined,color:skin.accent),title:Text(t('إضافة ملصق','Add sticker')),onTap:()=>Navigator.pop(ctx,'__add__')),
+     ...recent.map((m)=>ListTile(leading:Icon(Icons.sticky_note_2_outlined,color:skin.accent),title:Text((m['file_name']??m['body']).toString()),onTap:()=>Navigator.pop(ctx,m['body'].toString())))
+    ])));
+    if(chosen==null)return;if(chosen=='__add__'){await _uploadSelfStickerFallback();return;}
+    await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':chosen,'message_type':'sticker'});return;
+   }
+   List<Map<String,dynamic>> stickers=[];final favorites=<String>{};
+   try{
+    final data=await db.from('duo_stickers').select('id,pack_name,display_name,storage_path,is_animated,created_at').eq('space_id',widget.spaceId!).order('created_at',ascending:false);
+    stickers=List<Map<String,dynamic>>.from(data);
+    final fav=await db.from('duo_sticker_favorites').select('sticker_id').eq('user_id',uid);
+    favorites.addAll(List<Map<String,dynamic>>.from(fav).map((x)=>x['sticker_id'].toString()));
+   }catch(e){_show(t('تعذر تحميل مكتبة الملصقات','Could not load sticker library'));return;}
+   var selectedPack='all';
+   final packs=<String>{'all','favorites',...stickers.map((x)=>(x['pack_name']??'OURS').toString())}.toList();
+   final chosen=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,isScrollControlled:true,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal){
+    final visible=stickers.where((x)=>selectedPack=='all'||(selectedPack=='favorites'?favorites.contains(x['id'].toString()):(x['pack_name']??'OURS').toString()==selectedPack)).toList();
+    return SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.72,child:Column(children:[
+     Padding(padding:const EdgeInsets.fromLTRB(14,12,14,6),child:Row(children:[Expanded(child:Text(t('مكتبة ملصقات OURS','OURS Sticker Library'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900))),IconButton(onPressed:()=>Navigator.pop(ctx,'__add__'),icon:Icon(Icons.add_photo_alternate_outlined,color:skin.accent))])),
+     SizedBox(height:42,child:ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:12),children:packs.map((pack)=>Padding(padding:const EdgeInsetsDirectional.only(end:7),child:ChoiceChip(label:Text(pack=='all'?t('الكل','All'):pack=='favorites'?t('المفضلة','Favorites'):pack),selected:selectedPack==pack,onSelected:(_)=>setModal(()=>selectedPack=pack),selectedColor:skin.accent,backgroundColor:skin.partner,labelStyle:TextStyle(color:selectedPack==pack?skin.bg:Colors.white,fontSize:11)))).toList())),
+     Expanded(child:visible.isEmpty?Center(child:Text(t('لا توجد ملصقات في هذه الحزمة بعد','No stickers in this pack yet'),style:TextStyle(color:skin.accent))):GridView.builder(padding:const EdgeInsets.all(12),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,childAspectRatio:.82,crossAxisSpacing:9,mainAxisSpacing:9),itemCount:visible.length,itemBuilder:(ctx,i){
+      final item=visible[i],id=item['id'].toString(),path=item['storage_path'].toString(),name=(item['display_name']??'OURS').toString(),favorite=favorites.contains(id);
+      return Container(decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(15),border:Border.all(color:skin.accent.withValues(alpha:.18))),child:Stack(children:[
+       Positioned.fill(child:InkWell(borderRadius:BorderRadius.circular(15),onTap:()=>Navigator.pop(ctx,'send:$id'),child:Padding(padding:const EdgeInsets.fromLTRB(6,8,6,28),child:FutureBuilder<String>(future:_signedSticker(path),builder:(c,s)=>s.hasData?Image.network(s.data!,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent)):Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:2)))))),
+       Positioned(left:3,right:3,bottom:3,child:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:TextStyle(color:skin.accent,fontSize:9))),
+       Positioned(top:0,right:0,child:IconButton(padding:EdgeInsets.zero,constraints:const BoxConstraints.tightFor(width:28,height:28),onPressed:()async{
+        try{if(favorite){await db.from('duo_sticker_favorites').delete().eq('sticker_id',id).eq('user_id',uid);setModal((){favorites.remove(id);});}else{await db.from('duo_sticker_favorites').insert({'sticker_id':id,'user_id':uid});setModal((){favorites.add(id);});}}catch(_){_show(t('تعذر تحديث المفضلة','Could not update favorites'));}
+       },icon:Icon(favorite?Icons.star_rounded:Icons.star_border_rounded,color:favorite?const Color(0xFFFFD66B):skin.accent,size:18)))
+      ]));
+     }))
+    ])));
+   }));
+   if(chosen==null)return;
+   if(chosen=='__add__'){await _createSharedSticker();return;}
+   if(chosen.startsWith('send:')){
+    final id=chosen.substring(5),sticker=stickers.firstWhere((x)=>x['id'].toString()==id);
+    try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':sticker['storage_path'],'message_type':'sticker','file_name':sticker['display_name'],'mime_type':sticker['is_animated']==true?'image/gif':'image/png'});}
+    catch(e){_show(t('تعذر إرسال الملصق: $e','Could not send sticker: $e'));}
+   }
+  }
+  Future<void> _uploadSelfStickerFallback()async{
+   try{final result=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['png','jpg','jpeg','webp','gif'],withData:true);if(result==null||result.files.isEmpty)return;final file=result.files.single,bytes=file.bytes??(file.path==null?null:await File(file.path!).readAsBytes());if(bytes==null)return;await _upload(bytes,'sticker_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+file.name.split('.').last.toLowerCase(),'sticker');}
+   catch(e){_show(t('تعذر إضافة الملصق: $e','Could not add sticker: $e'));}
+  }
  Future<void> _consumeTemporaryMedia(String messageId) async{
   try{
    final path=await db.rpc('consume_ours_temporary_media',params:{'p_message_id':messageId}) as String?;
@@ -642,7 +685,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
              Text(originalBody,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))
             ])));
            }),
-          if(type=='sticker')FutureBuilder<String>(future:_signed(path),builder:(c,s)=>s.hasData?Center(child:Image.network(s.data!,width:150,height:150,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:42))):SizedBox(width:110,height:90,child:Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:2))))
+          if(type=='sticker')FutureBuilder<String>(future:_signedSticker(path),builder:(c,s)=>s.hasData?Center(child:Image.network(s.data!,width:150,height:150,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:42))):SizedBox(width:110,height:90,child:Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:2))))
           else if(type=='view_once'||type=='view_twice')
            ((m['view_count'] as num?)?.toInt()??0)>=((m['max_views'] as num?)?.toInt()??1)||m['viewed_at']!=null
             ?Text(t('انتهت مشاهدات الصورة','No views left'),style:TextStyle(color:skin.accent,fontSize:12))
