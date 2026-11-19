@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -111,6 +112,7 @@ class _StudioState extends State<_StudioView> {
   bool studioOpened = false;
   String canvasPreset = 'midnight';
   String toolMode = 'pen';
+  Offset? gestureStart;
   Color color = _l;
   double strokeWidth = 4;
   bool erasing = false;
@@ -174,6 +176,26 @@ class _StudioState extends State<_StudioView> {
       (point.dx / canvasSize.width).clamp(0.0, 1.0).toDouble(),
       (point.dy / canvasSize.height).clamp(0.0, 1.0).toDouble(),
     );
+  }
+
+  List<Offset> _shapePoints(Offset start,Offset end){
+    if(toolMode=='line'){
+      return List.generate(28,(i){final t=i/27;return Offset(start.dx+(end.dx-start.dx)*t,start.dy+(end.dy-start.dy)*t);});
+    }
+    final left=math.min(start.dx,end.dx),right=math.max(start.dx,end.dx);
+    final top=math.min(start.dy,end.dy),bottom=math.max(start.dy,end.dy);
+    if(toolMode=='circle'){
+      final center=Offset((left+right)/2,(top+bottom)/2),rx=(right-left)/2,ry=(bottom-top)/2;
+      return List.generate(72,(i){final a=2*math.pi*i/71;return Offset(center.dx+rx*math.cos(a),center.dy+ry*math.sin(a));});
+    }
+    final corners=[Offset(left,top),Offset(right,top),Offset(right,bottom),Offset(left,bottom),Offset(left,top)];
+    final result=<Offset>[];
+    for(var edge=0;edge<4;edge++){
+      final a=corners[edge],b=corners[edge+1];
+      for(var i=0;i<14;i++){final t=i/14;result.add(Offset(a.dx+(b.dx-a.dx)*t,a.dy+(b.dy-a.dy)*t));}
+    }
+    result.add(corners.last);
+    return result;
   }
 
   Future<void> _save() async {
@@ -336,6 +358,9 @@ class _StudioState extends State<_StudioView> {
           ChoiceChip(label:Text(_t(context,'قلم','Pen')),selected:toolMode=='pen',onSelected:(_){setState((){toolMode='pen';erasing=false;marker=false;});}),
           ChoiceChip(label:Text(_t(context,'تظليل','Marker')),selected:toolMode=='marker',onSelected:(_){setState((){toolMode='marker';erasing=false;marker=true;});}),
           ChoiceChip(label:Text(_t(context,'ممحاة','Eraser')),selected:toolMode=='eraser',onSelected:(_){setState((){toolMode='eraser';erasing=true;marker=false;});}),
+          ChoiceChip(label:Text(_t(context,'خط مستقيم','Line')),selected:toolMode=='line',onSelected:(_){setState((){toolMode='line';erasing=false;marker=false;});}),
+          ChoiceChip(label:Text(_t(context,'مستطيل','Rectangle')),selected:toolMode=='rectangle',onSelected:(_){setState((){toolMode='rectangle';erasing=false;marker=false;});}),
+          ChoiceChip(label:Text(_t(context,'دائرة','Circle')),selected:toolMode=='circle',onSelected:(_){setState((){toolMode='circle';erasing=false;marker=false;});}),
         ])),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -437,13 +462,18 @@ class _StudioState extends State<_StudioView> {
                           scaleEnabled: true,
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
-                            onPanStart: (details) => setState(
-                              () => points = [_normalized(details.localPosition)],
-                            ),
-                            onPanUpdate: (details) => setState(
-                              () => points.add(_normalized(details.localPosition)),
-                            ),
-                            onPanEnd: (_) => _save(),
+                            onPanStart: (details) {
+                              final p=_normalized(details.localPosition);
+                              setState((){gestureStart=p;points=[p];});
+                            },
+                            onPanUpdate: (details) {
+                              final p=_normalized(details.localPosition);
+                              setState((){
+                                if(['line','rectangle','circle'].contains(toolMode)&&gestureStart!=null){points=_shapePoints(gestureStart!,p);}
+                                else{points.add(p);}
+                              });
+                            },
+                            onPanEnd: (_) {gestureStart=null;_save();},
                             child: CustomPaint(
                               painter: _CanvasPainter(rows, points, color.withValues(alpha: marker ? opacity * 0.42 : opacity), marker ? strokeWidth * 2.2 : strokeWidth, showGrid),
                               child: const SizedBox.expand(),
