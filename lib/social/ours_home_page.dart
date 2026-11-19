@@ -18,7 +18,7 @@ class OursSocialHomePage extends StatefulWidget {
  @override State<OursSocialHomePage> createState()=>_OursSocialHomePageState();
 }
 class _OursSocialHomePageState extends State<OursSocialHomePage>{
- final db=Supabase.instance.client; int tab=0; String? spaceId,error,conversationId,partnerId,partnerName,partnerAlias,partnerAvatarUrl; bool loading=true;
+ final db=Supabase.instance.client; int tab=0,unreadMessages=0; String? spaceId,error,conversationId,partnerId,partnerName,partnerAlias,partnerAvatarUrl; bool loading=true;RealtimeChannel? unreadChannel;
  @override void initState(){super.initState();_load();}
  Future<void> _load() async {try{
   final raw=await db.rpc('ensure_ours_pair_space'); final m=Map<String,dynamic>.from(raw as Map);
@@ -39,7 +39,23 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
   final prefs=await SharedPreferences.getInstance();
   final alias=foundPartner==null?null:prefs.getString('ours_partner_alias_${me}_$foundPartner');
   if(mounted)setState(() { spaceId=m['space_id'].toString(); conversationId=foundConversation; partnerId=foundPartner; partnerName=foundName; partnerAlias=alias; partnerAvatarUrl=foundAvatar; loading=false; });
+  if(foundConversation!=null){await _refreshUnread();_listenUnread();}
  }catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}}
+ Future<void> _refreshUnread()async{
+  final id=conversationId;if(id==null||db.auth.currentUser==null)return;
+  try{
+   final rows=await db.from('duo_direct_messages').select('id').eq('conversation_id',id).neq('sender_id',db.auth.currentUser!.id).isFilter('read_at',null);
+   if(mounted)setState(()=>unreadMessages=rows.length);
+  }catch(_){}
+ }
+ void _listenUnread(){
+  final id=conversationId;if(id==null)return;
+  if(unreadChannel!=null)db.removeChannel(unreadChannel!);
+  unreadChannel=db.channel('ours-home-unread-$id')
+   .onPostgresChanges(event:PostgresChangeEvent.all,schema:'public',table:'duo_direct_messages',filter:PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'conversation_id',value:id),callback:(_)=>_refreshUnread())
+   .subscribe();
+ }
+ @override void dispose(){if(unreadChannel!=null)db.removeChannel(unreadChannel!);super.dispose();}
  String get _partnerLabel=>partnerAlias?.trim().isNotEmpty==true?partnerAlias!.trim():(partnerName??'zoi');
  Future<void> _editPartnerAlias() async{
   if(partnerId==null)return;
@@ -52,7 +68,8 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
  }
  void _openChat(){
   if(conversationId!=null&&partnerId!=null){
-   Navigator.push(context,MaterialPageRoute(builder:(_)=>OursDirectChatPage(conversationId:conversationId!,partnerId:partnerId!,partnerName:_partnerLabel,spaceId:spaceId)));
+   setState(()=>unreadMessages=0);
+   Navigator.push(context,MaterialPageRoute(builder:(_)=>OursDirectChatPage(conversationId:conversationId!,partnerId:partnerId!,partnerName:_partnerLabel,spaceId:spaceId))).then((_)=>_refreshUnread());
   }else if(spaceId!=null){widget.onChatTap(spaceId!);}
  }
  @override Widget build(BuildContext context){
@@ -61,7 +78,7 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
   return Scaffold(appBar:AppBar(title:const Text('OURS',style:TextStyle(color:_g,letterSpacing:5)),actions:[if(spaceId!=null) OursNotificationBell(spaceId:spaceId,onOpenMessage:_openChat),IconButton(onPressed:widget.onProfileTap,icon:const Icon(Icons.tune,color:_l))]),
    body:loading?const Center(child:CircularProgressIndicator(color:_g)):error!=null?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[Text(_t(context,'تعذر تجهيز مساحتنا','Could not load space')),Text(error!,style:const TextStyle(color:_l)),TextButton(onPressed:()=>setState(() { loading=true; error=null; _load(); }),child:Text(_t(context,'إعادة المحاولة','Retry')))])):
    IndexedStack(index:tab,children:[
-    _SpaceView(partnerName:_partnerLabel,username:partnerName??'zoi',avatarUrl:partnerAvatarUrl,onChat:_openChat,onPartnerProfile:partnerId==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:partnerId!))),onEditAlias:_editPartnerAlias,onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(spaceId:spaceId!)))),
+    _SpaceView(partnerName:_partnerLabel,username:partnerName??'zoi',avatarUrl:partnerAvatarUrl,unreadMessages:unreadMessages,onChat:_openChat,onPartnerProfile:partnerId==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:partnerId!))),onEditAlias:_editPartnerAlias,onSelf:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const OursSelfChatPage())),onAi:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursAiPage(spaceId:spaceId!)))),
     _StudioView(spaceId:spaceId!),
     _WatchView(spaceId:spaceId!,active:tab==2),
     const OursMusicPage(),
@@ -71,10 +88,10 @@ class _OursSocialHomePageState extends State<OursSocialHomePage>{
  }
 }
 class _SpaceView extends StatelessWidget{
- final String partnerName,username;final String? avatarUrl;
+ final String partnerName,username;final String? avatarUrl;final int unreadMessages;
  final VoidCallback onChat,onSelf,onAi,onEditAlias;
  final VoidCallback? onPartnerProfile;
- const _SpaceView({required this.partnerName,required this.username,this.avatarUrl,required this.onChat,required this.onSelf,required this.onAi,required this.onEditAlias,this.onPartnerProfile});
+ const _SpaceView({required this.partnerName,required this.username,this.avatarUrl,this.unreadMessages=0,required this.onChat,required this.onSelf,required this.onAi,required this.onEditAlias,this.onPartnerProfile});
  @override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.fromLTRB(18,18,18,26),children:[
   InkWell(onTap:onPartnerProfile,borderRadius:BorderRadius.circular(25),child:Container(
    padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF3A2C50),Color(0xFF171725),Color(0xFF18343A)]),borderRadius:BorderRadius.circular(25),border:Border.all(color:_g.withValues(alpha:.35)),boxShadow:[BoxShadow(color:_g.withValues(alpha:.08),blurRadius:24)]),
@@ -85,7 +102,7 @@ class _SpaceView extends StatelessWidget{
      const SizedBox(height:3),Text('@$username',style:const TextStyle(color:_l,fontSize:12)),
      const SizedBox(height:8),Text(_t(c,'مساحتكما الخاصة','Your private space'),style:const TextStyle(color:_g,fontSize:11,letterSpacing:.3))
     ])),
-    Column(children:[IconButton(tooltip:_t(c,'تخصيص الاسم عندك فقط','Set your private nickname'),onPressed:onEditAlias,icon:const Icon(Icons.edit_rounded,color:_g)),IconButton(tooltip:_t(c,'فتح المحادثة','Open chat'),onPressed:onChat,icon:const Icon(Icons.chat_bubble_outline_rounded,color:_l))])
+    Column(children:[IconButton(tooltip:_t(c,'تخصيص الاسم عندك فقط','Set your private nickname'),onPressed:onEditAlias,icon:const Icon(Icons.edit_rounded,color:_g)),Stack(clipBehavior:Clip.none,children:[IconButton(tooltip:_t(c,'فتح المحادثة','Open chat'),onPressed:onChat,icon:const Icon(Icons.chat_bubble_outline_rounded,color:_l)),if(unreadMessages>0)Positioned(top:0,right:0,child:Container(constraints:const BoxConstraints(minWidth:18,minHeight:18),padding:const EdgeInsets.symmetric(horizontal:5,vertical:2),decoration:BoxDecoration(color:const Color(0xFFE65C70),borderRadius:BorderRadius.circular(12),border:Border.all(color:_navy,width:1.5)),child:Text(unreadMessages>99?'99+':unreadMessages.toString(),style:const TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))))])])
    ])
   )),
   const SizedBox(height:24),Text(_t(c,'مساحاتك','YOUR SPACES'),style:const TextStyle(color:_g,fontSize:12,fontWeight:FontWeight.w800,letterSpacing:1.5)),
