@@ -57,7 +57,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
        leading:Container(width:48,height:34,decoration:BoxDecoration(color:s.bg,borderRadius:BorderRadius.circular(10),border:Border.all(color:s.accent.withValues(alpha:.8))),child:Stack(children:[Align(alignment:Alignment.centerLeft,child:Container(width:22,height:12,margin:const EdgeInsets.all(4),decoration:BoxDecoration(color:s.partner,borderRadius:BorderRadius.circular(6)))),Align(alignment:Alignment.centerRight,child:Container(width:22,height:12,margin:const EdgeInsets.all(4),decoration:BoxDecoration(color:s.mine,borderRadius:BorderRadius.circular(6))))])),
        title:Text(ar?s.ar:s.en,style:const TextStyle(color:Colors.white)),subtitle:Text(s.id=='signature'?t('الثيم الرسمي لهوية OURS','OURS official signature theme'):t('ثيم محادثة','Conversation theme'),style:TextStyle(color:s.accent,fontSize:11)),
        trailing:skin.id==s.id?Icon(Icons.check_circle,color:s.accent):null,onTap:()=>Navigator.pop(ctx,s)))]))
-   ])));
+   ]))));
   if(selected==null)return;setState(()=>skin=selected);final p=await SharedPreferences.getInstance();await p.setString('ours_direct_skin_'+widget.conversationId,selected.id);
  }
  Future<void> _openDetails() async{
