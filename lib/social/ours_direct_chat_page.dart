@@ -588,7 +588,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     if(mounted)setState(()=>downloadProgress=total>0?(received/total).clamp(0.0,1.0):null);
    }
    final saved=await FilePicker.platform.saveFile(fileName:(name?.trim().isNotEmpty==true?name!:path.split('/').last),bytes:bytes.takeBytes());
-   if(saved!=null)_show(t('تم حفظ الملف في الموقع الذي اخترته','File saved to your selected location'));
+   if(saved!=null){_show(t('تم حفظ الملف في الموقع الذي اخترته','File saved to your selected location'));await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication);}
   }catch(e){_show(t('تعذر تحميل الملف. حاول مجددًا.','Could not download file. Try again.'));}
   finally{client?.close(force:true);if(mounted)setState(()=>{downloadProgress=null;downloading=false;});}
  }
