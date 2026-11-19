@@ -139,7 +139,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Map<String,dynamic>? replyTo;
  RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
  Timer? typingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId;
- bool loading=true,sending=false,recording=false,uploading=false;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22;_ChatSkin skin=_skins.first;
+ bool loading=true,sending=false,recording=false,uploading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
  int _streakCount(){
@@ -543,7 +543,24 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   try{final url=await _signed(path);if(!await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication))_show(t('تعذر فتح الملف','Could not open file'));}
   catch(e){_show(t('تعذر فتح الملف: $e','Could not open file: $e'));}
  }
- String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();return d==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(d);}
+ Future<void> _downloadFile(String path,{String? name})async{
+  HttpClient? client;
+  try{
+   final url=await _signed(path);client=HttpClient();
+   final request=await client.getUrl(Uri.parse(url));final response=await request.close();
+   if(response.statusCode<200||response.statusCode>=300)throw Exception('Download failed');
+   final total=response.contentLength;var received=0;final bytes=BytesBuilder(copy:false);
+   if(mounted)setState(()=>downloadProgress=total>0?0.0:null);
+   await for(final chunk in response){
+    bytes.add(chunk);received+=chunk.length;
+    if(mounted)setState(()=>downloadProgress=total>0?(received/total).clamp(0.0,1.0):null);
+   }
+   final saved=await FilePicker.platform.saveFile(fileName:(name?.trim().isNotEmpty==true?name!:path.split('/').last),bytes:bytes.takeBytes());
+   if(saved!=null)_show(t('تم حفظ الملف في الموقع الذي اخترته','File saved to your selected location'));
+  }catch(e){_show(t('تعذر تحميل الملف. حاول مجددًا.','Could not download file. Try again.'));}
+  finally{client?.close(force:true);if(mounted)setState(()=>downloadProgress=null);}
+ }
+String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();return d==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(d);}
  String _dateLabel(DateTime date){
   final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);
   if(day==today)return t('اليوم','Today');
@@ -704,7 +721,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
            if(!s.hasData)return SizedBox(width:190,height:125,child:Center(child:CircularProgressIndicator(color:skin.accent)));
            return GestureDetector(onTap:()=>_openImageActions(s.data!),child:ClipRRect(borderRadius:BorderRadius.circular(13),child:Stack(children:[Image.network(s.data!,width:230,height:230,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Text(t('تعذر عرض الصورة','Image unavailable'))),Positioned(bottom:8,right:8,child:Container(padding:const EdgeInsets.all(6),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.58),borderRadius:BorderRadius.circular(30)),child:Icon(Icons.zoom_out_map_rounded,color:Colors.white,size:17)))])));
           })
-          else if(type=='file')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[
+          else if(type=='file')InkWell(onTap:()=>_downloadFile(path,name:m['file_name']?.toString()),child:Row(mainAxisSize:MainAxisSize.min,children:[
            Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),
            Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text((m['file_name']??path.split('/').last.replaceFirst(RegExp(r'^\d+_'),'' )).toString(),maxLines:2,overflow:TextOverflow.ellipsis),
