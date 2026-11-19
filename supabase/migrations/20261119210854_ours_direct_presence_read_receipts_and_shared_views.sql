@@ -116,3 +116,10 @@ for insert to authenticated with check (
       and cm.user_id = (select auth.uid())
   )
 );
+
+-- Keep exposed RPC wrappers invoker-safe; the private implementations retain
+-- their own authentication and conversation-membership checks.
+grant execute on function private.mark_ours_direct_messages_read_impl(uuid) to authenticated;
+grant execute on function private.touch_ours_presence_impl() to authenticated;
+alter function public.mark_ours_direct_messages_read(uuid) security invoker;
+alter function public.touch_ours_presence() security invoker;
