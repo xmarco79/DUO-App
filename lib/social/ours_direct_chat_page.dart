@@ -692,50 +692,109 @@ class OursAiPage extends StatefulWidget{
  @override State<OursAiPage> createState()=>_OursAiPageState();
 }
 class _OursAiPageState extends State<OursAiPage>{
- final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController();final messages=<Map<String,String>>[];
- bool sending=false,includeContext=false;bool get ar=>Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
+ final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController();
+ final messages=<Map<String,String>>[];
+ bool sending=false,includeContext=false;String? wallpaperPath;_ChatSkin skin=_skins.first;
+ bool get ar=>Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
+ @override void initState(){super.initState();_restore();_loadAppearance();}
+ Future<void> _loadAppearance()async{
+  final p=await SharedPreferences.getInstance(),id=p.getString('ours_ai_skin')??'ours';
+  final found=_skins.where((x)=>x.id==id);
+  if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=p.getString('ours_ai_wallpaper');});
+ }
+ Future<void> _chooseTheme()async{
+  final selected=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.62,child:ListView(padding:const EdgeInsets.all(14),children:[
+   Padding(padding:const EdgeInsets.all(8),child:Text(t('ثيم OURS AI','OURS AI theme'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900,fontSize:18))),
+   ..._skins.map((x)=>ListTile(leading:CircleAvatar(backgroundColor:x.accent,child:Icon(x.symbol,color:x.bg)),title:Text(ar?x.titleAr:x.titleEn,style:const TextStyle(color:Colors.white)),subtitle:Text(ar?x.detailAr:x.detailEn,style:const TextStyle(color:_lavender,fontSize:11)),onTap:()=>Navigator.pop(ctx,x.id)))
+  ]))));
+  if(selected==null)return;final p=await SharedPreferences.getInstance();await p.setString('ours_ai_skin',selected);
+  if(mounted)setState(()=>skin=_skins.firstWhere((x)=>x.id==selected,orElse:()=>_skins.first));
+ }
+ Future<void> _chooseWallpaper()async{
+  final action=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   ListTile(leading:Icon(Icons.photo_library_outlined,color:skin.accent),title:Text(t('اختيار خلفية','Choose wallpaper')),onTap:()=>Navigator.pop(ctx,'choose')),
+   ListTile(leading:Icon(Icons.layers_clear_outlined,color:skin.accent),title:Text(t('إزالة الخلفية','Remove wallpaper')),onTap:()=>Navigator.pop(ctx,'clear'))
+  ])));
+  if(action==null)return;final p=await SharedPreferences.getInstance();
+  if(action=='clear'){final old=wallpaperPath;await p.remove('ours_ai_wallpaper');if(mounted)setState(()=>wallpaperPath=null);if(old!=null){try{final file=File(old);if(await file.exists())await file.delete();}catch(_){}}}
+  else{try{final f=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);if(f==null)return;final dir=await getApplicationDocumentsDirectory(),target=File('\${dir.path}/ours_ai_wallpaper.jpg');await File(f.path).copy(target.path);await p.setString('ours_ai_wallpaper',target.path);if(mounted)setState(()=>wallpaperPath=target.path);}catch(_){_notice(t('تعذر تطبيق الخلفية','Could not apply wallpaper'));}}
+ }
  Future<List<Map<String,String>>> _context() async{
   final rows=await db.from('duo_messages').select('body,sender_id').eq('space_id',widget.spaceId).eq('message_type','text').isFilter('deleted_at',null).order('created_at',ascending:false).limit(20);
   return List<Map<String,dynamic>>.from(rows).reversed.map((r)=>{'sender':r['sender_id']==db.auth.currentUser!.id?(ar?'أنا':'Me'):(ar?'الشريك':'Partner'),'text':r['body'].toString()}).toList();
  }
  Future<void> _send({String? preset,String task='chat'}) async{
-  final text=(preset??input.text).trim();if(text.isEmpty||sending)return;setState(()=>sending=true);messages.add({'role':'user','content':text});input.clear();_persist();_bottom();
+  final text=(preset??input.text).trim();if(text.isEmpty||sending)return;
+  setState(()=>sending=true);messages.add({'role':'user','content':text,'created_at':DateTime.now().toIso8601String()});input.clear();_persist();_bottom();
   try{
-   final ctx=includeContext?await _context():<Map<String,String>>[];final history=messages.length>12?messages.sublist(messages.length-12):messages;
+   final ctx=includeContext?await _context():<Map<String,String>>[];
+   final history=(messages.length>12?messages.sublist(messages.length-12):messages).map((m)=>{'role':m['role']??'user','content':m['content']??''}).toList();
    final r=await db.functions.invoke('ours-ai',body:{'space_id':widget.spaceId,'task':task,'messages':history,'context':ctx});
    final data=r.data is Map?Map<String,dynamic>.from(r.data):<String,dynamic>{};
    if(r.status!=200){final e=data['error']?.toString()??'';if(e=='GEMINI_SETUP_REQUIRED')throw Exception(t('مفتاح الذكاء الاصطناعي غير مضبوط على الخادم.','AI provider key is not configured on the server.'));
     if(e=='AI_LIMIT_REACHED')throw Exception(t('وصلنا لحد الاستخدام الحالي، حاول لاحقًا.','Usage limit reached. Try later.'));if(r.status==403)throw Exception(t('لا تملك صلاحية هذه المحادثة.','Conversation access denied.'));throw Exception(t('تعذر الاتصال بمساعد OURS.','Could not reach OURS AI.'));
    }
-   final answer=data['answer']?.toString()??'';if(answer.isEmpty)throw Exception('Empty response');if(mounted){messages.add({'role':'assistant','content':answer});await _persist();}_bottom();
-  }catch(e){if(mounted){final raw=e.toString().toLowerCase();final friendly=raw.contains('socket')||raw.contains('network')||raw.contains('connection')||raw.contains('timeout')?t('تعذر الاتصال بمساعد OURS. تحقق من الإنترنت وحاول مجددًا.','Could not reach OURS AI. Check your connection and retry.'):raw.contains('limit')?t('وصلنا إلى حد الاستخدام الحالي. حاول لاحقًا.','Usage limit reached. Please try later.'):t('تعذر إكمال الطلب الآن. حاول مرة أخرى.','Could not complete the request. Please retry.');messages.add({'role':'assistant','content':friendly});await _persist();}_bottom();}
-  finally{if(mounted)setState(()=>sending=false);}
+   final answer=data['answer']?.toString()??'';if(answer.isEmpty)throw Exception('Empty response');
+   if(mounted){messages.add({'role':'assistant','content':answer,'created_at':DateTime.now().toIso8601String()});await _persist();}_bottom();
+  }catch(e){
+   if(mounted){final raw=e.toString().toLowerCase();final friendly=raw.contains('socket')||raw.contains('network')||raw.contains('connection')||raw.contains('timeout')?t('تعذر الاتصال بمساعد OURS. تحقق من الإنترنت وحاول مجددًا.','Could not reach OURS AI. Check your connection and retry.'):raw.contains('limit')?t('وصلنا إلى حد الاستخدام الحالي. حاول لاحقًا.','Usage limit reached. Please try later.'):t('تعذر إكمال الطلب الآن. حاول مرة أخرى.','Could not complete the request. Please retry.');messages.add({'role':'assistant','content':friendly,'created_at':DateTime.now().toIso8601String()});await _persist();}_bottom();
+  }finally{if(mounted)setState(()=>sending=false);}
  }
+ void _notice(String text){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(text)));}
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
- @override void initState(){super.initState();_restore();}
+ String _time(String? value){final date=DateTime.tryParse(value??'')?.toLocal();return date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);}
+ String _dateLabel(DateTime date){final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);if(day==today)return t('اليوم','Today');if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');return DateFormat(ar?'d MMMM y':'MMM d, y').format(day);}
+ void _jumpToMessage(int index){if(!scroll.hasClients)return;scroll.animateTo((index*155.0).clamp(0.0,scroll.position.maxScrollExtent),duration:const Duration(milliseconds:320),curve:Curves.easeOutCubic);}
+ Future<void> _search()async{
+  final controller=TextEditingController();
+  final query=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('البحث في محادثة AI','Search AI chat')),content:TextField(controller:controller,autofocus:true,decoration:InputDecoration(hintText:t('اكتب كلمة للبحث','Search for a word'))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:Text(t('بحث','Search')))]));
+  controller.dispose();if(query==null||query.isEmpty)return;
+  final found=<int>[];for(var i=0;i<messages.length;i++){if((messages[i]['content']??'').toLowerCase().contains(query.toLowerCase()))found.add(i);}
+  if(!mounted)return;
+  await showModalBottomSheet<void>(context:context,backgroundColor:skin.bg,isScrollControlled:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.6,child:ListView(children:found.reversed.map((i)=>ListTile(title:Text(messages[i]['content']??'',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white)),subtitle:Text(_time(messages[i]['created_at']),style:TextStyle(color:skin.accent)),onTap:(){Navigator.pop(ctx);_jumpToMessage(i);})).toList()))));
+ }
+ @override void initState(){super.initState();_restore();_loadAppearance();}
  Future<void> _restore() async{try{final p=await SharedPreferences.getInstance();final raw=p.getString('ours_ai_history_'+db.auth.currentUser!.id);if(raw!=null){final decoded=(jsonDecode(raw) as List).map((e)=>Map<String,String>.from(e)).toList();if(mounted)setState(()=>messages.addAll(decoded));}}catch(_){} }
  Future<void> _persist() async{try{final p=await SharedPreferences.getInstance();await p.setString('ours_ai_history_'+db.auth.currentUser!.id,jsonEncode(messages.take(100).toList()));}catch(_){} }
  @override void dispose(){input.dispose();scroll.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_navy,appBar:AppBar(backgroundColor:_navy,centerTitle:true,title:Column(mainAxisSize:MainAxisSize.min,children:[const Text('OURS AI',style:TextStyle(color:_gold,letterSpacing:2,fontWeight:FontWeight.w800)),Text(t('مساعدك الذكي','Your private assistant'),style:const TextStyle(color:_lavender,fontSize:10))])),
-  body:SafeArea(child:Column(children:[
-   Container(margin:const EdgeInsets.fromLTRB(12,8,12,4),padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:const Color(0xFF211D30),borderRadius:BorderRadius.circular(15)),child:Row(children:[const Icon(Icons.lock_outline_rounded,color:_gold,size:19),const SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('سياق المحادثة','Chat context'),style:const TextStyle(fontWeight:FontWeight.w700,fontSize:12)),Text(t('اختياري · مغلق افتراضيًا','Optional · off by default'),style:const TextStyle(color:_lavender,fontSize:10))])),Switch(value:includeContext,onChanged:(v)=>setState(()=>includeContext=v),activeColor:_gold)])),
-   SizedBox(height:40,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(mainAxisSize:MainAxisSize.min,children:[
-    ActionChip(label:Text(t('أفكار لنا','Ideas for us')),onPressed:sending?null:()=>_send(preset:t('اقترح أنشطة مناسبة لشخصين.','Suggest activities for two people.'),task:'ideas')),
-    ActionChip(label:Text(t('تلخيص المحادثة','Summarize chat')),onPressed:sending||!includeContext?null:()=>_send(preset:t('لخّص آخر محادثاتنا.','Summarize our recent chat.'),task:'summary')),
-    ActionChip(label:Text(t('خطط وأهداف','Plans')),onPressed:sending?null:()=>_send(preset:t('ساعدني أضع خطة عملية لأهدافي مع خطوات صغيرة قابلة للتنفيذ.','Help me create a practical plan with small actionable steps.'),task:'organize')),
-    ActionChip(label:Text(t('مساعدة دراسية','Study help')),onPressed:sending?null:()=>_send(preset:t('ساعدني أذاكر موضوعًا بطريقة مبسطة مع أسئلة تدريبية.','Help me study a topic simply with practice questions.'),task:'study')),
-    ActionChip(label:Text(t('أفكار إبداعية','Brainstorm')),onPressed:sending?null:()=>_send(preset:t('اعطني أفكارًا إبداعية ومختلفة لمشاريع وأنشطة ممتعة.','Give me creative and unusual project and activity ideas.'),task:'brainstorm')),
-    ActionChip(label:Text(t('فضفضة وكتابة','Journal')),onPressed:sending?null:()=>_send(preset:t('ساعدني أرتب أفكاري وأكتب ما أشعر به بطريقة واضحة.','Help me organize my thoughts and journal clearly.'),task:'journal'))
-   ]))),
-   Padding(padding:const EdgeInsets.all(10),child:Text(t('قد تتم معالجة سؤالك عبر مزوّد ذكاء اصطناعي خارجي. لا تفعّل سياق المحادثة إلا إذا رغبت بإرسال الرسائل الأخيرة.','Your prompt may be processed by an external AI provider. Enable chat context only if you want recent messages shared.'),textAlign:TextAlign.center,style:const TextStyle(color:_lavender,fontSize:10))),
-   const Divider(color:Color(0x3329293D)),
-   Expanded(child:ListView.builder(controller:scroll,padding:const EdgeInsets.all(14),itemCount:messages.length,itemBuilder:(c,i){final m=messages[i],mine=m['role']=='user';return Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:IntrinsicWidth(child:Container(constraints:const BoxConstraints(maxWidth:320),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(13),decoration:BoxDecoration(gradient:LinearGradient(colors:mine?[const Color(0xFF6D42A8),const Color(0xFF39275D)]:[const Color(0xFF332345),const Color(0xFF21182F)]),borderRadius:BorderRadius.circular(16)),child:SelectableText(m['content']??'',style:const TextStyle(height:1.5)))));})),
-   if(sending)const LinearProgressIndicator(color:_gold,minHeight:2),
-   Padding(padding:const EdgeInsets.fromLTRB(10,8,10,12),child:Row(children:[
-    Expanded(child:TextField(controller:input,minLines:1,maxLines:4,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اسأل OURS AI…','Ask OURS AI…'),filled:true,fillColor:const Color(0xFF29213D),border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none)))),
-    IconButton(onPressed:sending?null:()=>_send(),icon:const Icon(Icons.send_rounded,color:_gold))
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,centerTitle:true,title:Column(mainAxisSize:MainAxisSize.min,children:[Text('OURS AI',style:TextStyle(color:skin.accent,letterSpacing:2,fontWeight:FontWeight.w800)),Text(t('مساعدك الذكي','Your private assistant'),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:10))]),actions:[
+  IconButton(onPressed:_search,icon:Icon(Icons.search,color:skin.accent)),
+  IconButton(onPressed:_chooseTheme,icon:Icon(Icons.palette_outlined,color:skin.accent)),
+  IconButton(onPressed:_chooseWallpaper,icon:Icon(Icons.wallpaper_outlined,color:skin.accent))
+ ]),
+  body:Stack(children:[
+   Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
+   if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Opacity(opacity:.22,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())))),
+   SafeArea(child:Column(children:[
+    Container(margin:const EdgeInsets.fromLTRB(12,8,12,4),padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(15)),child:Row(children:[Icon(Icons.lock_outline_rounded,color:skin.accent,size:19),const SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('سياق المحادثة','Chat context'),style:const TextStyle(fontWeight:FontWeight.w700,fontSize:12,color:Colors.white)),Text(t('اختياري · مغلق افتراضيًا','Optional · off by default'),style:TextStyle(color:skin.accent,fontSize:10))])),Switch(value:includeContext,onChanged:(v)=>setState(()=>includeContext=v),activeColor:skin.accent)])),
+    SizedBox(height:40,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(mainAxisSize:MainAxisSize.min,children:[
+     ActionChip(label:Text(t('أفكار لنا','Ideas for us')),onPressed:sending?null:()=>_send(preset:t('اقترح أنشطة مناسبة لشخصين.','Suggest activities for two people.'),task:'ideas')),
+     ActionChip(label:Text(t('تلخيص المحادثة','Summarize chat')),onPressed:sending||!includeContext?null:()=>_send(preset:t('لخّص آخر محادثاتنا.','Summarize our recent chat.'),task:'summary')),
+     ActionChip(label:Text(t('خطط وأهداف','Plans')),onPressed:sending?null:()=>_send(preset:t('ساعدني أضع خطة عملية لأهدافي مع خطوات صغيرة قابلة للتنفيذ.','Help me create a practical plan with small actionable steps.'),task:'organize')),
+     ActionChip(label:Text(t('مساعدة دراسية','Study help')),onPressed:sending?null:()=>_send(preset:t('ساعدني أذاكر موضوعًا بطريقة مبسطة مع أسئلة تدريبية.','Help me study a topic simply with practice questions.'),task:'study')),
+     ActionChip(label:Text(t('أفكار إبداعية','Brainstorm')),onPressed:sending?null:()=>_send(preset:t('اعطني أفكارًا إبداعية ومختلفة لمشاريع وأنشطة ممتعة.','Give me creative and unusual project and activity ideas.'),task:'brainstorm')),
+     ActionChip(label:Text(t('فضفضة وكتابة','Journal')),onPressed:sending?null:()=>_send(preset:t('ساعدني أرتب أفكاري وأكتب ما أشعر به بطريقة واضحة.','Help me organize my thoughts and journal clearly.'),task:'journal'))
+    ]))),
+    Padding(padding:const EdgeInsets.all(10),child:Text(t('قد تتم معالجة سؤالك عبر مزوّد ذكاء اصطناعي خارجي. لا تفعّل سياق المحادثة إلا إذا رغبت بإرسال الرسائل الأخيرة.','Your prompt may be processed by an external AI provider. Enable chat context only if you want recent messages shared.'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent,fontSize:10))),
+    Divider(color:skin.accent.withValues(alpha:.2)),
+    Expanded(child:ListView.builder(controller:scroll,padding:const EdgeInsets.all(14),itemCount:messages.length,itemBuilder:(c,i){
+     final m=messages[i],mine=m['role']=='user',date=DateTime.tryParse(m['created_at']??'')?.toLocal(),previous=i>0?DateTime.tryParse(messages[i-1]['created_at']??'')?.toLocal():null;
+     final showDate=date!=null&&(previous==null||DateUtils.dateOnly(date)!=DateUtils.dateOnly(previous));
+     return Column(children:[
+      if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:9),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_dateLabel(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
+      Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:IntrinsicWidth(child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(13),decoration:BoxDecoration(gradient:LinearGradient(colors:mine?skin.mineGradient:skin.partnerGradient),borderRadius:BorderRadius.circular(17)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+       SelectableText(m['content']??'',style:const TextStyle(height:1.5,color:Colors.white)),
+       const SizedBox(height:5),Align(alignment:AlignmentDirectional.centerEnd,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)))
+      ]))))
+     ]);
+    })),
+    if(sending)LinearProgressIndicator(color:skin.accent,minHeight:2),
+    Padding(padding:const EdgeInsets.fromLTRB(10,8,10,12),child:Row(children:[
+     Expanded(child:TextField(controller:input,minLines:1,maxLines:4,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اسأل OURS AI…','Ask OURS AI…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none)))),
+     IconButton(onPressed:sending?null:()=>_send(),icon:Icon(Icons.send_rounded,color:skin.accent))
+    ]))
    ]))
-  ])));
+  ]));
 }
 
 class _DirectAudioBubble extends StatefulWidget{
