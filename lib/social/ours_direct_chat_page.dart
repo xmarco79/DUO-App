@@ -170,15 +170,15 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
    ..lineTo(size.width,bottom-radius)
    ..cubicTo(size.width,bottom-radius*.42,size.width-radius*.42,bottom,size.width-radius,bottom);
   if(tailOnLeft){
-   path.lineTo(radius+tailWidth,bottom)
+   path..lineTo(radius+tailWidth,bottom)
     ..cubicTo(radius+tailWidth*.52,bottom+tailHeight*.12,radius+tailWidth*.35,size.height,radius+tailWidth*.08,size.height)
     ..cubicTo(radius*.65,size.height,radius*.48,bottom+tailHeight*.2,radius,bottom);
   }else{
-   path.lineTo(size.width-radius-tailWidth,bottom)
+   path..lineTo(size.width-radius-tailWidth,bottom)
     ..cubicTo(size.width-radius-tailWidth*.52,bottom+tailHeight*.12,size.width-radius-tailWidth*.35,size.height,size.width-radius-tailWidth*.08,size.height)
     ..cubicTo(size.width-radius*.65,size.height,size.width-radius*.48,bottom+tailHeight*.2,size.width-radius,bottom);
   }
-  path.lineTo(radius,bottom)
+  path..lineTo(radius,bottom)
    ..cubicTo(radius*.42,bottom,0,bottom-radius*.42,0,bottom-radius)
    ..lineTo(0,radius)
    ..cubicTo(0,radius*.42,radius*.42,0,radius,0)
@@ -1348,7 +1348,7 @@ class _ImageMarkupDialogState extends State<_ImageMarkupDialog>{
    canvas.drawImage(decoded,Offset.zero,Paint());
    final sx=decoded.width.toDouble(),sy=decoded.height.toDouble();
    final all=[...strokes,if(current.length>1)_MarkupStroke(List<Offset>.from(current),color)];
-   for(final stroke in all){if(stroke.points.length<2)continue;final path=Path()..moveTo(stroke.points.first.dx*sx,stroke.points.first.dy*sy);for(final p in stroke.points.skip(1))path.lineTo(p.dx*sx,p.dy*sy);canvas.drawPath(path,Paint()..color=stroke.color..strokeWidth=math.max(5.0,decoded.width/180.0)..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke);}
+   for(final stroke in all){if(stroke.points.length<2)continue;final path=Path()..moveTo(stroke.points.first.dx*sx,stroke.points.first.dy*sy);for(final p in stroke.points.skip(1))path..lineTo(p.dx*sx,p.dy*sy);canvas.drawPath(path,Paint()..color=stroke.color..strokeWidth=math.max(5.0,decoded.width/180.0)..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke);}
    final image=await recorder.endRecording().toImage(decoded.width,decoded.height);final data=await image.toByteData(format:ui.ImageByteFormat.png);if(data==null)throw Exception('encode');
    final output=data.buffer.asUint8List();final saved=await FilePicker.platform.saveFile(fileName:'OURS_drawing_${DateTime.now().millisecondsSinceEpoch}.png',type:FileType.image,bytes:output);if(saved==null)return;
    if(mounted){Navigator.pop(context);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تم حفظ الرسم في المكان الذي اخترته','Drawing saved to your selected location'))));}
@@ -1364,7 +1364,7 @@ class _ImageMarkupDialogState extends State<_ImageMarkupDialog>{
 class _MarkupStroke{final List<Offset> points;final Color color;const _MarkupStroke(this.points,this.color);}
 class _MarkupPainter extends CustomPainter{
  final List<_MarkupStroke> strokes;const _MarkupPainter(this.strokes);
- @override void paint(Canvas canvas,Size size){for(final stroke in strokes){if(stroke.points.length<2)continue;final path=Path()..moveTo(stroke.points.first.dx*size.width,stroke.points.first.dy*size.height);for(final p in stroke.points.skip(1))path.lineTo(p.dx*size.width,p.dy*size.height);canvas.drawPath(path,Paint()..color=stroke.color..strokeWidth=4..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke);}}
+ @override void paint(Canvas canvas,Size size){for(final stroke in strokes){if(stroke.points.length<2)continue;final path=Path()..moveTo(stroke.points.first.dx*size.width,stroke.points.first.dy*size.height);for(final p in stroke.points.skip(1))path..lineTo(p.dx*size.width,p.dy*size.height);canvas.drawPath(path,Paint()..color=stroke.color..strokeWidth=4..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke);}}
  @override bool shouldRepaint(covariant _MarkupPainter old)=>old.strokes!=strokes;
 }
 class _ChatDetailsPage extends StatelessWidget{
