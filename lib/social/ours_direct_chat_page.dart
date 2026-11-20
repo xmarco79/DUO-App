@@ -638,8 +638,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    <double>[.85,0,0,0,18,0,.94,0,0,8,0,0,1.12,0,18,0,0,0,1,0],
    <double>[1.15,0,0,0,8,0,1.15,0,0,8,0,0,1.15,0,8,0,0,0,1,0],
   ];
-  canvas.drawImageRect(source,src,dst,Paint()..filterQuality=FilterQuality.high..colorFilter=ColorFilter.matrix(matrices[filter.clamp(0,3)]));
-  for(final stroke in strokes){if(stroke.length<2)continue;final path=Path()..moveTo(stroke.first.dx*w,stroke.first.dy*h);for(final point in stroke.skip(1)){path.lineTo(point.dx*w,point.dy*h);}canvas.drawPath(path,Paint()..color=const Color(0xFFFFD66B)..strokeWidth=(w/260).clamp(4,16)..strokeCap=StrokeCap.round..style=PaintingStyle.stroke);}
+  canvas.drawImageRect(source,src,dst,Paint()..filterQuality=FilterQuality.high..colorFilter=ColorFilter.matrix(matrices[filter.clamp(0,3).toInt()]));
+  for(final stroke in strokes){if(stroke.length<2)continue;final path=Path()..moveTo(stroke.first.dx*w,stroke.first.dy*h);for(final point in stroke.skip(1)){path.lineTo(point.dx*w,point.dy*h);}canvas.drawPath(path,Paint()..color=const Color(0xFFFFD66B)..strokeWidth=(w/260).clamp(4,16).toDouble()..strokeCap=StrokeCap.round..style=PaintingStyle.stroke);}
   final picture=recorder.endRecording();final image=await picture.toImage(source.width,source.height);final data=await image.toByteData(format:ui.ImageByteFormat.png);
   source.dispose();image.dispose();picture.dispose();codec.dispose();if(data==null)throw Exception('Image export failed');return data.buffer.asUint8List();
  }
@@ -650,7 +650,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
     Padding(padding:const EdgeInsets.fromLTRB(14,8,8,8),child:Row(children:[Icon(Icons.auto_awesome_rounded,color:skin.accent),const SizedBox(width:9),Expanded(child:Text(t('استوديو معاينة الوسائط','Media preview studio'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900))),IconButton(onPressed:()=>Navigator.pop(ctx,null),icon:const Icon(Icons.close,color:Colors.white))])),
     Expanded(child:Center(child:video?Container(width:double.infinity,margin:const EdgeInsets.all(16),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(22)),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(Icons.video_file_rounded,color:skin.accent,size:72),Text(name,style:TextStyle(color:skin.accent),maxLines:2,overflow:TextOverflow.ellipsis)])):LayoutBuilder(builder:(context,constraints)=>GestureDetector(
-     onPanStart:drawing?(d)=>setEditor(()=>activeStroke=[Offset((d.localPosition.dx/constraints.maxWidth).clamp(0,1),(d.localPosition.dy/constraints.maxHeight).clamp(0,1)]):null,
+     onPanStart:drawing?(d)=>setEditor(()=>activeStroke=[Offset((d.localPosition.dx/constraints.maxWidth).clamp(0,1).toDouble(),(d.localPosition.dy/constraints.maxHeight).clamp(0,1).toDouble()]):null,
      onPanUpdate:drawing?(d)=>setEditor(()=>activeStroke.add(Offset((d.localPosition.dx/constraints.maxWidth).clamp(0,1),(d.localPosition.dy/constraints.maxHeight).clamp(0,1)))):null,
      onPanEnd:drawing?(_)=>setEditor(()=>{if(activeStroke.isNotEmpty)strokes.add(List<Offset>.from(activeStroke));activeStroke=[];}):null,
      child:Stack(fit:StackFit.expand,children:[
