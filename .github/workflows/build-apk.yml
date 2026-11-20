@@ -5,6 +5,7 @@ on:
     branches:
       - feature/full-ours-worlds
       - feature/ours-two-person-expansion
+      - feature/ours-polish-stickers-themes
   pull_request:
     branches:
       - feature/full-ours-worlds
