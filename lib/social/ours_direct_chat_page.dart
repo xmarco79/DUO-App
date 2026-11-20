@@ -157,6 +157,13 @@ class _ChatAtmospherePainter extends CustomPainter {
 }
 
 
+class _MediaMessageClipper extends CustomClipper<Path> {
+ @override
+ Path getClip(Size size) => Path()..addRect(Offset.zero & size);
+ @override
+ bool shouldReclip(covariant _MediaMessageClipper oldClipper) => false;
+}
+
 class _MessageBubbleClipper extends CustomClipper<Path> {
  final bool tailOnLeft;
  const _MessageBubbleClipper({required this.tailOnLeft});
@@ -863,7 +870,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       const SizedBox(height:7),Text(t('رسائل وصور وملفات وتسجيلات صوتية في مكان واحد.','Messages, photos, files and voice notes in one place.'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))
      ])))
      :ListView.builder(controller:scroll,padding:const EdgeInsets.all(12),itemCount:messages.length,itemBuilder:(ctx,i){
-      final m=messages[i];final mine=m['sender_id']==me;final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';
+      final m=messages[i];final mine=m['sender_id']==me;final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';final isVisualMessage=type=='image'||type=='sticker';
       final createdAt=DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal();
       final previousAt=i>0?DateTime.tryParse(messages[i-1]['created_at']?.toString()??'')?.toLocal():null;
       final showDate=createdAt!=null&&(previousAt==null||DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt));
@@ -872,9 +879,9 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
-        child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:5,shadowColor:skin.accent.withValues(alpha:.20),clipBehavior:Clip.antiAlias,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:const EdgeInsets.fromLTRB(16,12,16,17),
-         decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:highlightedMessageId==m['id'].toString()?[skin.accent.withValues(alpha:.42),skin.partner.withValues(alpha:.96)]:mine?[Color.lerp(skin.mine,Colors.white,.055)!,Color.lerp(skin.mine,skin.bg,.16)!]:[Color.lerp(skin.partner,Colors.white,.045)!,Color.lerp(skin.partner,skin.bg,.12)!]),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.26):_lavender.withValues(alpha:.18)),width:highlightedMessageId==m['id'].toString()?1.7:.85)),
+        child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isVisualMessage?0:5,shadowColor:isVisualMessage?Colors.transparent:skin.accent.withValues(alpha:.20),clipBehavior:Clip.antiAlias,child:Container(
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isVisualMessage?EdgeInsets.zero:const EdgeInsets.fromLTRB(16,12,16,17),
+         decoration:isVisualMessage?const BoxDecoration():BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:highlightedMessageId==m['id'].toString()?[skin.accent.withValues(alpha:.42),skin.partner.withValues(alpha:.96)]:mine?[Color.lerp(skin.mine,Colors.white,.055)!,Color.lerp(skin.mine,skin.bg,.16)!]:[Color.lerp(skin.partner,Colors.white,.045)!,Color.lerp(skin.partner,skin.bg,.12)!]),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.26):_lavender.withValues(alpha:.18)),width:highlightedMessageId==m['id'].toString()?1.7:.85)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
