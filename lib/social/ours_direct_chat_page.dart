@@ -164,9 +164,9 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  Path getClip(Size size) {
   const r=18.0, tailW=10.0, tailH=9.0;
   final p=Path()..moveTo(r,0)..lineTo(size.width-r,0)..quadraticBezierTo(size.width,0,size.width,r)..lineTo(size.width,size.height-tailH-r)..quadraticBezierTo(size.width,size.height-tailH,size.width-r,size.height-tailH);
-  if(mine){p.lineTo(size.width-tailW,size.height-tailH)..quadraticBezierTo(size.width-tailW*.55,size.height-tailH*.35,size.width-tailW*.15,size.height)..quadraticBezierTo(size.width-tailW*.15,size.height-tailH*.45,size.width-r,size.height-tailH);}
-  else{p.lineTo(r,size.height-tailH)..quadraticBezierTo(tailW*.15,size.height-tailH*.45,tailW*.15,size.height)..quadraticBezierTo(tailW*.55,size.height-tailH*.35,tailW,size.height-tailH)..lineTo(r,size.height-tailH);}
-  p.lineTo(r,size.height-tailH)..quadraticBezierTo(0,size.height-tailH,0,size.height-tailH-r)..lineTo(0,r)..quadraticBezierTo(0,0,r,0);
+  if(mine){p.lineTo(size.width-tailW,size.height-tailH);p.quadraticBezierTo(size.width-tailW*.55,size.height-tailH*.35,size.width-tailW*.15,size.height);p.quadraticBezierTo(size.width-tailW*.15,size.height-tailH*.45,size.width-r,size.height-tailH);}
+  else{p.lineTo(r,size.height-tailH);p.quadraticBezierTo(tailW*.15,size.height-tailH*.45,tailW*.15,size.height);p.quadraticBezierTo(tailW*.55,size.height-tailH*.35,tailW,size.height-tailH);p.lineTo(r,size.height-tailH);}
+  p.lineTo(r,size.height-tailH);p.quadraticBezierTo(0,size.height-tailH,0,size.height-tailH-r);p.lineTo(0,r);p.quadraticBezierTo(0,0,r,0);
   return p..close();
  }
  @override bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.mine!=mine;
