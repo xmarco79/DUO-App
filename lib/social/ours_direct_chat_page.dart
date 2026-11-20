@@ -651,7 +651,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Future<bool> _previewVideoFile(String path) async{
   final controller=VideoPlayerController.file(File(path));
   try{await controller.initialize();}catch(_){await controller.dispose();return false;}
-  final confirmed=await showDialog<bool>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('معاينة الفيديو','Video preview')),content:Column(mainAxisSize:MainAxisSize.min,children:[if(controller.value.isInitialized)AspectRatio(aspectRatio:controller.value.aspectRatio,child:VideoPlayer(controller)),const SizedBox(height:10),Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>setModal(()=>controller.value.isPlaying?controller.pause():controller.play()),icon:Icon(controller.value.isPlaying?Icons.pause:Icons.play_arrow,color:skin.accent)),IconButton(onPressed:()=>setModal(()=>controller.seekTo(Duration.zero)),icon:Icon(Icons.replay,color:skin.accent))]),Text(t('يمكنك مشاهدة المقطع قبل إرساله.','Preview the clip before sending.'),style:TextStyle(color:skin.accent,fontSize:12),textAlign:TextAlign.center)]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(t('إرسال','Send')))])));
+  final confirmed=await showDialog<bool>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('معاينة الفيديو','Video preview')),content:Column(mainAxisSize:MainAxisSize.min,children:[if(player.value.isInitialized)AspectRatio(aspectRatio:player.value.aspectRatio,child:VideoPlayer(player)),const SizedBox(height:10),Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>setModal(()=>player.value.isPlaying?player.pause():player.play()),icon:Icon(player.value.isPlaying?Icons.pause:Icons.play_arrow,color:skin.accent)),IconButton(onPressed:()=>setModal(()=>player.seekTo(Duration.zero)),icon:Icon(Icons.replay,color:skin.accent))]),Text(t('يمكنك مشاهدة المقطع قبل إرساله.','Preview the clip before sending.'),style:TextStyle(color:skin.accent,fontSize:12),textAlign:TextAlign.center)]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(t('إرسال','Send')))])));
   await controller.dispose();return confirmed==true;
  }
  Future<void> _pickVideo() async{
@@ -754,8 +754,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    await controller.initialize();
    if(!mounted){await controller.dispose();return;}
    await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>Dialog(backgroundColor:Colors.black,insetPadding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[
-    AspectRatio(aspectRatio:controller.value.aspectRatio,child:VideoPlayer(controller)),
-    Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>setModal(()=>controller.value.isPlaying?controller.pause():controller.play()),icon:Icon(controller.value.isPlaying?Icons.pause:Icons.play_arrow,color:Colors.white)),IconButton(onPressed:()=>setModal(()=>controller!.seekTo(Duration.zero)),icon:const Icon(Icons.replay,color:Colors.white))]),
+    AspectRatio(aspectRatio:player.value.aspectRatio,child:VideoPlayer(player)),
+    Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>setModal(()=>player.value.isPlaying?player.pause():player.play()),icon:Icon(player.value.isPlaying?Icons.pause:Icons.play_arrow,color:Colors.white)),IconButton(onPressed:()=>setModal(()=>controller!.seekTo(Duration.zero)),icon:const Icon(Icons.replay,color:Colors.white))]),
     TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close'),style:const TextStyle(color:Colors.white)))
    ]))));
   }catch(e){_show(t('تعذر تشغيل الفيديو. تحقق من الاتصال.','Could not play video. Check your connection.'));}
@@ -770,11 +770,12 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    if(path==null||path.isEmpty){_show(t('انتهت مرات مشاهدة هذه الوسائط','No views left for this media'));await _load();return;}
    final url=await _signed(path);
    if(isVideo){videoController=VideoPlayerController.networkUrl(Uri.parse(url));await videoController.initialize();}
+    final temporaryVideo = videoController;
    if(!mounted)return;
    await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>Dialog(backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
     Padding(padding:const EdgeInsets.all(12),child:Text(isVideo?t('فيديو مؤقت','Temporary video'):t('صورة مؤقتة','Temporary photo'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700))),
-    Expanded(child:Center(child:isVideo?AspectRatio(aspectRatio:videoController.value.aspectRatio,child:VideoPlayer(videoController)):InteractiveViewer(minScale:.5,maxScale:4,child:Image.network(url,fit:BoxFit.contain)))),
-    if(isVideo)Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>videoController.value.isPlaying?videoController!.pause():videoController!.play(),icon:Icon(videoController.value.isPlaying?Icons.pause:Icons.play_arrow,color:Colors.white)),IconButton(onPressed:()=>videoController!.seekTo(Duration.zero),icon:const Icon(Icons.replay,color:Colors.white))]),
+    Expanded(child:Center(child:isVideo?AspectRatio(aspectRatio:temporaryVideo!.value.aspectRatio,child:VideoPlayer(temporaryVideo!)):InteractiveViewer(minScale:.5,maxScale:4,child:Image.network(url,fit:BoxFit.contain)))),
+    if(isVideo)Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>temporaryVideo!.value.isPlaying?videoController!.pause():videoController!.play(),icon:Icon(temporaryVideo!.value.isPlaying?Icons.pause:Icons.play_arrow,color:Colors.white)),IconButton(onPressed:()=>videoController!.seekTo(Duration.zero),icon:const Icon(Icons.replay,color:Colors.white))]),
     Padding(padding:const EdgeInsets.all(14),child:TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close'),style:const TextStyle(color:Colors.white))))
    ])))));
    final row=await db.from('duo_direct_messages').select('view_count,max_views').eq('id',messageId).maybeSingle();
