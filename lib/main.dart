@@ -77,10 +77,20 @@ const _oursChatThemes = [
 
 class OursAppSettings {
   static final ValueNotifier<Locale> locale = ValueNotifier(const Locale('ar'));
+  static final ValueNotifier<String> fontFamily = ValueNotifier('sans-serif');
 
   static Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     locale.value = Locale(prefs.getString('ours_language') ?? 'ar');
+    fontFamily.value = prefs.getString('ours_font_family') ?? 'sans-serif';
+  }
+
+  static Future<void> setFontFamily(String value) async {
+    const supported = {'sans-serif', 'serif', 'sans-serif-condensed'};
+    final normalized = supported.contains(value) ? value : 'sans-serif';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ours_font_family', normalized);
+    fontFamily.value = normalized;
   }
 
   static Future<void> setLanguage(String languageCode) async {
@@ -114,7 +124,9 @@ class OursApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Locale>(
+    return ValueListenableBuilder<String>(
+      valueListenable: OursAppSettings.fontFamily,
+      builder: (context, fontFamily, _) => ValueListenableBuilder<Locale>(
       valueListenable: OursAppSettings.locale,
       builder: (context, locale, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -131,6 +143,7 @@ class OursApp extends StatelessWidget {
           child: child ?? const SizedBox.shrink(),
         ),
         theme: ThemeData(
+          fontFamily: fontFamily,
           brightness: Brightness.dark,
           scaffoldBackgroundColor: navy,
           colorScheme: const ColorScheme.dark(
@@ -550,6 +563,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -1930,6 +1944,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   String email = '';
   String? avatarUrl;
   String languageCode = 'ar';
+  String fontFamily = 'sans-serif';
   bool uploadingAvatar = false;
   bool loading = true;
   bool saving = false;
@@ -1950,6 +1965,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       quietMode = prefs.getBool('ours_quiet_mode') ?? false;
       confirmBeforeDelete = prefs.getBool('ours_confirm_delete') ?? true;
       languageCode = prefs.getString('ours_language') ?? 'ar';
+      fontFamily = prefs.getString('ours_font_family') ?? 'sans-serif';
     });
   }
 
@@ -2483,6 +2499,73 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                         setState(() => languageCode = value);
                         await OursAppSettings.setLanguage(value);
                       },
+                    ),
+                  ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          const Icon(Icons.text_fields_rounded, color: gold),
+                          const SizedBox(width: 10),
+                          Expanded(child: Text(oursText(context, 'خطوط التطبيق', 'App fonts'),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+                        ]),
+                        const SizedBox(height: 6),
+                        Text(oursText(context, 'معاينة مباشرة قبل اعتماد الخط على كامل التطبيق',
+                            'Live preview before applying the font app-wide'),
+                            style: const TextStyle(color: lavender, fontSize: 11)),
+                        const SizedBox(height: 12),
+                        SegmentedButton<String>(
+                          showSelectedIcon: false,
+                          segments: [
+                            ButtonSegment(value: 'sans-serif', label: Text(oursText(context, 'حديث', 'Modern'))),
+                            ButtonSegment(value: 'serif', label: Text(oursText(context, 'كلاسيكي', 'Classic'))),
+                            ButtonSegment(value: 'sans-serif-condensed', label: Text(oursText(context, 'مكثف', 'Compact'))),
+                          ],
+                          selected: {fontFamily},
+                          onSelectionChanged: (values) async {
+                            final selected = values.first;
+                            setState(() => fontFamily = selected);
+                            await OursAppSettings.setFontFamily(selected);
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: navy.withOpacity(.72),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: gold.withOpacity(.16)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(oursText(context, 'معاينة OURS', 'OURS preview'),
+                                  style: const TextStyle(color: gold, fontSize: 11)),
+                              const SizedBox(height: 8),
+                              Text(oursText(context, 'مرحبًا بك في عالمنا الخاص', 'Welcome to our private universe'),
+                                  style: TextStyle(fontFamily: fontFamily, color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 4),
+                              Text('The little details make OURS feel like home.',
+                                  style: TextStyle(fontFamily: fontFamily, color: lavender, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: TextButton(
+                            onPressed: () async {
+                              setState(() => fontFamily = 'sans-serif');
+                              await OursAppSettings.setFontFamily('sans-serif');
+                            },
+                            child: Text(oursText(context, 'استعادة الخط الافتراضي', 'Restore default font')),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
