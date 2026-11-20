@@ -222,7 +222,7 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
      gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:isMine
       ?[Color.lerp(skin.mine,Colors.white,.055)!,Color.lerp(skin.mine,skin.bg,.16)!]
       :[Color.lerp(skin.partner,Colors.white,.045)!,Color.lerp(skin.partner,skin.bg,.12)!]),
-     border:Border.all(color:(isMine?skin.accent:_lavender).withValues(alpha:isMine?.26:.18),width:.85)),
+     border:Border.all(color:(isMine?skin.accent:_lavender).withValues(alpha:isMine ? .26 : .18),width:.85)),
     child:child)));
  }
 }
@@ -279,7 +279,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
     Expanded(child:TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel')))),
     Expanded(child:FilledButton.icon(onPressed:()=>Navigator.pop(ctx,true),icon:const Icon(Icons.check_rounded),label:Text(t('تطبيق الخلفية','Apply wallpaper')))),
    ])
-  ]))))));
+  ]))))))));
  if(saved!=true)return null;
  try{
   var targetPath=currentPath??'';
