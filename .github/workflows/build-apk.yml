@@ -229,7 +229,7 @@ jobs:
           if fraction_font is None:
               raise SystemExit("No available font supports the ⅝ glyph")
           fraction = Image.new("L", (S, S), 0)
-          ImageDraw.Draw(fraction).text((245, 390), "⅝", font=fraction_font, fill=255)
+          ImageDraw.Draw(fraction).text((400, 390), "⅝", font=fraction_font, fill=255)
 
           mask = Image.new("L", (S, S), 0)
           mask = Image.composite(strokes, mask, strokes)
