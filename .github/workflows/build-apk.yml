@@ -160,7 +160,7 @@ jobs:
           manifest.write_text(content)
           PY
 
-      - name: Generate premium flowing OURS icon and launch artwork
+      - name: Generate high-resolution flowing ZN⅝ icon and launch artwork
         shell: bash
         run: |
           python3 -m pip install --quiet Pillow
@@ -169,142 +169,154 @@ jobs:
           from PIL import Image, ImageDraw, ImageFont, ImageFilter
           import math, re
 
-          S = 1024
-          gold = (238, 194, 112, 255)
-          pale = (255, 230, 174, 255)
-          dark = (10, 9, 13, 255)
+          S = 2048
           root = Path("android/app/src/main/res")
-
-          def font(size):
-              candidates = [
-                  "/usr/share/fonts/truetype/dejavu/DejaVuSerifCondensed-BoldItalic.ttf",
-                  "/usr/share/fonts/truetype/dejavu/DejaVuSerif-BoldItalic.ttf",
-                  "/usr/share/fonts/truetype/liberation2/LiberationSerif-BoldItalic.ttf",
-                  "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
-              ]
-              for candidate in candidates:
-                  if Path(candidate).exists():
-                      return ImageFont.truetype(candidate, size)
-              return ImageFont.load_default()
+          dark = (9, 8, 12, 255)
 
           def bezier(p0, p1, p2, p3, n=180):
-              out=[]
-              for i in range(n+1):
-                  t=i/n; u=1-t
-                  out.append((u**3*p0[0]+3*u*u*t*p1[0]+3*u*t*t*p2[0]+t**3*p3[0],
-                              u**3*p0[1]+3*u*u*t*p1[1]+3*u*t*t*p2[1]+t**3*p3[1]))
+              pts = []
+              for i in range(n + 1):
+                  t = i / n
+                  u = 1 - t
+                  pts.append((
+                      u**3*p0[0] + 3*u*u*t*p1[0] + 3*u*t*t*p2[0] + t**3*p3[0],
+                      u**3*p0[1] + 3*u*u*t*p1[1] + 3*u*t*t*p2[1] + t**3*p3[1]
+                  ))
+              return pts
+
+          def join(*segments):
+              out = []
+              for segment in segments:
+                  out.extend(segment if not out else segment[1:])
               return out
 
-          def stroke(draw, pts, fill, width):
-              draw.line(pts, fill=fill, width=width, joint="curve")
+          def stroke(draw, points, color, width):
+              draw.line(points, fill=color, width=width, joint="curve")
+              r = width // 2
+              for x, y in (points[0], points[-1]):
+                  draw.ellipse((x-r, y-r, x+r, y+r), fill=color)
 
-          # Transparent foreground artwork: carefully composed inside Android's adaptive-icon safe zone.
-          art = Image.new("RGBA", (S,S), (0,0,0,0))
-          glow = Image.new("RGBA", (S,S), (0,0,0,0))
-          gd = ImageDraw.Draw(glow)
-          ad = ImageDraw.Draw(art)
+          # Custom pen-drawn Z and N: continuous, flowing strokes rather than typed initials.
+          strokes = Image.new("L", (S, S), 0)
+          sd = ImageDraw.Draw(strokes)
+          z = join(
+              bezier((440, 720), (555, 505), (845, 495), (1090, 655)),
+              bezier((1090, 655), (930, 820), (650, 1030), (495, 1190)),
+              bezier((495, 1190), (665, 1260), (885, 1245), (1055, 1150))
+          )
+          n = join(
+              bezier((1010, 1165), (1060, 965), (1105, 735), (1150, 575)),
+              bezier((1150, 575), (1245, 790), (1350, 1050), (1430, 1190)),
+              bezier((1430, 1190), (1470, 1000), (1490, 800), (1525, 635))
+          )
+          stroke(sd, z, 255, 82)
+          stroke(sd, n, 255, 82)
 
-          # Flowing continuous infinity-like ribbon, deliberately hand-drawn and asymmetrical.
-          curves = [
-              bezier((130,520),(145,300),(385,285),(500,470)),
-              bezier((500,470),(635,690),(850,680),(900,430)),
-              bezier((900,430),(940,240),(735,225),(610,360)),
-              bezier((610,360),(510,470),(410,660),(230,650)),
-              bezier((230,650),(115,645),(85,570),(130,520)),
+          # Set the fraction separately as a refined typographic accent.
+          fraction_candidates = [
+              "/usr/share/fonts/truetype/dejavu/DejaVuSerifCondensed-BoldItalic.ttf",
+              "/usr/share/fonts/truetype/dejavu/DejaVuSerif-BoldItalic.ttf",
+              "/usr/share/fonts/truetype/liberation2/LiberationSerif-BoldItalic.ttf",
+              "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
           ]
-          for curve in curves:
-              stroke(gd, curve, (255,183,72,125), 34)
-              stroke(ad, curve, (225,164,79,235), 13)
-              stroke(ad, curve, (255,224,164,235), 4)
+          fraction_font = None
+          for candidate in fraction_candidates:
+              if Path(candidate).exists():
+                  candidate_font = ImageFont.truetype(candidate, 300)
+                  if candidate_font.getbbox("⅝"):
+                      fraction_font = candidate_font
+                      break
+          if fraction_font is None:
+              raise SystemExit("No available font supports the ⅝ glyph")
+          fraction = Image.new("L", (S, S), 0)
+          ImageDraw.Draw(fraction).text((1515, 690), "⅝", font=fraction_font, fill=255)
 
-          # Main flowing wordmark.
-          f = font(236)
-          word = "OURS"
-          box = ad.textbbox((0,0), word, font=f, stroke_width=0)
-          tw = box[2]-box[0]
-          x = (S-tw)//2 - box[0]
-          y = 405 - (box[3]-box[1])//2 - box[1]
-          ad.text((x,y), word, font=f, fill=(255,220,153,255),
-                  stroke_width=2, stroke_fill=(169,105,37,255))
+          mask = ImageChops = Image.new("L", (S, S), 0)
+          mask = Image.composite(strokes, mask, strokes)
+          mask = Image.composite(fraction, mask, fraction)
 
-          # Delicate crown accent.
-          crown = [(370,255),(390,175),(448,225),(510,145),(565,225),(630,175),(654,255),(370,255)]
-          stroke(gd, crown, (255,184,78,115), 28)
-          stroke(ad, crown, (240,190,111,255), 12)
-          ad.line([(382,270),(642,270)], fill=pale, width=10)
-          for cx,cy in [(390,175),(510,145),(630,175)]:
-              ad.ellipse((cx-10,cy-10,cx+10,cy+10), fill=pale)
+          # Subtle gold-metal gradient and restrained glow.
+          gold = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+          gp = gold.load()
+          for y in range(S):
+              t = y / (S - 1)
+              color = (int(255 - 22*t), int(231 - 55*t), int(183 - 63*t), 255)
+              for x in range(S):
+                  gp[x, y] = color
+          gold.putalpha(mask)
+          glow = Image.new("RGBA", (S, S), (255, 186, 92, 0))
+          glow.putalpha(mask.filter(ImageFilter.GaussianBlur(34)).point(lambda v: int(v * .25)))
+          art = Image.alpha_composite(glow, gold)
 
-          # A small, integrated chat bubble; simple and legible at launcher size.
-          bubble=(665,690,875,825)
-          ad.rounded_rectangle(bubble, radius=58, outline=(245,199,121,255), width=12)
-          ad.polygon([(715,808),(700,862),(770,820)], fill=(10,9,13,0), outline=(245,199,121,255))
-          for cx in (735,770,805):
-              ad.ellipse((cx-8,748,cx+8,764), fill=pale)
+          # Delicate pen flourishes complete the monogram's motion.
+          flourish = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+          fd = ImageDraw.Draw(flourish)
+          fd.line(bezier((425, 710), (310, 570), (325, 465), (440, 425)),
+                  fill=(247, 205, 139, 170), width=10)
+          fd.line(bezier((1450, 1210), (1555, 1300), (1660, 1260), (1690, 1160)),
+                  fill=(247, 205, 139, 150), width=9)
+          art = Image.alpha_composite(art, flourish)
 
-          # Fine highlights and soft gold bloom.
-          bloom = glow.filter(ImageFilter.GaussianBlur(22))
-          bloom.putalpha(bloom.getchannel("A").point(lambda v: int(v*.22)))
-          art = Image.alpha_composite(bloom, art)
+          # Deep charcoal field with very subtle radial warmth and silk-like curves.
+          bg = Image.new("RGBA", (S, S), dark)
+          pixels = bg.load()
+          for y in range(S):
+              for x in range(S):
+                  d = math.sqrt((x-1024)**2 + (y-1000)**2)
+                  a = max(0, 1-d/1320)
+                  pixels[x, y] = (int(9+8*a), int(8+6*a), int(12+4*a), 255)
+          silk = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+          silk_draw = ImageDraw.Draw(silk)
+          for curve in (
+              bezier((-80, 300), (480, 60), (1050, 470), (2110, 120)),
+              bezier((-90, 1810), (520, 1500), (1320, 2050), (2130, 1690))
+          ):
+              silk_draw.line(curve, fill=(255, 222, 170, 17), width=20)
+          bg = Image.alpha_composite(bg, silk)
+          master = Image.alpha_composite(bg, art)
 
-          # Premium dark background with subtle radial warmth and silk-like waves.
-          bg = Image.new("RGBA",(S,S),dark)
-          pix=bg.load()
-          for yy in range(S):
-              for xx in range(S):
-                  d=math.sqrt((xx-500)**2+(yy-470)**2)
-                  a=max(0,1-d/760)
-                  pix[xx,yy]=(int(10+9*a),int(9+6*a),int(13+3*a),255)
-          silk=Image.new("RGBA",(S,S),(0,0,0,0))
-          sd=ImageDraw.Draw(silk)
-          for pts in [
-              bezier((-40,160),(260,20),(500,260),(1050,20)),
-              bezier((-30,930),(260,760),(710,1030),(1060,810)),
-          ]:
-              stroke(sd,pts,(255,218,164,22),18)
-              stroke(sd,[(x,y+12) for x,y in pts],(0,0,0,95),34)
-          bg=Image.alpha_composite(bg,silk)
-          master=Image.alpha_composite(bg,art)
-
-          # Store a high-resolution source image for the app icon and launch screen.
           Path("assets").mkdir(exist_ok=True)
-          master.convert("RGB").save("assets/ours_launcher_master.png", optimize=True)
-          art.save("assets/ours_launcher_foreground.png", optimize=True)
+          master.resize((1024, 1024), Image.Resampling.LANCZOS).convert("RGB").save(
+              "assets/ours_launcher_master.png", optimize=True)
+          art.resize((1024, 1024), Image.Resampling.LANCZOS).save(
+              "assets/ours_launcher_foreground.png", optimize=True)
 
-          # Legacy launcher bitmaps, generated from the same 1024px master.
-          sizes={"mdpi":48,"hdpi":72,"xhdpi":96,"xxhdpi":144,"xxxhdpi":192}
-          for density,pixels in sizes.items():
-              folder=root/f"mipmap-{density}"
-              folder.mkdir(parents=True,exist_ok=True)
-              master.resize((pixels,pixels),Image.Resampling.LANCZOS).save(folder/"ic_launcher.png",optimize=True)
-              master.resize((pixels,pixels),Image.Resampling.LANCZOS).save(folder/"ic_launcher_round.png",optimize=True)
-              art.resize((pixels,pixels),Image.Resampling.LANCZOS).save(folder/"ic_launcher_foreground.png",optimize=True)
+          sizes = {"mdpi":48, "hdpi":72, "xhdpi":96, "xxhdpi":144, "xxxhdpi":192}
+          for density, pixels in sizes.items():
+              folder = root / f"mipmap-{density}"
+              folder.mkdir(parents=True, exist_ok=True)
+              icon = master.resize((pixels, pixels), Image.Resampling.LANCZOS)
+              foreground = art.resize((pixels, pixels), Image.Resampling.LANCZOS)
+              icon.save(folder / "ic_launcher.png", optimize=True)
+              icon.save(folder / "ic_launcher_round.png", optimize=True)
+              foreground.save(folder / "ic_launcher_foreground.png", optimize=True)
 
-          # Android adaptive icon with safe margins so the flowing gold frame is never clipped.
           adaptive = """<?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
               <background android:drawable="@color/ours_icon_background" />
               <foreground android:drawable="@mipmap/ic_launcher_foreground" />
           </adaptive-icon>
           """
-          adaptive_dir=root/"mipmap-anydpi-v26"
-          adaptive_dir.mkdir(parents=True,exist_ok=True)
-          (adaptive_dir/"ic_launcher.xml").write_text(adaptive)
-          (adaptive_dir/"ic_launcher_round.xml").write_text(adaptive)
-          colors=root/"values/colors.xml"
-          colors.parent.mkdir(parents=True,exist_ok=True)
-          txt=colors.read_text() if colors.exists() else '<?xml version="1.0" encoding="utf-8"?>\\n<resources>\\n</resources>\\n'
-          definition='<color name="ours_icon_background">#0A090D</color>'
-          if re.search(r'<color name="ours_icon_background">.*?</color>',txt):
-              txt=re.sub(r'<color name="ours_icon_background">.*?</color>',definition,txt)
-          else:
-              txt=txt.replace('</resources>',f'    {definition}\\n</resources>')
-          colors.write_text(txt)
+          adaptive_dir = root / "mipmap-anydpi-v26"
+          adaptive_dir.mkdir(parents=True, exist_ok=True)
+          (adaptive_dir / "ic_launcher.xml").write_text(adaptive)
+          (adaptive_dir / "ic_launcher_round.xml").write_text(adaptive)
 
-          # Android 11 and earlier launch screen.
-          splash_dir=root/"drawable-nodpi"
-          splash_dir.mkdir(parents=True,exist_ok=True)
-          art.resize((640,640),Image.Resampling.LANCZOS).save(splash_dir/"ours_splash.png",optimize=True)
+          colors = root / "values/colors.xml"
+          colors.parent.mkdir(parents=True, exist_ok=True)
+          color_text = colors.read_text() if colors.exists() else '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
+          definition = '<color name="ours_icon_background">#09080C</color>'
+          if re.search(r'<color name="ours_icon_background">.*?</color>', color_text):
+              color_text = re.sub(r'<color name="ours_icon_background">.*?</color>', definition, color_text)
+          else:
+              color_text = color_text.replace('</resources>', '    ' + definition + '\n</resources>')
+          colors.write_text(color_text)
+
+          # Legacy launch artwork and Android 12+ splash use the same high-res mark.
+          splash_dir = root / "drawable-nodpi"
+          splash_dir.mkdir(parents=True, exist_ok=True)
+          art.resize((768, 768), Image.Resampling.LANCZOS).save(
+              splash_dir / "ours_splash.png", optimize=True)
           launch = """<?xml version="1.0" encoding="utf-8"?>
           <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
               <item android:drawable="@color/ours_icon_background" />
@@ -313,33 +325,32 @@ jobs:
               </item>
           </layer-list>
           """
-          for name in ("drawable/launch_background.xml","drawable-v21/launch_background.xml"):
-              p=root/name
-              p.parent.mkdir(parents=True,exist_ok=True)
-              p.write_text(launch)
+          for name in ("drawable/launch_background.xml", "drawable-v21/launch_background.xml"):
+              path = root / name
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_text(launch)
 
-          # Android 12+ system splash uses the same high-resolution transparent emblem.
-          v31=root/"values-v31"
-          v31.mkdir(parents=True,exist_ok=True)
-          styles=v31/"styles.xml"
-          styles.write_text("""<?xml version="1.0" encoding="utf-8"?>
+          v31 = root / "values-v31"
+          v31.mkdir(parents=True, exist_ok=True)
+          (v31 / "styles.xml").write_text("""<?xml version="1.0" encoding="utf-8"?>
           <resources>
               <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
-                  <item name="android:windowSplashScreenBackground">#0A090D</item>
+                  <item name="android:windowSplashScreenBackground">#09080C</item>
                   <item name="android:windowSplashScreenAnimatedIcon">@drawable/ours_splash</item>
-                  <item name="android:windowSplashScreenIconBackgroundColor">#0A090D</item>
+                  <item name="android:windowSplashScreenIconBackgroundColor">#09080C</item>
                   <item name="android:windowBackground">@android:color/black</item>
               </style>
           </resources>
           """)
-          manifest=root/"../AndroidManifest.xml"
-          manifest=root.parent/"AndroidManifest.xml"
+
+          manifest = root.parent / "AndroidManifest.xml"
           if manifest.exists():
-              mt=manifest.read_text()
-              mt=re.sub(r'android:label="[^"]*"','android:label="OURS"',mt,count=1)
-              mt=re.sub(r'android:icon="[^"]*"','android:icon="@mipmap/ic_launcher"',mt,count=1)
-              manifest.write_text(mt)
-          print("Generated unified 1024px OURS wordmark, adaptive icons, and matching Android launch artwork.")
+              text = manifest.read_text()
+              text = re.sub(r'android:label="[^"]*"', 'android:label="OURS"', text, count=1)
+              text = re.sub(r'android:icon="[^"]*"', 'android:icon="@mipmap/ic_launcher"', text, count=1)
+              manifest.write_text(text)
+
+          print("Generated custom flowing ZN⅝ artwork at 2048px, with matching adaptive launcher and splash assets.")
           PY
           rm -f android/app/src/main/res/drawable/ours_icon.xml
 
