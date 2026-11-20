@@ -229,7 +229,7 @@ jobs:
           if fraction_font is None:
               raise SystemExit("No available font supports the ⅝ glyph")
           fraction = Image.new("L", (S, S), 0)
-          ImageDraw.Draw(fraction).text((245, 210), "⅝", font=fraction_font, fill=255)
+          ImageDraw.Draw(fraction).text((245, 390), "⅝", font=fraction_font, fill=255)
 
           mask = Image.new("L", (S, S), 0)
           mask = Image.composite(strokes, mask, strokes)
@@ -285,24 +285,8 @@ jobs:
           bg = Image.alpha_composite(bg, ribbon)
           master = Image.alpha_composite(bg, art)
 
-          # Prefer the approved image artwork stored in assets/ours_icon.png.
-          # Apply a 45% saturation reduction (retain 55% saturation) and use
-          # that artwork for launcher, adaptive foreground, and splash outputs.
-          approved_icon = Path("assets/ours_icon.png")
-          if approved_icon.exists():
-              from PIL import ImageEnhance, ImageFile
-              # Repository artwork may be a partially encoded PNG; tolerate its
-              # truncated stream so the approved visual is still used.
-              ImageFile.LOAD_TRUNCATED_IMAGES = True
-              try:
-                  approved = Image.open(approved_icon).convert("RGBA")
-                  approved = ImageEnhance.Color(approved).enhance(0.55)
-                  approved = approved.resize((S, S), Image.Resampling.LANCZOS)
-                  master = approved
-                  art = approved
-                  print("Using approved icon artwork with saturation reduced by 45%.")
-              except Exception as exc:
-                  print(f"Approved image could not be decoded ({exc}); fallback artwork will be used.")
+          # Keep the generated ZN⅝ monogram as the authoritative app icon.
+          # Do not replace it with the older unrelated asset.
 
           Path("assets").mkdir(exist_ok=True)
           master.resize((1024, 1024), Image.Resampling.LANCZOS).convert("RGB").save(
