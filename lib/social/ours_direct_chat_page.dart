@@ -688,18 +688,39 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    await _upload(edited,name,mode=='normal'?'image':mode=='once'?'view_once':'view_twice',maxViews:mode=='twice'?2:1);
   }catch(e){_show(t('تعذر اختيار الصورة: $e','Could not select image: $e'));}
  }
- Future<bool> _previewVideoFile(String path) async{
+ Future<String?> _previewVideoFile(String path) async{
   final controller=VideoPlayerController.file(File(path));
-  try{await controller.initialize();}catch(_){await controller.dispose();return false;}
-  final confirmed=await showDialog<bool>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('معاينة الفيديو','Video preview')),content:Column(mainAxisSize:MainAxisSize.min,children:[if(controller.value.isInitialized)AspectRatio(aspectRatio:controller.value.aspectRatio,child:VideoPlayer(controller)),const SizedBox(height:10),Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>setModal(()=>controller.value.isPlaying?controller.pause():controller.play()),icon:Icon(controller.value.isPlaying?Icons.pause:Icons.play_arrow,color:skin.accent)),IconButton(onPressed:()=>setModal(()=>controller.seekTo(Duration.zero)),icon:Icon(Icons.replay,color:skin.accent))]),Text(t('يمكنك مشاهدة المقطع قبل إرساله.','Preview the clip before sending.'),style:TextStyle(color:skin.accent,fontSize:12),textAlign:TextAlign.center)]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(t('إرسال','Send')))])));
-  await controller.dispose();return confirmed==true;
+  try{await controller.initialize();}catch(_){await controller.dispose();return null;}
+  var mode='normal',hd=true;
+  try{
+   final result=await showDialog<String>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setEditor)=>Dialog(
+    backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
+     Padding(padding:const EdgeInsets.fromLTRB(14,8,8,8),child:Row(children:[Icon(Icons.movie_creation_outlined,color:skin.accent),const SizedBox(width:9),Expanded(child:Text(t('معاينة الفيديو','Video preview'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900))),IconButton(onPressed:()=>Navigator.pop(ctx,null),icon:const Icon(Icons.close,color:Colors.white))])),
+     Expanded(child:Center(child:AspectRatio(aspectRatio:controller.value.aspectRatio,child:VideoPlayer(controller)))),
+     Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+      IconButton(onPressed:()=>setEditor(()=>controller.value.isPlaying?controller.pause():controller.play()),icon:Icon(controller.value.isPlaying?Icons.pause_circle_filled:Icons.play_circle_fill,color:skin.accent,size:42)),
+      IconButton(onPressed:()=>setEditor(()=>controller.seekTo(Duration.zero)),icon:Icon(Icons.replay_rounded,color:skin.accent,size:28))
+     ]),
+     Container(width:double.infinity,padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:const Color(0xFF171326),border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.2)))),child:Column(children:[
+      Row(children:[Expanded(child:Text(t('جودة الفيديو','Video quality'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w700))),Switch(value:hd,onChanged:(v)=>setEditor(()=>hd=v),activeThumbColor:skin.accent),Text('HD',style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900))]),
+      Wrap(spacing:7,children:[
+       ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setEditor(()=>mode='normal')),
+       ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setEditor(()=>mode='once')),
+       ChoiceChip(label:Text(t('مرتين','Twice')),selected:mode=='twice',onSelected:(_)=>setEditor(()=>mode='twice')),
+      ]),
+      const SizedBox(height:10),SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:()=>Navigator.pop(ctx,mode),icon:const Icon(Icons.send_rounded),label:Text(t('إرسال الفيديو','Send video'))))
+     ]))
+    ])))
+   )));
+   return result;
+  }finally{await controller.dispose();}
  }
  Future<void> _pickVideo() async{
   try{
    final f=await picker.pickVideo(source:ImageSource.gallery,maxDuration:const Duration(minutes:2));if(f==null)return;
    final ext=f.name.split('.').last.toLowerCase();if(!['mp4','mov','webm'].contains(ext)){_show(t('صيغة الفيديو غير مدعومة','Unsupported video format'));return;}
-   if(!await _previewVideoFile(f.path))return;
-   await _upload(await f.readAsBytes(),f.name,'video');
+   final mode=await _previewVideoFile(f.path);if(mode==null)return;
+   await _upload(await f.readAsBytes(),f.name,mode=='normal'?'video':mode=='once'?'view_once':'view_twice',maxViews:mode=='twice'?2:1);
   }catch(e){_show(t('تعذر اختيار الفيديو: $e','Could not select video: $e'));}
  }
   Future<String> _signedSticker(String path){
