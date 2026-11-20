@@ -160,31 +160,41 @@ class _ChatAtmospherePainter extends CustomPainter {
 class _MessageBubbleClipper extends CustomClipper<Path> {
  final bool tailOnLeft;
  const _MessageBubbleClipper({required this.tailOnLeft});
+
  @override
  Path getClip(Size size) {
-  final radius=math.min(18.0,size.width*.30),tailWidth=math.min(12.0,size.width*.22);
-  const tailHeight=8.0;
-  final bottom=size.height-tailHeight;
-  final path=Path()..moveTo(radius,0)..lineTo(size.width-radius,0)
+  final radius=math.min(19.0,size.width*.30);
+  final tailWidth=math.min(16.0,size.width*.34);
+  const tailHeight=13.0;
+  final bodyBottom=size.height-tailHeight;
+  final path=Path()
+   ..moveTo(radius,0)
+   ..lineTo(size.width-radius,0)
    ..cubicTo(size.width-radius*.42,0,size.width,radius*.42,size.width,radius)
-   ..lineTo(size.width,bottom-radius)
-   ..cubicTo(size.width,bottom-radius*.42,size.width-radius*.42,bottom,size.width-radius,bottom);
+   ..lineTo(size.width,bodyBottom-radius)
+   ..cubicTo(size.width,bodyBottom-radius*.42,size.width-radius*.42,bodyBottom,size.width-radius,bodyBottom);
+
   if(tailOnLeft){
-   path..lineTo(radius+tailWidth,bottom)
-    ..cubicTo(radius+tailWidth*.52,bottom+tailHeight*.12,radius+tailWidth*.35,size.height,radius+tailWidth*.08,size.height)
-    ..cubicTo(radius*.65,size.height,radius*.48,bottom+tailHeight*.2,radius,bottom);
+   path
+    ..lineTo(radius+tailWidth,bodyBottom)
+    ..cubicTo(radius+tailWidth*.72,bodyBottom+1,radius+tailWidth*.55,size.height-2,radius+tailWidth*.10,size.height)
+    ..cubicTo(radius+tailWidth*.03,size.height-1,radius+2,bodyBottom+5,radius,bodyBottom);
   }else{
-   path..lineTo(size.width-radius-tailWidth,bottom)
-    ..cubicTo(size.width-radius-tailWidth*.52,bottom+tailHeight*.12,size.width-radius-tailWidth*.35,size.height,size.width-radius-tailWidth*.08,size.height)
-    ..cubicTo(size.width-radius*.65,size.height,size.width-radius*.48,bottom+tailHeight*.2,size.width-radius,bottom);
+   path
+    ..lineTo(size.width-radius-tailWidth,bodyBottom)
+    ..cubicTo(size.width-radius-tailWidth*.72,bodyBottom+1,size.width-radius-tailWidth*.55,size.height-2,size.width-radius-tailWidth*.10,size.height)
+    ..cubicTo(size.width-radius-tailWidth*.03,size.height-1,size.width-radius-2,bodyBottom+5,size.width-radius,bodyBottom);
   }
-  path..lineTo(radius,bottom)
-   ..cubicTo(radius*.42,bottom,0,bottom-radius*.42,0,bottom-radius)
+
+  path
+   ..lineTo(radius,bodyBottom)
+   ..cubicTo(radius*.42,bodyBottom,0,bodyBottom-radius*.42,0,bodyBottom-radius)
    ..lineTo(0,radius)
    ..cubicTo(0,radius*.42,radius*.42,0,radius,0)
    ..close();
   return path;
  }
+
  @override
  bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
 }
@@ -862,9 +872,9 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
-        child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:3.5,shadowColor:skin.accent.withValues(alpha:.16),clipBehavior:Clip.antiAlias,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),margin:const EdgeInsets.symmetric(vertical:6),padding:const EdgeInsets.fromLTRB(16,12,16,14),
-         decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:highlightedMessageId==m['id'].toString()?[skin.accent.withValues(alpha:.38),skin.partner.withValues(alpha:.94)]:mine?[skin.mine.withValues(alpha:.98),skin.mine.withValues(alpha:.78)]:[skin.partner.withValues(alpha:.98),skin.partner.withValues(alpha:.76)]),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.35):_lavender.withValues(alpha:.20)),width:highlightedMessageId==m['id'].toString()?1.8:1)),
+        child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:5,shadowColor:skin.accent.withValues(alpha:.20),clipBehavior:Clip.antiAlias,child:Container(
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:const EdgeInsets.fromLTRB(16,12,16,17),
+         decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:highlightedMessageId==m['id'].toString()?[skin.accent.withValues(alpha:.42),skin.partner.withValues(alpha:.96)]:mine?[Color.lerp(skin.mine,Colors.white,.055)!,Color.lerp(skin.mine,skin.bg,.16)!]:[Color.lerp(skin.partner,Colors.white,.045)!,Color.lerp(skin.partner,skin.bg,.12)!]),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.26):_lavender.withValues(alpha:.18)),width:highlightedMessageId==m['id'].toString()?1.7:.85)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
@@ -903,7 +913,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
            if(mine)Padding(padding:const EdgeInsetsDirectional.only(start:5),child:Icon(m['read_at']!=null?Icons.done_all_rounded:Icons.done_rounded,color:m['read_at']!=null?skin.accent:skin.accent.withValues(alpha:.55),size:13))
           ]))
          ]))
-        )))
+        ))))
        )
       ]);
      })),
