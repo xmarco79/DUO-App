@@ -489,10 +489,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      ListTile(leading:Icon(Icons.add_photo_alternate_outlined,color:skin.accent),title:Text(t('إضافة ملصق','Add sticker')),onTap:()=>Navigator.pop(ctx,'__add__')),
      ...recent.map((m)=>ListTile(leading:Icon(Icons.sticky_note_2_outlined,color:skin.accent),title:Text((m['file_name']??m['body']).toString()),onTap:()=>Navigator.pop(ctx,m['body'].toString())))
     ])));
-    searchController.dispose();
     if(chosen==null)return;if(chosen=='__add__'){await _uploadSelfStickerFallback();return;}
     await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':chosen,'message_type':'sticker'});return;
    }
+   final searchController=TextEditingController();
    List<Map<String,dynamic>> stickers=[];final favorites=<String>{};
    urls.removeWhere((key,_)=>key.startsWith('sticker:'));
    try{
@@ -504,7 +504,14 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    var selectedPack='all';
    final packs=<String>{'all','favorites',...stickers.map((x)=>(x['pack_name']??'OURS').toString())}.toList();
    final chosen=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,isScrollControlled:true,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal){
-    final visible=stickers.where((x)=>selectedPack=='all'||(selectedPack=='favorites'?favorites.contains(x['id'].toString()):(x['pack_name']??'OURS').toString()==selectedPack)).toList();
+    final query=searchController.text.trim().toLowerCase();
+    final visible=stickers.where((x){
+     final name=(x['display_name']??'').toString().toLowerCase();
+     final pack=(x['pack_name']??'OURS').toString().toLowerCase();
+     final matchesQuery=query.isEmpty||name.contains(query)||pack.contains(query);
+     final matchesPack=selectedPack=='all'||(selectedPack=='favorites'?favorites.contains(x['id'].toString()):pack==selectedPack.toLowerCase());
+     return matchesQuery&&matchesPack;
+    }).toList();
     return SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.72,child:Column(children:[
      Padding(padding:const EdgeInsets.fromLTRB(14,12,14,6),child:Row(children:[Expanded(child:Text(t('مكتبة ملصقات OURS','OURS Sticker Library'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900))),IconButton(onPressed:()=>Navigator.pop(ctx,'__add__'),icon:Icon(Icons.add_photo_alternate_outlined,color:skin.accent))])),
       Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),child:TextField(controller:searchController,onChanged:(_)=>setModal((){}),decoration:InputDecoration(hintText:t('ابحث عن ملصق أو حزمة','Search stickers or packs'),prefixIcon:Icon(Icons.search,color:skin.accent),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(14),borderSide:BorderSide.none)))),
@@ -521,6 +528,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      }))
     ])));
    }));
+   searchController.dispose();
    if(chosen==null)return;
    if(chosen=='__add__'){await _createSharedSticker();return;}
    if(chosen.startsWith('send:')){
