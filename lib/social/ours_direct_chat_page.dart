@@ -1081,7 +1081,6 @@ class _OursAiPageState extends State<OursAiPage>{
    if(mounted){final raw=e.toString().toLowerCase();final friendly=raw.contains('socket')||raw.contains('network')||raw.contains('connection')||raw.contains('timeout')?t('تعذر الاتصال بمساعد OURS. تحقق من الإنترنت وحاول مجددًا.','Could not reach OURS AI. Check your connection and retry.'):raw.contains('limit')?t('وصلنا إلى حد الاستخدام الحالي. حاول لاحقًا.','Usage limit reached. Please try later.'):t('تعذر إكمال الطلب الآن. حاول مرة أخرى.','Could not complete the request. Please retry.');messages.add({'role':'assistant','content':friendly,'created_at':DateTime.now().toIso8601String()});await _persist();}_bottom();
   }finally{if(mounted)setState(()=>sending=false);}
  }
- void _notice(String text){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(text)));}
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
  String _time(String? value){final date=DateTime.tryParse(value??'')?.toLocal();return date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);}
  String _dateLabel(DateTime date){final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);if(day==today)return t('اليوم','Today');if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');return _oursDate(day,ar);}
