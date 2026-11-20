@@ -156,6 +156,22 @@ class _ChatAtmospherePainter extends CustomPainter {
  bool shouldRepaint(covariant _ChatAtmospherePainter oldDelegate)=>oldDelegate.skin.id!=skin.id;
 }
 
+
+class _MessageBubbleClipper extends CustomClipper<Path> {
+ final bool mine;
+ const _MessageBubbleClipper({required this.mine});
+ @override
+ Path getClip(Size size) {
+  const r=18.0, tailW=10.0, tailH=9.0;
+  final p=Path()..moveTo(r,0)..lineTo(size.width-r,0)..quadraticBezierTo(size.width,0,size.width,r)..lineTo(size.width,size.height-tailH-r)..quadraticBezierTo(size.width,size.height-tailH,size.width-r,size.height-tailH);
+  if(mine){p.lineTo(size.width-tailW,size.height-tailH)..quadraticBezierTo(size.width-tailW*.55,size.height-tailH*.35,size.width-tailW*.15,size.height)..quadraticBezierTo(size.width-tailW*.15,size.height-tailH*.45,size.width-r,size.height-tailH);}
+  else{p.lineTo(r,size.height-tailH)..quadraticBezierTo(tailW*.15,size.height-tailH*.45,tailW*.15,size.height)..quadraticBezierTo(tailW*.55,size.height-tailH*.35,tailW,size.height-tailH)..lineTo(r,size.height-tailH);}
+  p.lineTo(r,size.height-tailH)..quadraticBezierTo(0,size.height-tailH,0,size.height-tailH-r)..lineTo(0,r)..quadraticBezierTo(0,0,r,0);
+  return p..close();
+ }
+ @override bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.mine!=mine;
+}
+
 class OursDirectChatPage extends StatefulWidget{
  final String conversationId,partnerName,partnerId;
  final String? spaceId;
@@ -708,9 +724,9 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
     IconButton(tooltip:t('تفاصيل المحادثة','Chat details'),icon:Icon(Icons.more_horiz,color:skin.accent),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>_ChatDetailsPage(partnerId:widget.partnerId,partnerName:localPartnerName??widget.partnerName,skin:skin,profile:()=>OursProfilePage(userId:widget.partnerId),nickname:_changeLocalNickname,search:_searchMessages,media:()=>_showChatLibrary('media'),files:()=>_showChatLibrary('files'),themes:_chooseSkin,wallpaper:_chooseWallpaper))))
    ]),
    body:Stack(children:[
-    Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
-    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Opacity(opacity:wallpaperOpacity,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())))),
-    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:.48)))),
+    if(wallpaperPath==null)Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
+    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>CustomPaint(painter:_ChatAtmospherePainter(skin))))),
+    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:(1-wallpaperOpacity).clamp(.35,.82).toDouble())))),
     Column(children:[
     Expanded(child:loading?Center(child:CircularProgressIndicator(color:skin.accent)):messages.isEmpty
      ?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
@@ -727,9 +743,9 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
-        child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(10),
-         decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),borderRadius:BorderRadius.circular(17),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
+        child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:ClipPath(clipper:_MessageBubbleClipper(mine:mine),child:Container(
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.fromLTRB(10,10,10,13),
+         decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
@@ -768,7 +784,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
            if(mine)Padding(padding:const EdgeInsetsDirectional.only(start:5),child:Icon(m['read_at']!=null?Icons.done_all_rounded:Icons.done_rounded,color:m['read_at']!=null?skin.accent:skin.accent.withValues(alpha:.55),size:13))
           ]))
          ]))
-        ))
+        )))
        )
       ]);
      })),
