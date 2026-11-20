@@ -229,7 +229,7 @@ jobs:
           if fraction_font is None:
               raise SystemExit("No available font supports the ⅝ glyph")
           fraction = Image.new("L", (S, S), 0)
-          ImageDraw.Draw(fraction).text((1515, 690), "⅝", font=fraction_font, fill=255)
+          ImageDraw.Draw(fraction).text((245, 210), "⅝", font=fraction_font, fill=255)
 
           mask = Image.new("L", (S, S), 0)
           mask = Image.composite(strokes, mask, strokes)
@@ -272,7 +272,17 @@ jobs:
               bezier((-90, 1810), (520, 1500), (1320, 2050), (2130, 1690))
           ):
               silk_draw.line(curve, fill=(255, 222, 170, 17), width=20)
+          ribbon = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+          rd = ImageDraw.Draw(ribbon)
+          upper = bezier((300, 130), (760, -30), (1420, 430), (1880, 190))
+          lower = bezier((80, 1510), (540, 1160), (1050, 1760), (1710, 1430))
+          rd.line(upper, fill=(112, 45, 207, 105), width=118)
+          rd.line(upper, fill=(187, 125, 255, 95), width=12)
+          rd.line(lower, fill=(104, 40, 205, 125), width=138)
+          rd.line(lower, fill=(214, 165, 255, 105), width=13)
+          ribbon = ribbon.filter(ImageFilter.GaussianBlur(1.4))
           bg = Image.alpha_composite(bg, silk)
+          bg = Image.alpha_composite(bg, ribbon)
           master = Image.alpha_composite(bg, art)
 
           Path("assets").mkdir(exist_ok=True)
