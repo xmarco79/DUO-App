@@ -780,7 +780,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>Dialog(backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
     Padding(padding:const EdgeInsets.all(12),child:Text(isVideo?t('فيديو مؤقت','Temporary video'):t('صورة مؤقتة','Temporary photo'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700))),
     Expanded(child:Center(child:isVideo?AspectRatio(aspectRatio:temporaryVideo!.value.aspectRatio,child:VideoPlayer(temporaryVideo!)):InteractiveViewer(minScale:.5,maxScale:4,child:Image.network(url,fit:BoxFit.contain)))),
-    if(isVideo)Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>temporaryVideo!.value.isPlaying?videoController.pause():videoController.play(),icon:Icon(temporaryVideo!.value.isPlaying?Icons.pause:Icons.play_arrow,color:Colors.white)),IconButton(onPressed:()=>videoController.seekTo(Duration.zero),icon:const Icon(Icons.replay,color:Colors.white))]),
+    if(isVideo)Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>temporaryVideo.value.isPlaying?temporaryVideo.pause():temporaryVideo.play(),icon:Icon(temporaryVideo!.value.isPlaying?Icons.pause:Icons.play_arrow,color:Colors.white)),IconButton(onPressed:()=>temporaryVideo.seekTo(Duration.zero),icon:const Icon(Icons.replay,color:Colors.white))]),
     Padding(padding:const EdgeInsets.all(14),child:TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close'),style:const TextStyle(color:Colors.white))))
    ])))));
    final row=await db.from('duo_direct_messages').select('view_count,max_views').eq('id',messageId).maybeSingle();
