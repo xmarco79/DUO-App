@@ -764,21 +764,25 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){_show(t('تعذر فتح الصورة: $e','Could not open image: $e'));}
  }
  Future<void> _showAttachments() async{
-  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,
-   builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    ListTile(leading:Icon(Icons.photo_library_outlined,color:skin.accent),title:Text(t('الوسائط','Media')),subtitle:Text(t('صور ومقاطع فيديو','Photos and videos')),onTap:()=>Navigator.pop(ctx,'media')),
-    ListTile(leading:Icon(Icons.insert_drive_file_outlined,color:skin.accent),title:Text(t('ملف','File')),onTap:()=>Navigator.pop(ctx,'file')),
-    ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:skin.accent),title:Text(t('ملصقاتنا','Our stickers')),onTap:()=>Navigator.pop(ctx,'sticker')),
-   ])));
+  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,isScrollControlled:true,builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(18,8,18,22),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Text(t('إرسال الوسائط','Share media'),style:TextStyle(color:skin.accent,fontSize:18,fontWeight:FontWeight.w800)),
+   const SizedBox(height:5),Text(t('اختر ما تريد مشاركته','Choose what you want to share'),style:TextStyle(color:skin.accent.withValues(alpha:.65),fontSize:12)),
+   const SizedBox(height:16),
+   Row(children:[
+    Expanded(child:_attachmentTile(ctx,'image',Icons.photo_rounded,t('صورة','Photo'),t('إرسال الصور','Send photos'),const Color(0xFF9C83F5))),
+    const SizedBox(width:10),Expanded(child:_attachmentTile(ctx,'video',Icons.play_circle_rounded,t('فيديو','Video'),t('إرسال المقاطع','Send videos'),const Color(0xFFDB9D58))),
+   ]),
+   const SizedBox(height:10),
+   Row(children:[
+    Expanded(child:_attachmentTile(ctx,'file',Icons.insert_drive_file_rounded,t('ملف','File'),t('مستندات وملفات','Documents'),const Color(0xFF67B9D4))),
+    const SizedBox(width:10),Expanded(child:_attachmentTile(ctx,'sticker',Icons.stars_rounded,t('ملصقات','Stickers'),t('ملصقات OURS','OURS stickers'),const Color(0xFFE58BB7))),
+   ])
+  ]))));
   if(choice==null)return;
-  switch(choice){case 'media':await _pickMedia();break;case 'image':await _pickImageWithMode();break;case 'video':await _pickVideo();break;case 'file':await _pickFile();break;case 'sticker':await _sendSticker();break;}
+  switch(choice){case 'image':await _pickImageWithMode();break;case 'video':await _pickVideo();break;case 'file':await _pickFile();break;case 'sticker':await _sendSticker();break;}
  }
- Future<void> _pickMedia()async{
-  final kind=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-   ListTile(leading:Icon(Icons.image_outlined,color:skin.accent),title:Text(t('صور','Photos')),onTap:()=>Navigator.pop(ctx,'image')),
-   ListTile(leading:Icon(Icons.video_library_outlined,color:skin.accent),title:Text(t('مقاطع فيديو','Videos')),onTap:()=>Navigator.pop(ctx,'video')),
-  ])));
-  if(kind=='image')await _pickImageWithMode();else if(kind=='video')await _pickVideo();
+ Widget _attachmentTile(BuildContext ctx,String value,IconData icon,String title,String subtitle,Color color){
+  return InkWell(onTap:()=>Navigator.pop(ctx,value),borderRadius:BorderRadius.circular(18),child:Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:color.withValues(alpha:.11),border:Border.all(color:color.withValues(alpha:.27)),borderRadius:BorderRadius.circular(18)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Container(width:44,height:44,decoration:BoxDecoration(color:color.withValues(alpha:.2),borderRadius:BorderRadius.circular(14)),child:Icon(icon,color:color,size:24)),const SizedBox(height:11),Text(title,style:TextStyle(color:skin.accent,fontWeight:FontWeight.w800)),const SizedBox(height:4),Text(subtitle,style:TextStyle(color:skin.accent.withValues(alpha:.65),fontSize:11))])));
  }
  Future<void> _pickFile() async{
   try{final r=await FilePicker.platform.pickFiles(withData:true);if(r==null||r.files.isEmpty)return;final f=r.files.single;
@@ -988,7 +992,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
           else if(type=='image')FutureBuilder<String>(future:_signed(path),builder:(c,s){
            if(s.hasError)return Text(t('تعذر تحميل الصورة','Could not load image'),style:TextStyle(color:skin.accent));
            if(!s.hasData)return SizedBox(width:190,height:125,child:Center(child:CircularProgressIndicator(color:skin.accent)));
-           return GestureDetector(onTap:()=>_openImageActions(s.data!),child:ClipRRect(borderRadius:BorderRadius.circular(13),child:Stack(children:[Image.network(s.data!,width:230,height:230,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Text(t('تعذر عرض الصورة','Image unavailable'))),Positioned(bottom:8,right:8,child:Container(padding:const EdgeInsets.all(6),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.58),borderRadius:BorderRadius.circular(30)),child:Icon(Icons.zoom_out_map_rounded,color:Colors.white,size:17)))])));
+           return GestureDetector(onTap:()=>_openImageActions(s.data!),child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Stack(alignment:Alignment.bottomRight,children:[ConstrainedBox(constraints:const BoxConstraints(maxWidth:280,maxHeight:360),child:Image.network(s.data!,width:280,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Padding(padding:const EdgeInsets.all(18),child:Text(t('تعذر عرض الصورة','Image unavailable'),style:TextStyle(color:skin.accent))))),PositionedDirectional(end:8,bottom:8,child:ClipRRect(borderRadius:BorderRadius.circular(22),child:BackdropFilter(filter:ImageFilter.blur(sigmaX:12,sigmaY:12),child:Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.28),border:Border.all(color:Colors.white.withValues(alpha:.15)),borderRadius:BorderRadius.circular(22)),child:Row(mainAxisSize:MainAxisSize.min,children:[Text(_time(m['created_at']),style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w600)),if(mine)Padding(padding:const EdgeInsetsDirectional.only(start:4),child:Icon(m['read_at']!=null?Icons.done_all_rounded:Icons.done_rounded,color:m['read_at']!=null?const Color(0xFFB7D7FF):Colors.white70,size:13))]))))])));
           })
           else if(type=='file')InkWell(onTap:()=>_downloadFile(path,name:m['file_name']?.toString()),child:Row(mainAxisSize:MainAxisSize.min,children:[
            Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),
