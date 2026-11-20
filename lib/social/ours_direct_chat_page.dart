@@ -223,7 +223,7 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
       ?[Color.lerp(skin.mine,Colors.white,.055)!,Color.lerp(skin.mine,skin.bg,.16)!]
       :[Color.lerp(skin.partner,Colors.white,.045)!,Color.lerp(skin.partner,skin.bg,.12)!]),
      border:Border.all(color:(isMine?skin.accent:_lavender).withValues(alpha:isMine?.26:.18),width:.85)),
-    child:child))));
+    child:child)));
  }
 }
 
@@ -238,7 +238,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
    Padding(padding:const EdgeInsets.fromLTRB(18,12,18,8),child:Row(children:[Icon(Icons.wallpaper_rounded,color:skin.accent,size:24),const SizedBox(width:10),Expanded(child:Text(t('استوديو خلفية المحادثة','Chat wallpaper studio'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900)))])),
    ListTile(leading:Icon(Icons.add_photo_alternate_outlined,color:skin.accent),title:Text(t('اختيار خلفية جديدة','Choose a new wallpaper')),subtitle:Text(t('اختر صورة ثم خصّص موضعها ووضوحها','Choose a photo, then customize its position and clarity')),onTap:()=>Navigator.pop(ctx,'new')),
    if(exists)ListTile(leading:Icon(Icons.tune_rounded,color:skin.accent),title:Text(t('تعديل الخلفية الحالية','Edit current wallpaper')),subtitle:Text(t('استكمل التعديل دون اختيار صورة من جديد','Continue editing your current image')),onTap:()=>Navigator.pop(ctx,'edit')),
-   if(exists)ListTile(leading:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent),title:Text(t('إزالة الخلفية','Remove wallpaper'),onTap:()=>Navigator.pop(ctx,'remove')),
+   if(exists)ListTile(leading:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent),title:Text(t('إزالة الخلفية','Remove wallpaper')),onTap:()=>Navigator.pop(ctx,'remove')),
    const SizedBox(height:8),
   ])));
  if(action==null)return null;
