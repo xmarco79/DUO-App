@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'notifications/ours_push_service.dart';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'social/ours_home_page.dart';
@@ -77,17 +78,25 @@ const _oursChatThemes = [
 
 class OursAppSettings {
   static final ValueNotifier<Locale> locale = ValueNotifier(const Locale('ar'));
-  static final ValueNotifier<String> fontFamily = ValueNotifier('sans-serif');
+  static final ValueNotifier<String> fontFamily = ValueNotifier('Cairo');
 
   static Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     locale.value = Locale(prefs.getString('ours_language') ?? 'ar');
-    fontFamily.value = prefs.getString('ours_font_family') ?? 'sans-serif';
+    final savedFont = prefs.getString('ours_font_family') ?? 'Cairo';
+    fontFamily.value = supportedFonts.contains(savedFont) ? savedFont : 'Cairo';
   }
 
+  static const supportedFonts = <String>{
+    'Cairo','Tajawal','Almarai','Noto Sans Arabic','IBM Plex Sans Arabic',
+    'Changa','Mada','Readex Pro','El Messiri','Amiri','Lateef','Reem Kufi',
+    'Rubik','Alexandria','Noto Kufi Arabic','Baloo Bhaijaan 2','Lemonada',
+    'Scheherazade New','Aref Ruqaa','Harmattan','Markazi Text',
+    'Inter','Poppins','Montserrat','Nunito','Raleway','Playfair Display',
+    'Merriweather','Roboto','Outfit','Space Grotesk'
+  };
   static Future<void> setFontFamily(String value) async {
-    const supported = {'sans-serif', 'serif', 'sans-serif-condensed'};
-    final normalized = supported.contains(value) ? value : 'sans-serif';
+    final normalized = supportedFonts.contains(value) ? value : 'Cairo';
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('ours_font_family', normalized);
     fontFamily.value = normalized;
@@ -144,6 +153,8 @@ class OursApp extends StatelessWidget {
         ),
         theme: ThemeData(
           fontFamily: fontFamily,
+          textTheme: GoogleFonts.getTextTheme(fontFamily, ThemeData.dark().textTheme),
+          primaryTextTheme: GoogleFonts.getTextTheme(fontFamily, ThemeData.dark().primaryTextTheme),
           brightness: Brightness.dark,
           scaffoldBackgroundColor: navy,
           colorScheme: const ColorScheme.dark(
@@ -1944,7 +1955,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   String email = '';
   String? avatarUrl;
   String languageCode = 'ar';
-  String fontFamily = 'sans-serif';
+  String fontFamily = 'Cairo';
   bool uploadingAvatar = false;
   bool loading = true;
   bool saving = false;
@@ -1965,7 +1976,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       quietMode = prefs.getBool('ours_quiet_mode') ?? false;
       confirmBeforeDelete = prefs.getBool('ours_confirm_delete') ?? true;
       languageCode = prefs.getString('ours_language') ?? 'ar';
-      fontFamily = prefs.getString('ours_font_family') ?? 'sans-serif';
+      final savedFont = prefs.getString('ours_font_family') ?? 'Cairo';
+      fontFamily = OursAppSettings.supportedFonts.contains(savedFont) ? savedFont : 'Cairo';
     });
   }
 
@@ -2518,21 +2530,50 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                             'Live preview before applying the font app-wide'),
                             style: const TextStyle(color: lavender, fontSize: 11)),
                         const SizedBox(height: 12),
-                        SegmentedButton<String>(
-                          showSelectedIcon: false,
-                          segments: [
-                            ButtonSegment(value: 'sans-serif', label: Text(oursText(context, 'حديث', 'Modern'))),
-                            ButtonSegment(value: 'serif', label: Text(oursText(context, 'كلاسيكي', 'Classic'))),
-                            ButtonSegment(value: 'sans-serif-condensed', label: Text(oursText(context, 'مكثف', 'Compact'))),
+                        DropdownButtonFormField<String>(
+                          value: OursAppSettings.supportedFonts.contains(fontFamily) ? fontFamily : 'Cairo',
+                          isExpanded: true,
+                          decoration: InputDecoration(labelText:oursText(context,'اختر الخط','Choose a font'),prefixIcon:const Icon(Icons.font_download_outlined)),
+                          items: const [
+                            DropdownMenuItem(value:'Cairo',child:Text('Cairo · عربي')),
+                            DropdownMenuItem(value:'Tajawal',child:Text('Tajawal · عربي')),
+                            DropdownMenuItem(value:'Almarai',child:Text('Almarai · عربي')),
+                            DropdownMenuItem(value:'Noto Sans Arabic',child:Text('Noto Sans Arabic · عربي')),
+                            DropdownMenuItem(value:'IBM Plex Sans Arabic',child:Text('IBM Plex Sans Arabic · عربي')),
+                            DropdownMenuItem(value:'Changa',child:Text('Changa · عربي')),
+                            DropdownMenuItem(value:'Mada',child:Text('Mada · عربي')),
+                            DropdownMenuItem(value:'Readex Pro',child:Text('Readex Pro · عربي')),
+                            DropdownMenuItem(value:'El Messiri',child:Text('El Messiri · عربي')),
+                            DropdownMenuItem(value:'Amiri',child:Text('Amiri · عربي')),
+                            DropdownMenuItem(value:'Lateef',child:Text('Lateef · عربي')),
+                            DropdownMenuItem(value:'Reem Kufi',child:Text('Reem Kufi · عربي')),
+                            DropdownMenuItem(value:'Rubik',child:Text('Rubik · عربي/لاتيني')),
+                            DropdownMenuItem(value:'Alexandria',child:Text('Alexandria · عربي/لاتيني')),
+                            DropdownMenuItem(value:'Noto Kufi Arabic',child:Text('Noto Kufi Arabic · عربي')),
+                            DropdownMenuItem(value:'Baloo Bhaijaan 2',child:Text('Baloo Bhaijaan 2 · عربي')),
+                            DropdownMenuItem(value:'Lemonada',child:Text('Lemonada · عربي')),
+                            DropdownMenuItem(value:'Scheherazade New',child:Text('Scheherazade New · عربي')),
+                            DropdownMenuItem(value:'Aref Ruqaa',child:Text('Aref Ruqaa · عربي')),
+                            DropdownMenuItem(value:'Harmattan',child:Text('Harmattan · عربي')),
+                            DropdownMenuItem(value:'Markazi Text',child:Text('Markazi Text · عربي')),
+                            DropdownMenuItem(value:'Inter',child:Text('Inter · English')),
+                            DropdownMenuItem(value:'Poppins',child:Text('Poppins · English')),
+                            DropdownMenuItem(value:'Montserrat',child:Text('Montserrat · English')),
+                            DropdownMenuItem(value:'Nunito',child:Text('Nunito · English')),
+                            DropdownMenuItem(value:'Raleway',child:Text('Raleway · English')),
+                            DropdownMenuItem(value:'Playfair Display',child:Text('Playfair Display · English')),
+                            DropdownMenuItem(value:'Merriweather',child:Text('Merriweather · English')),
+                            DropdownMenuItem(value:'Roboto',child:Text('Roboto · English')),
+                            DropdownMenuItem(value:'Outfit',child:Text('Outfit · English')),
+                            DropdownMenuItem(value:'Space Grotesk',child:Text('Space Grotesk · English')),
                           ],
-                          selected: {fontFamily},
-                          onSelectionChanged: (values) async {
-                            final selected = values.first;
-                            setState(() => fontFamily = selected);
+                          onChanged:(selected) async {
+                            if(selected==null)return;
+                            setState(()=>fontFamily=selected);
                             await OursAppSettings.setFontFamily(selected);
                           },
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height:14),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
@@ -2548,10 +2589,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                                   style: const TextStyle(color: gold, fontSize: 11)),
                               const SizedBox(height: 8),
                               Text(oursText(context, 'مرحبًا بك في عالمنا الخاص', 'Welcome to our private universe'),
-                                  style: TextStyle(fontFamily: fontFamily, color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                                  style: GoogleFonts.getFont(fontFamily, color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
                               const SizedBox(height: 4),
                               Text('The little details make OURS feel like home.',
-                                  style: TextStyle(fontFamily: fontFamily, color: lavender, fontSize: 12)),
+                                  style: GoogleFonts.getFont(fontFamily, color: lavender, fontSize: 12)),
                             ],
                           ),
                         ),
@@ -2559,8 +2600,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                           alignment: AlignmentDirectional.centerEnd,
                           child: TextButton(
                             onPressed: () async {
-                              setState(() => fontFamily = 'sans-serif');
-                              await OursAppSettings.setFontFamily('sans-serif');
+                              setState(() => fontFamily = 'Cairo');
+                              await OursAppSettings.setFontFamily('Cairo');
                             },
                             child: Text(oursText(context, 'استعادة الخط الافتراضي', 'Restore default font')),
                           ),
