@@ -888,8 +888,9 @@ class _OursAiPageState extends State<OursAiPage>{
   IconButton(onPressed:_chooseWallpaper,icon:Icon(Icons.wallpaper_outlined,color:skin.accent))
  ]),
   body:Stack(children:[
-   Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
-   if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Opacity(opacity:.22,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())))),
+   if(wallpaperPath==null)Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
+   if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>CustomPaint(painter:_ChatAtmospherePainter(skin))))),
+   if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:.58)))),
    SafeArea(child:Column(children:[
     Container(margin:const EdgeInsets.fromLTRB(12,8,12,4),padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(15)),child:Row(children:[Icon(Icons.lock_outline_rounded,color:skin.accent,size:19),const SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('سياق المحادثة','Chat context'),style:const TextStyle(fontWeight:FontWeight.w700,fontSize:12,color:Colors.white)),Text(t('اختياري · مغلق افتراضيًا','Optional · off by default'),style:TextStyle(color:skin.accent,fontSize:10))])),Switch(value:includeContext,onChanged:(v)=>setState(()=>includeContext=v),activeColor:skin.accent)])),
     SizedBox(height:40,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(mainAxisSize:MainAxisSize.min,children:[
@@ -1168,8 +1169,9 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
    IconButton(onPressed:_chooseWallpaper,icon:Icon(Icons.wallpaper_outlined,color:skin.accent))
   ]),
   body:Stack(children:[
-   Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
-   if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Opacity(opacity:.24,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())))),
+   if(wallpaperPath==null)Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
+   if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>CustomPaint(painter:_ChatAtmospherePainter(skin))))),
+   if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:.58)))),
    Column(children:[
     Expanded(child:loading?Center(child:CircularProgressIndicator(color:skin.accent)):rows.isEmpty
      ?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
