@@ -176,14 +176,24 @@ jobs:
           foreground = Image.new("RGBA", (size, size), (0, 0, 0, 0))
           draw = ImageDraw.Draw(foreground)
 
-          # One clean gold infinity mark; no circle, lettering, or decoration.
-          points = []
-          for step in range(2400):
-              t = 2 * math.pi * step / 2399
-              x = 512 + 300 * math.cos(t)
-              y = 512 + 180 * math.sin(2 * t)
-              points.append((round(x), round(y)))
-          draw.line(points, fill=gold, width=68, joint="curve")
+          # Integrated ZN + ⅝ monogram: a single flowing gold mark.
+          from PIL import ImageFont
+          font_candidates = [
+              "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+              "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+          ]
+          font_path = next((p for p in font_candidates if Path(p).exists()), None)
+          if font_path is None:
+              raise SystemExit("No supported bold font found for OURS launcher mark")
+          font = ImageFont.truetype(font_path, 330)
+          mark = "ZN"
+          box = draw.textbbox((0, 0), mark, font=font, stroke_width=0)
+          draw.text((512 - (box[2]-box[0])//2, 440 - (box[3]-box[1])//2),
+                    mark, font=font, fill=gold, stroke_width=2, stroke_fill=gold)
+          fraction_font = ImageFont.truetype(font_path, 190)
+          fraction_box = draw.textbbox((0, 0), "⅝", font=fraction_font)
+          draw.text((512 - (fraction_box[2]-fraction_box[0])//2, 650),
+                    "⅝", font=fraction_font, fill=gold)
 
           background = Image.new("RGBA", (size, size), navy)
           background.alpha_composite(foreground)
