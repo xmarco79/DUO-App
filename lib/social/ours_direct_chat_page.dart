@@ -747,21 +747,42 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    try{final result=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['png','jpg','jpeg','webp','gif'],withData:true);if(result==null||result.files.isEmpty)return;final file=result.files.single,bytes=file.bytes??(file.path==null?null:await File(file.path!).readAsBytes());if(bytes==null)return;await _upload(bytes,'sticker_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+file.name.split('.').last.toLowerCase(),'sticker');}
    catch(e){_show(t('تعذر إضافة الملصق: $e','Could not add sticker: $e'));}
   }
- Future<void> _consumeTemporaryMedia(String messageId) async{
+ Future<void> _playVideo(String path)async{
+  VideoPlayerController? controller;
   try{
+   final url=await _signed(path);controller=VideoPlayerController.networkUrl(Uri.parse(url));
+   await controller.initialize();
+   if(!mounted){await controller.dispose();return;}
+   await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>Dialog(backgroundColor:Colors.black,insetPadding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[
+    AspectRatio(aspectRatio:controller!.value.aspectRatio,child:VideoPlayer(controller)),
+    Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>setModal(()=>controller!.value.isPlaying?controller.pause():controller.play()),icon:Icon(controller!.value.isPlaying?Icons.pause:Icons.play_arrow,color:Colors.white)),IconButton(onPressed:()=>setModal(()=>controller!.seekTo(Duration.zero)),icon:const Icon(Icons.replay,color:Colors.white))]),
+    TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close'),style:const TextStyle(color:Colors.white)))
+   ]))));
+  }catch(e){_show(t('تعذر تشغيل الفيديو. تحقق من الاتصال.','Could not play video. Check your connection.'));}
+  finally{await controller?.dispose();}
+ }
+ Future<void> _consumeTemporaryMedia(String messageId) async{
+  VideoPlayerController? videoController;
+  try{
+   final media=messages.firstWhere((m)=>m['id'].toString()==messageId,orElse:()=>{});
+   final isVideo=media['mime_type']?.toString().startsWith('video/')==true||media['message_type']=='video';
    final path=await db.rpc('consume_ours_temporary_media',params:{'p_message_id':messageId}) as String?;
-   if(path==null||path.isEmpty){_show(t('انتهت مرات مشاهدة هذه الصورة','This photo has no views left'));await _load();return;}
+   if(path==null||path.isEmpty){_show(t('انتهت مرات مشاهدة هذه الوسائط','No views left for this media'));await _load();return;}
    final url=await _signed(path);
+   if(isVideo){videoController=VideoPlayerController.networkUrl(Uri.parse(url));await videoController!.initialize();}
+   if(!mounted)return;
    await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>Dialog(backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
-    Padding(padding:const EdgeInsets.all(12),child:Text(t('صورة مؤقتة','Temporary photo'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700))),
-    Expanded(child:Center(child:InteractiveViewer(minScale:.5,maxScale:4,child:Image.network(url,fit:BoxFit.contain)))),
+    Padding(padding:const EdgeInsets.all(12),child:Text(isVideo?t('فيديو مؤقت','Temporary video'):t('صورة مؤقتة','Temporary photo'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700))),
+    Expanded(child:Center(child:isVideo?AspectRatio(aspectRatio:videoController!.value.aspectRatio,child:VideoPlayer(videoController!)):InteractiveViewer(minScale:.5,maxScale:4,child:Image.network(url,fit:BoxFit.contain)))),
+    if(isVideo)Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>videoController!.value.isPlaying?videoController!.pause():videoController!.play(),icon:Icon(videoController!.value.isPlaying?Icons.pause:Icons.play_arrow,color:Colors.white)),IconButton(onPressed:()=>videoController!.seekTo(Duration.zero),icon:const Icon(Icons.replay,color:Colors.white))]),
     Padding(padding:const EdgeInsets.all(14),child:TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close'),style:const TextStyle(color:Colors.white))))
    ])))));
    final row=await db.from('duo_direct_messages').select('view_count,max_views').eq('id',messageId).maybeSingle();
    final count=(row?['view_count'] as num?)?.toInt()??1,limit=(row?['max_views'] as num?)?.toInt()??1;
-   if(count>=limit){await db.storage.from(_bucket).remove([path]);}
+   if(count>=limit)await db.storage.from(_bucket).remove([path]);
    if(mounted)await _load();
-  }catch(e){_show(t('تعذر فتح الصورة: $e','Could not open image: $e'));}
+  }catch(e){_show(t('تعذر فتح الوسائط: $e','Could not open media: $e'));}
+  finally{await videoController?.dispose();}
  }
  Future<void> _showAttachments() async{
   final choice=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,isScrollControlled:true,builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(18,8,18,22),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -988,7 +1009,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
             :FutureBuilder<String>(future:_signed(path),builder:(c,s)=>s.hasData
              ?Column(mainAxisSize:MainAxisSize.min,children:[ClipRRect(borderRadius:BorderRadius.circular(11),child:ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:13,sigmaY:13),child:Image.network(s.data!,width:210,height:130,fit:BoxFit.cover))),const SizedBox(height:7),TextButton.icon(onPressed:()=>_consumeTemporaryMedia(m['id'].toString()),icon:Icon(Icons.visibility_outlined,color:skin.accent),label:Text((m['max_views']==2)?t('فتح الصورة · مشاهدتان','Open photo · two views'):t('فتح الصورة · مرة واحدة','Open photo · once')))])
              :Text(t('صورة مؤقتة','Temporary photo'),style:TextStyle(color:skin.accent,fontSize:12)))
-          else if(type=='video')InkWell(onTap:()=>_openFile(path),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.play_circle_fill,color:skin.accent,size:36),const SizedBox(width:8),Text(t('مقطع فيديو · تشغيل','Video · Play'))]))
+          else if(type=='video')InkWell(onTap:()=>_playVideo(path),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.play_circle_fill,color:skin.accent,size:36),const SizedBox(width:8),Text(t('مقطع فيديو · تشغيل','Video · Play'))]))
           else if(type=='image')FutureBuilder<String>(future:_signed(path),builder:(c,s){
            if(s.hasError)return Text(t('تعذر تحميل الصورة','Could not load image'),style:TextStyle(color:skin.accent));
            if(!s.hasData)return SizedBox(width:190,height:125,child:Center(child:CircularProgressIndicator(color:skin.accent)));
