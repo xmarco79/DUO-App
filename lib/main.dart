@@ -249,6 +249,7 @@ class OursApp extends StatelessWidget {
         ),
         home: const OursEntryGate(),
       ),
+      ),
     );
   }
 }
@@ -350,6 +351,7 @@ class WelcomePage extends StatelessWidget {
             ),
           ),
         ),
+      ),
     );
   }
 }
