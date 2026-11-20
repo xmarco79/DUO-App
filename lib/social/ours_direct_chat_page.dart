@@ -682,7 +682,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Widget _previewTool(String label,IconData icon,bool active,VoidCallback onTap)=>Expanded(child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(13),child:Container(padding:const EdgeInsets.symmetric(vertical:9,horizontal:3),decoration:BoxDecoration(color:active?skin.accent.withValues(alpha:.17):Colors.white.withValues(alpha:.04),borderRadius:BorderRadius.circular(13),border:Border.all(color:active?skin.accent.withValues(alpha:.6):Colors.white.withValues(alpha:.08))),child:Column(children:[Icon(icon,color:skin.accent,size:21),const SizedBox(height:4),Text(label,style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700))]))));
  Future<void> _pickImageWithMode() async{
   try{
-   final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);if(f==null)return;
+   final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:100,maxWidth:4096,maxHeight:4096);if(f==null)return;
    final bytes=await f.readAsBytes();final mode=await _previewMedia(bytes:bytes,name:f.name,video:false);if(mode==null)return;final edited=_editedPreviewBytes??bytes;_editedPreviewBytes=null;
    final ext=f.name.split('.').last.toLowerCase();final name=['png','webp'].contains(ext)?f.name:'photo_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
    await _upload(edited,name,mode=='normal'?'image':mode=='once'?'view_once':'view_twice',maxViews:mode=='twice'?2:1);
