@@ -285,6 +285,18 @@ jobs:
           bg = Image.alpha_composite(bg, ribbon)
           master = Image.alpha_composite(bg, art)
 
+          # Prefer the approved image artwork stored in assets/ours_icon.png.
+          # Apply a 45% saturation reduction (retain 55% saturation) and use
+          # that artwork for launcher, adaptive foreground, and splash outputs.
+          approved_icon = Path("assets/ours_icon.png")
+          if approved_icon.exists():
+              from PIL import ImageEnhance
+              approved = Image.open(approved_icon).convert("RGBA")
+              approved = ImageEnhance.Color(approved).enhance(0.55)
+              approved = approved.resize((S, S), Image.Resampling.LANCZOS)
+              master = approved
+              art = approved
+
           Path("assets").mkdir(exist_ok=True)
           master.resize((1024, 1024), Image.Resampling.LANCZOS).convert("RGB").save(
               "assets/ours_launcher_master.png", optimize=True)
