@@ -637,6 +637,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    <double>[.393,.769,.189,0,0,.349,.686,.168,0,0,.272,.534,.131,0,0,0,0,0,1,0],
    <double>[.85,0,0,0,18,0,.94,0,0,8,0,0,1.12,0,18,0,0,0,1,0],
    <double>[1.15,0,0,0,8,0,1.15,0,0,8,0,0,1.15,0,8,0,0,0,1,0],
+   <double>[1.08,0,0,0,0,0,.92,0,0,4,0,0,.82,0,12,0,0,0,1,0],
+   <double>[.9,0,0,0,18,0,.9,0,0,12,0,0,.9,0,6,0,0,0,1,0],
+   <double>[1.12,0,0,0,0,0,1.02,0,0,0,0,0,.92,0,0,0,0,0,1,0],
+   <double>[.95,.05,0,0,0,.02,1.04,.02,0,0,0,.03,1.1,0,0,0,0,0,1,0],
   ];
   canvas.drawImageRect(source,src,dst,Paint()..filterQuality=FilterQuality.high..colorFilter=ColorFilter.matrix(matrices[filter.clamp(0,3).toInt()]));
   for(final stroke in strokes){if(stroke.length<2)continue;final path=Path()..moveTo(stroke.first.dx*w,stroke.first.dy*h);for(final point in stroke.skip(1)){path.lineTo(point.dx*w,point.dy*h);}canvas.drawPath(path,Paint()..color=const Color(0xFFFFD66B)..strokeWidth=(w/260).clamp(4,16).toDouble()..strokeCap=StrokeCap.round..style=PaintingStyle.stroke);}
@@ -654,7 +658,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      onPanUpdate:drawing?(d)=>setEditor(()=>activeStroke.add(Offset((d.localPosition.dx/constraints.maxWidth).clamp(0,1),(d.localPosition.dy/constraints.maxHeight).clamp(0,1)))):null,
      onPanEnd:drawing?(_)=>setEditor((){if(activeStroke.isNotEmpty)strokes.add(List<Offset>.from(activeStroke));activeStroke=[];}):null,
      child:Stack(fit:StackFit.expand,children:[
-      Center(child:Transform.scale(scale:crop,child:ColorFiltered(colorFilter:const [ColorFilter.mode(Colors.transparent,BlendMode.dst),ColorFilter.matrix(<double>[.393,.769,.189,0,0,.349,.686,.168,0,0,.272,.534,.131,0,0,0,0,0,1,0]),ColorFilter.matrix(<double>[.85,0,0,0,18,0,.94,0,0,8,0,0,1.12,0,18,0,0,0,1,0]),ColorFilter.matrix(<double>[1.15,0,0,0,8,0,1.15,0,0,8,0,0,1.15,0,8,0,0,0,1,0])][filter],child:Image.memory(bytes,fit:BoxFit.contain,width:constraints.maxWidth,height:constraints.maxHeight)))),
+      Center(child:Transform.scale(scale:crop,child:ColorFiltered(colorFilter:const [ColorFilter.mode(Colors.transparent,BlendMode.dst),ColorFilter.matrix(<double>[.393,.769,.189,0,0,.349,.686,.168,0,0,.272,.534,.131,0,0,0,0,0,1,0]),ColorFilter.matrix(<double>[.85,0,0,0,18,0,.94,0,0,8,0,0,1.12,0,18,0,0,0,1,0]),ColorFilter.matrix(<double>[1.15,0,0,0,8,0,1.15,0,0,8,0,0,1.15,0,8,0,0,0,1,0]),ColorFilter.matrix(<double>[1.08,0,0,0,0,0,.92,0,0,4,0,0,.82,0,12,0,0,0,1,0]),ColorFilter.matrix(<double>[.9,0,0,0,18,0,.9,0,0,12,0,0,.9,0,6,0,0,0,1,0]),ColorFilter.matrix(<double>[1.12,0,0,0,0,0,1.02,0,0,0,0,0,.92,0,0,0,0,0,1,0]),ColorFilter.matrix(<double>[.95,.05,0,0,0,.02,1.04,.02,0,0,0,.03,1.1,0,0,0,0,0,1,0])][filter],child:Image.memory(bytes,fit:BoxFit.contain,width:constraints.maxWidth,height:constraints.maxHeight)))),
       CustomPaint(painter:_PreviewStrokePainter([...strokes,if(activeStroke.isNotEmpty)activeStroke])),
      ])
     )))),
