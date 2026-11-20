@@ -290,12 +290,19 @@ jobs:
           # that artwork for launcher, adaptive foreground, and splash outputs.
           approved_icon = Path("assets/ours_icon.png")
           if approved_icon.exists():
-              from PIL import ImageEnhance
-              approved = Image.open(approved_icon).convert("RGBA")
-              approved = ImageEnhance.Color(approved).enhance(0.55)
-              approved = approved.resize((S, S), Image.Resampling.LANCZOS)
-              master = approved
-              art = approved
+              from PIL import ImageEnhance, ImageFile
+              # Repository artwork may be a partially encoded PNG; tolerate its
+              # truncated stream so the approved visual is still used.
+              ImageFile.LOAD_TRUNCATED_IMAGES = True
+              try:
+                  approved = Image.open(approved_icon).convert("RGBA")
+                  approved = ImageEnhance.Color(approved).enhance(0.55)
+                  approved = approved.resize((S, S), Image.Resampling.LANCZOS)
+                  master = approved
+                  art = approved
+                  print("Using approved icon artwork with saturation reduced by 45%.")
+              except Exception as exc:
+                  print(f"Approved image could not be decoded ({exc}); fallback artwork will be used.")
 
           Path("assets").mkdir(exist_ok=True)
           master.resize((1024, 1024), Image.Resampling.LANCZOS).convert("RGB").save(
