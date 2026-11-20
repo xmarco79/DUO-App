@@ -455,8 +455,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){_show(t('تعذر اختيار الفيديو: $e','Could not select video: $e'));}
  }
   Future<String> _signedSticker(String path){
-   if(widget.spaceId!=null&&path.startsWith('${widget.spaceId}/'))return db.storage.from('ours-stickers').createSignedUrl(path,900);
-   return _signed(path);
+   return urls.putIfAbsent('sticker:$path',(){
+    if(widget.spaceId!=null&&path.startsWith('${widget.spaceId}/'))return db.storage.from('ours-stickers').createSignedUrl(path,900);
+    return _signed(path);
+   });
   }
   Future<void> _createSharedSticker()async{
    if(widget.spaceId==null){_show(t('تعذر تحديد مساحتكما','Could not find your shared space'));return;}
@@ -489,6 +491,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':chosen,'message_type':'sticker'});return;
    }
    List<Map<String,dynamic>> stickers=[];final favorites=<String>{};
+   urls.removeWhere((key,_)=>key.startsWith('sticker:'));
    try{
     final data=await db.from('duo_stickers').select('id,pack_name,display_name,storage_path,is_animated,created_at').eq('space_id',widget.spaceId!).order('created_at',ascending:false);
     stickers=List<Map<String,dynamic>>.from(data);
@@ -501,6 +504,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     final visible=stickers.where((x)=>selectedPack=='all'||(selectedPack=='favorites'?favorites.contains(x['id'].toString()):(x['pack_name']??'OURS').toString()==selectedPack)).toList();
     return SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.72,child:Column(children:[
      Padding(padding:const EdgeInsets.fromLTRB(14,12,14,6),child:Row(children:[Expanded(child:Text(t('مكتبة ملصقات OURS','OURS Sticker Library'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900))),IconButton(onPressed:()=>Navigator.pop(ctx,'__add__'),icon:Icon(Icons.add_photo_alternate_outlined,color:skin.accent))])),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),child:TextField(controller:searchController,onChanged:(_)=>setModal((){}),decoration:InputDecoration(hintText:t('ابحث عن ملصق أو حزمة','Search stickers or packs'),prefixIcon:Icon(Icons.search,color:skin.accent),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(14),borderSide:BorderSide.none)))),
      SizedBox(height:42,child:ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:12),children:packs.map((pack)=>Padding(padding:const EdgeInsetsDirectional.only(end:7),child:ChoiceChip(label:Text(pack=='all'?t('الكل','All'):pack=='favorites'?t('المفضلة','Favorites'):pack),selected:selectedPack==pack,onSelected:(_)=>setModal(()=>selectedPack=pack),selectedColor:skin.accent,backgroundColor:skin.partner,labelStyle:TextStyle(color:selectedPack==pack?skin.bg:Colors.white,fontSize:11)))).toList())),
      Expanded(child:visible.isEmpty?Center(child:Text(t('لا توجد ملصقات في هذه الحزمة بعد','No stickers in this pack yet'),style:TextStyle(color:skin.accent))):GridView.builder(padding:const EdgeInsets.all(12),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,childAspectRatio:.82,crossAxisSpacing:9,mainAxisSpacing:9),itemCount:visible.length,itemBuilder:(ctx,i){
       final item=visible[i],id=item['id'].toString(),path=item['storage_path'].toString(),name=(item['display_name']??'OURS').toString(),favorite=favorites.contains(id);
