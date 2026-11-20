@@ -158,18 +158,32 @@ class _ChatAtmospherePainter extends CustomPainter {
 
 
 class _MessageBubbleClipper extends CustomClipper<Path> {
- final bool mine;
- const _MessageBubbleClipper({required this.mine});
+ final bool tailOnLeft;
+ const _MessageBubbleClipper({required this.tailOnLeft});
  @override
  Path getClip(Size size) {
-  const r=18.0, tailW=10.0, tailH=9.0;
-  final p=Path()..moveTo(r,0)..lineTo(size.width-r,0)..quadraticBezierTo(size.width,0,size.width,r)..lineTo(size.width,size.height-tailH-r)..quadraticBezierTo(size.width,size.height-tailH,size.width-r,size.height-tailH);
-  if(mine){p.lineTo(size.width-tailW,size.height-tailH);p.quadraticBezierTo(size.width-tailW*.55,size.height-tailH*.35,size.width-tailW*.15,size.height);p.quadraticBezierTo(size.width-tailW*.15,size.height-tailH*.45,size.width-r,size.height-tailH);}
-  else{p.lineTo(r,size.height-tailH);p.quadraticBezierTo(tailW*.15,size.height-tailH*.45,tailW*.15,size.height);p.quadraticBezierTo(tailW*.55,size.height-tailH*.35,tailW,size.height-tailH);p.lineTo(r,size.height-tailH);}
-  p.lineTo(r,size.height-tailH);p.quadraticBezierTo(0,size.height-tailH,0,size.height-tailH-r);p.lineTo(0,r);p.quadraticBezierTo(0,0,r,0);
+  const r=18.0, tailW=11.0, tailH=9.0;
+  final bodyBottom=size.height-tailH;
+  final p=Path()
+   ..moveTo(r,0)..lineTo(size.width-r,0)
+   ..quadraticBezierTo(size.width,0,size.width,r)
+   ..lineTo(size.width,bodyBottom-r)
+   ..quadraticBezierTo(size.width,bodyBottom,size.width-r,bodyBottom);
+  if(tailOnLeft){
+   p.lineTo(r+tailW,bodyBottom)
+    ..quadraticBezierTo(r+tailW*.45,bodyBottom+tailH*.12,r+tailW*.18,size.height)
+    ..quadraticBezierTo(r+tailW*.12,bodyBottom+tailH*.42,r,bodyBottom);
+  }else{
+   p.lineTo(size.width-r-tailW,bodyBottom)
+    ..quadraticBezierTo(size.width-r-tailW*.45,bodyBottom+tailH*.12,size.width-r-tailW*.18,size.height)
+    ..quadraticBezierTo(size.width-r-tailW*.12,bodyBottom+tailH*.42,size.width-r,bodyBottom);
+  }
+  p.lineTo(r,bodyBottom)
+   ..quadraticBezierTo(0,bodyBottom,0,bodyBottom-r)
+   ..lineTo(0,r)..quadraticBezierTo(0,0,r,0);
   return p..close();
  }
- @override bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.mine!=mine;
+ @override bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
 }
 
 class OursDirectChatPage extends StatefulWidget{
@@ -378,8 +392,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   try{
    final hidden=await db.from('ours_direct_message_hides').select('message_id').eq('user_id',uid);
    hiddenIds..clear()..addAll(hidden.map((r)=>r['message_id'].toString()));
-   final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at');
-   if(!mounted)return;setState((){messages..clear()..addAll(List<Map<String,dynamic>>.from(rows).where((m)=>!hiddenIds.contains(m['id'].toString())));loading=false;});
+   final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at',ascending:true);
+   final ordered=List<Map<String,dynamic>>.from(rows).where((m)=>!hiddenIds.contains(m['id'].toString())).toList()..sort(_compareMessages);
+   if(!mounted)return;setState((){messages..clear()..addAll(ordered);loading=false;});
    await db.rpc('mark_ours_direct_messages_read',params:{'p_conversation_id':widget.conversationId});
    _bottom();
   }catch(e){if(mounted){setState(()=>loading=false);_show(t('تعذر تحميل المحادثة. تحقق من الاتصال وحاول مجددًا.','Could not load conversation. Check your connection and try again.'));}}
@@ -388,7 +403,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final filter=PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'conversation_id',value:widget.conversationId);
   channel=db.channel('ours-direct-'+widget.conversationId)
    .onPostgresChanges(event:PostgresChangeEvent.insert,schema:'public',table:'duo_direct_messages',filter:filter,callback:(p){
-    final row=Map<String,dynamic>.from(p.newRecord);if(!mounted||hiddenIds.contains(row['id'].toString())||messages.any((m)=>m['id']==row['id']))return;setState(()=>messages.add(row));_bottom();
+    final row=Map<String,dynamic>.from(p.newRecord);if(!mounted||hiddenIds.contains(row['id'].toString())||messages.any((m)=>m['id'].toString()==row['id'].toString()))return;setState((){messages.add(row);messages.sort(_compareMessages);});_bottom();
     if(row['sender_id']?.toString()!=uid){db.rpc('mark_ours_direct_messages_read',params:{'p_conversation_id':widget.conversationId});}
    })
    .onPostgresChanges(event:PostgresChangeEvent.delete,schema:'public',table:'duo_direct_messages',callback:(p){
@@ -397,6 +412,12 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    .onPostgresChanges(event:PostgresChangeEvent.update,schema:'public',table:'duo_direct_messages',filter:filter,callback:(p){
     final row=Map<String,dynamic>.from(p.newRecord);if(!mounted)return;final index=messages.indexWhere((m)=>m['id'].toString()==row['id'].toString());if(index>=0)setState(()=>messages[index]=row);
    }).subscribe();
+ }
+ int _compareMessages(Map<String,dynamic> a,Map<String,dynamic> b){
+  final at=DateTime.tryParse(a['created_at']?.toString()??'')??DateTime.fromMillisecondsSinceEpoch(0);
+  final bt=DateTime.tryParse(b['created_at']?.toString()??'')??DateTime.fromMillisecondsSinceEpoch(0);
+  final byTime=at.compareTo(bt);if(byTime!=0)return byTime;
+  return (a['id']?.toString()??'').compareTo(b['id']?.toString()??'');
  }
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
  void _show(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
@@ -758,7 +779,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
-        child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:ClipPath(clipper:_MessageBubbleClipper(mine:mine),child:Container(
+        child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:ClipPath(clipper:_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==TextDirection.rtl:Directionality.of(context)==TextDirection.ltr),child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.fromLTRB(10,10,10,13),
          decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
