@@ -301,6 +301,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController(),picker=ImagePicker();
  final Map<String,Future<String>> urls={};final List<Map<String,dynamic>> messages=[];
  final Set<String> hiddenIds={};
+ Uint8List? _editedPreviewBytes;
  Map<String,dynamic>? replyTo;
  RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
  Timer? typingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId;
@@ -626,26 +627,65 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    catch(_){await db.storage.from(_bucket).remove([path]);rethrow;}
   }catch(e){_show(t('تعذر رفع المرفق. تحقق من الاتصال.','Could not upload the attachment. Check your connection.'));}finally{if(mounted)setState(()=>uploading=false);}
  }
- Future<String?> _previewMedia({required Uint8List bytes,required String name,required bool video}) async{
-  final isImage=!video;String mode='normal';
-  return await showDialog<String>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('معاينة قبل الإرسال','Preview before sending')),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-   if(isImage)ClipRRect(borderRadius:BorderRadius.circular(14),child:Image.memory(bytes,height:230,fit:BoxFit.contain))
-   else Container(height:170,width:260,decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Icon(Icons.video_file_rounded,color:skin.accent,size:70)),
-   const SizedBox(height:12),Text(name,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent)),
-   if(isImage)Padding(padding:const EdgeInsets.only(top:10),child:Wrap(spacing:6,children:[
-    ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setModal(()=>mode='normal')),
-    ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setModal(()=>mode='once')),
-    ChoiceChip(label:Text(t('مرتين','Twice')),selected:mode=='twice',onSelected:(_)=>setModal(()=>mode='twice')),
-   ])),
-   const SizedBox(height:8),Text(t('لن يتم إرسال الملف حتى تضغط إرسال.','The media is not sent until you tap Send.'),style:TextStyle(color:skin.accent,fontSize:12),textAlign:TextAlign.center)
-  ])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,null),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,mode),child:Text(t('إرسال','Send')))])));
+ Future<Uint8List> _renderEditedImage(Uint8List bytes,int filter,double crop,List<List<Offset>> strokes) async{
+  final codec=await ui.instantiateImageCodec(bytes);final frame=await codec.getNextFrame();final source=frame.image;
+  final recorder=ui.PictureRecorder();final canvas=Canvas(recorder);
+  final w=source.width.toDouble(),h=source.height.toDouble(),sw=w/crop,sh=h/crop;
+  final src=Rect.fromLTWH((w-sw)/2,(h-sh)/2,sw,sh),dst=Rect.fromLTWH(0,0,w,h);
+  const matrices=<List<double>>[
+   <double>[1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0],
+   <double>[.393,.769,.189,0,0,.349,.686,.168,0,0,.272,.534,.131,0,0,0,0,0,1,0],
+   <double>[.85,0,0,0,18,0,.94,0,0,8,0,0,1.12,0,18,0,0,0,1,0],
+   <double>[1.15,0,0,0,8,0,1.15,0,0,8,0,0,1.15,0,8,0,0,0,1,0],
+  ];
+  canvas.drawImageRect(source,src,dst,Paint()..filterQuality=FilterQuality.high..colorFilter=ColorFilter.matrix(matrices[filter.clamp(0,3)]));
+  for(final stroke in strokes){if(stroke.length<2)continue;final path=Path()..moveTo(stroke.first.dx*w,stroke.first.dy*h);for(final point in stroke.skip(1)){path.lineTo(point.dx*w,point.dy*h);}canvas.drawPath(path,Paint()..color=const Color(0xFFFFD66B)..strokeWidth=(w/260).clamp(4,16)..strokeCap=StrokeCap.round..style=PaintingStyle.stroke);}
+  final picture=recorder.endRecording();final image=await picture.toImage(source.width,source.height);final data=await image.toByteData(format:ui.ImageByteFormat.png);
+  source.dispose();image.dispose();picture.dispose();codec.dispose();if(data==null)throw Exception('Image export failed');return data.buffer.asUint8List();
  }
+ Future<String?> _previewMedia({required Uint8List bytes,required String name,required bool video}) async{
+  var mode='normal',filter=0;var crop=1.0;var drawing=false;var strokes=<List<Offset>>[];var activeStroke=<Offset>[];
+  _editedPreviewBytes=null;
+  return await showDialog<String>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setEditor)=>Dialog(
+   backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
+    Padding(padding:const EdgeInsets.fromLTRB(14,8,8,8),child:Row(children:[Icon(Icons.auto_awesome_rounded,color:skin.accent),const SizedBox(width:9),Expanded(child:Text(t('استوديو معاينة الوسائط','Media preview studio'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900))),IconButton(onPressed:()=>Navigator.pop(ctx,null),icon:const Icon(Icons.close,color:Colors.white))])),
+    Expanded(child:Center(child:video?Container(width:double.infinity,margin:const EdgeInsets.all(16),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(22)),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(Icons.video_file_rounded,color:skin.accent,size:72),Text(name,style:TextStyle(color:skin.accent),maxLines:2,overflow:TextOverflow.ellipsis)])):LayoutBuilder(builder:(context,constraints)=>GestureDetector(
+     onPanStart:drawing?(d)=>setEditor(()=>activeStroke=[Offset((d.localPosition.dx/constraints.maxWidth).clamp(0,1),(d.localPosition.dy/constraints.maxHeight).clamp(0,1)]):null,
+     onPanUpdate:drawing?(d)=>setEditor(()=>activeStroke.add(Offset((d.localPosition.dx/constraints.maxWidth).clamp(0,1),(d.localPosition.dy/constraints.maxHeight).clamp(0,1)))):null,
+     onPanEnd:drawing?(_)=>setEditor(()=>{if(activeStroke.isNotEmpty)strokes.add(List<Offset>.from(activeStroke));activeStroke=[];}):null,
+     child:Stack(fit:StackFit.expand,children:[
+      Center(child:Transform.scale(scale:crop,child:ColorFiltered(colorFilter:const [ColorFilter.mode(Colors.transparent,BlendMode.dst),ColorFilter.matrix(<double>[.393,.769,.189,0,0,.349,.686,.168,0,0,.272,.534,.131,0,0,0,0,0,1,0]),ColorFilter.matrix(<double>[.85,0,0,0,18,0,.94,0,0,8,0,0,1.12,0,18,0,0,0,1,0]),ColorFilter.matrix(<double>[1.15,0,0,0,8,0,1.15,0,0,8,0,0,1.15,0,8,0,0,0,1,0])][filter],child:Image.memory(bytes,fit:BoxFit.contain,width:constraints.maxWidth,height:constraints.maxHeight)))),
+      CustomPaint(painter:_PreviewStrokePainter([...strokes,if(activeStroke.isNotEmpty)activeStroke])),
+     ])
+    )))),
+    if(!video)Container(padding:const EdgeInsets.fromLTRB(14,10,14,12),decoration:BoxDecoration(color:const Color(0xFF171326),border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.22)))),child:Column(mainAxisSize:MainAxisSize.min,children:[
+     Row(children:[
+      _previewTool(t('قص','Crop'),Icons.crop_rounded,crop>1.01,()=>setEditor(()=>crop=crop>=1.8?1.0:crop+.2)),
+      _previewTool(t('رسم','Draw'),Icons.draw_rounded,drawing,()=>setEditor(()=>drawing=!drawing)),
+      _previewTool(t('الفلاتر','Filters'),Icons.filter_vintage_rounded,filter!=0,()=>setEditor(()=>filter=(filter+1)%4)),
+      _previewTool('HD',Icons.hd_rounded,true,()=>{})
+     ]),
+     const SizedBox(height:8),Row(children:[Expanded(child:Text(t('جودة أصلية عالية','Original high quality'),style:TextStyle(color:skin.accent,fontSize:11))),Text(t('فلتر '+(filter+1).toString()+' / 4','Filter '+(filter+1).toString()+' / 4'),style:TextStyle(color:skin.accent,fontSize:10)),IconButton(onPressed:()=>setEditor((){filter=0;crop=1;drawing=false;strokes.clear();activeStroke.clear();}),icon:Icon(Icons.restart_alt_rounded,color:skin.accent))]),
+     Wrap(spacing:7,children:[
+      ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setEditor(()=>mode='normal')),
+      ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setEditor(()=>mode='once')),
+      ChoiceChip(label:Text(t('مرتين','Twice')),selected:mode=='twice',onSelected:(_)=>setEditor(()=>mode='twice')),
+     ])
+    ])),
+    Padding(padding:const EdgeInsets.fromLTRB(14,8,14,14),child:Row(children:[
+     Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(ctx,null),child:Text(t('إلغاء','Cancel')))),
+     const SizedBox(width:10),Expanded(child:FilledButton.icon(onPressed:()async{try{if(!video)_editedPreviewBytes=await _renderEditedImage(bytes,filter,crop,strokes);if(ctx.mounted)Navigator.pop(ctx,mode);}catch(_){_show(t('تعذر تطبيق التعديلات','Could not apply edits'));}},icon:const Icon(Icons.send_rounded),label:Text(t('إرسال','Send'))))
+    ]))
+   ])))
+  )));
+ }
+ Widget _previewTool(String label,IconData icon,bool active,VoidCallback onTap)=>Expanded(child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(13),child:Container(padding:const EdgeInsets.symmetric(vertical:9,horizontal:3),decoration:BoxDecoration(color:active?skin.accent.withValues(alpha:.17):Colors.white.withValues(alpha:.04),borderRadius:BorderRadius.circular(13),border:Border.all(color:active?skin.accent.withValues(alpha:.6):Colors.white.withValues(alpha:.08))),child:Column(children:[Icon(icon,color:skin.accent,size:21),const SizedBox(height:4),Text(label,style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700))]))));
  Future<void> _pickImageWithMode() async{
   try{
    final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);if(f==null)return;
-   final bytes=await f.readAsBytes();final mode=await _previewMedia(bytes:bytes,name:f.name,video:false);if(mode==null)return;
+   final bytes=await f.readAsBytes();final mode=await _previewMedia(bytes:bytes,name:f.name,video:false);if(mode==null)return;final edited=_editedPreviewBytes??bytes;_editedPreviewBytes=null;
    final ext=f.name.split('.').last.toLowerCase();final name=['png','webp'].contains(ext)?f.name:'photo_'+DateTime.now().millisecondsSinceEpoch.toString()+'.jpg';
-   await _upload(bytes,name,mode=='normal'?'image':mode=='once'?'view_once':'view_twice',maxViews:mode=='twice'?2:1);
+   await _upload(edited,name,mode=='normal'?'image':mode=='once'?'view_once':'view_twice',maxViews:mode=='twice'?2:1);
   }catch(e){_show(t('تعذر اختيار الصورة: $e','Could not select image: $e'));}
  }
  Future<bool> _previewVideoFile(String path) async{
