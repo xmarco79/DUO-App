@@ -162,7 +162,8 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  const _MessageBubbleClipper({required this.tailOnLeft});
  @override
  Path getClip(Size size) {
-  const radius=21.0,tailWidth=13.0,tailHeight=8.0;
+  final radius=math.min(18.0,size.width*.30),tailWidth=math.min(12.0,size.width*.22);
+  const tailHeight=8.0;
   final bottom=size.height-tailHeight;
   final path=Path()..moveTo(radius,0)..lineTo(size.width-radius,0)
    ..cubicTo(size.width-radius*.42,0,size.width,radius*.42,size.width,radius)
@@ -450,7 +451,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    if(action=='new'){
     final dir=await getApplicationDocumentsDirectory();
     final target=File('${dir.path}/ours_chat_wallpaper_${widget.conversationId}.jpg');
-    await source.copy(target.path);
+    await source!.copy(target.path);
     targetPath=target.path;
    }
    await prefs.setString('ours_direct_wallpaper_'+widget.conversationId,targetPath);
@@ -862,8 +863,8 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
         child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:3.5,shadowColor:skin.accent.withValues(alpha:.16),clipBehavior:Clip.antiAlias,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.fromLTRB(10,10,10,13),
-         decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:highlightedMessageId==m['id'].toString()?[skin.accent.withValues(alpha:.38),skin.partner.withValues(alpha:.94)]:mine?[skin.mine.withValues(alpha:.98),skin.mine.withValues(alpha:.78)]:[skin.partner.withValues(alpha:.98),skin.partner.withValues(alpha:.76)]),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.22),width:highlightedMessageId==m['id'].toString()?1.8:1)),
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),margin:const EdgeInsets.symmetric(vertical:6),padding:const EdgeInsets.fromLTRB(16,12,16,14),
+         decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:highlightedMessageId==m['id'].toString()?[skin.accent.withValues(alpha:.38),skin.partner.withValues(alpha:.94)]:mine?[skin.mine.withValues(alpha:.98),skin.mine.withValues(alpha:.78)]:[skin.partner.withValues(alpha:.98),skin.partner.withValues(alpha:.76)]),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.35):_lavender.withValues(alpha:.20)),width:highlightedMessageId==m['id'].toString()?1.8:1)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
@@ -896,7 +897,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
            ]))
           ]))
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
-          else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
+          else SelectableText(path,style:const TextStyle(color:Colors.white,fontSize:16,height:1.45)),
           const SizedBox(height:4),Align(alignment:AlignmentDirectional.centerEnd,child:Row(mainAxisSize:MainAxisSize.min,children:[
            Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)),
            if(mine)Padding(padding:const EdgeInsetsDirectional.only(start:5),child:Icon(m['read_at']!=null?Icons.done_all_rounded:Icons.done_rounded,color:m['read_at']!=null?skin.accent:skin.accent.withValues(alpha:.55),size:13))
