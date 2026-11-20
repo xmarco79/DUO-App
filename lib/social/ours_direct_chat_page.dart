@@ -1578,7 +1578,7 @@ class _PreviewStrokePainter extends CustomPainter{
  final List<List<Offset>> strokes;
  const _PreviewStrokePainter(this.strokes);
  @override void paint(Canvas canvas,Size size){
-  for(final stroke in strokes){if(stroke.length<2)continue;final path=Path()..moveTo(stroke.first.dx*size.width,stroke.first.dy*size.height);for(final point in stroke.skip(1)){path.lineTo(point.dx*size.width,point.dy*size.height);}canvas.drawPath(path,Paint()..color=const Color(0xFFFFD66B)..strokeWidth:4..strokeCap=StrokeCap.round..style=PaintingStyle.stroke);}
+  for(final stroke in strokes){if(stroke.length<2)continue;final path=Path()..moveTo(stroke.first.dx*size.width,stroke.first.dy*size.height);for(final point in stroke.skip(1)){path.lineTo(point.dx*size.width,point.dy*size.height);}canvas.drawPath(path,Paint()..color=const Color(0xFFFFD66B)..strokeWidth=4..strokeCap=StrokeCap.round..style=PaintingStyle.stroke);}
  }
  @override bool shouldRepaint(covariant _PreviewStrokePainter old)=>old.strokes!=strokes;
 }
