@@ -231,7 +231,7 @@ jobs:
           fraction = Image.new("L", (S, S), 0)
           ImageDraw.Draw(fraction).text((1515, 690), "⅝", font=fraction_font, fill=255)
 
-          mask = ImageChops = Image.new("L", (S, S), 0)
+          mask = Image.new("L", (S, S), 0)
           mask = Image.composite(strokes, mask, strokes)
           mask = Image.composite(fraction, mask, fraction)
 
