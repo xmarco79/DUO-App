@@ -1976,17 +1976,21 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   Future<void> loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
+    final savedFont = prefs.getString('ours_font_family');
+    final migratedFont = savedFont == null || savedFont == 'Amiri'
+        ? 'Noto Sans Arabic'
+        : savedFont;
+    final normalizedFont = OursAppSettings.supportedFonts.contains(migratedFont)
+        ? migratedFont
+        : 'Noto Sans Arabic';
+    if (savedFont == null || savedFont == 'Amiri') {
+      await prefs.setString('ours_font_family', 'Noto Sans Arabic');
+    }
     setState(() {
       quietMode = prefs.getBool('ours_quiet_mode') ?? false;
       confirmBeforeDelete = prefs.getBool('ours_confirm_delete') ?? true;
       languageCode = prefs.getString('ours_language') ?? 'ar';
-      final savedFont = prefs.getString('ours_font_family');
-      final migratedFont = savedFont == null || savedFont == 'Amiri' ? 'Noto Sans Arabic' : savedFont;
-      fontFamily = OursAppSettings.supportedFonts.contains(migratedFont) ? migratedFont : 'Noto Sans Arabic';
-      if (savedFont == null || savedFont == 'Amiri') {
-        fontFamily = 'Noto Sans Arabic';
-        await prefs.setString('ours_font_family', 'Noto Sans Arabic');
-      }
+      fontFamily = normalizedFont;
     });
   }
 
