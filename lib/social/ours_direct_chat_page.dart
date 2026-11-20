@@ -451,7 +451,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    if(action=='new'){
     final dir=await getApplicationDocumentsDirectory();
     final target=File('${dir.path}/ours_chat_wallpaper_${widget.conversationId}.jpg');
-    await source!.copy(target.path);
+    await source.copy(target.path);
     targetPath=target.path;
    }
    await prefs.setString('ours_direct_wallpaper_'+widget.conversationId,targetPath);
