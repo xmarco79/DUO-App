@@ -1572,3 +1572,13 @@ class _ChatDetailTile extends StatelessWidget{
  const _ChatDetailTile({required this.icon,required this.title,required this.subtitle,required this.accent,required this.onTap});
  @override Widget build(BuildContext c)=>InkWell(onTap:onTap,borderRadius:BorderRadius.circular(17),child:Container(margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.symmetric(horizontal:14,vertical:13),decoration:BoxDecoration(color:const Color(0xFF211D30),borderRadius:BorderRadius.circular(17),border:Border.all(color:accent.withValues(alpha:.15))),child:Row(children:[Container(width:38,height:38,decoration:BoxDecoration(color:accent.withValues(alpha:.12),borderRadius:BorderRadius.circular(12)),child:Icon(icon,color:accent,size:21)),const SizedBox(width:11),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),const SizedBox(height:3),Text(subtitle,style:TextStyle(color:accent.withValues(alpha:.8),fontSize:11))])),Icon(Icons.chevron_right_rounded,color:accent.withValues(alpha:.6))])));}
 
+
+
+class _PreviewStrokePainter extends CustomPainter{
+ final List<List<Offset>> strokes;
+ const _PreviewStrokePainter(this.strokes);
+ @override void paint(Canvas canvas,Size size){
+  for(final stroke in strokes){if(stroke.length<2)continue;final path=Path()..moveTo(stroke.first.dx*size.width,stroke.first.dy*size.height);for(final point in stroke.skip(1)){path.lineTo(point.dx*size.width,point.dy*size.height);}canvas.drawPath(path,Paint()..color=const Color(0xFFFFD66B)..strokeWidth:4..strokeCap=StrokeCap.round..style=PaintingStyle.stroke);}
+ }
+ @override bool shouldRepaint(covariant _PreviewStrokePainter old)=>old.strokes!=strokes;
+}
