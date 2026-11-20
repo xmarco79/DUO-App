@@ -363,6 +363,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    try{
     final picked=await picker.pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);
     if(picked==null)return;
+    final approved=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('معاينة الخلفية','Preview wallpaper'),style:TextStyle(color:skin.accent)),content:ClipRRect(borderRadius:BorderRadius.circular(14),child:Image.file(File(picked.path),height:230,width:280,fit:BoxFit.cover)),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(t('تطبيق','Apply')))]));
+    if(approved!=true)return;
     final dir=await getApplicationDocumentsDirectory();
     final target=File('${dir.path}/ours_chat_wallpaper_${widget.conversationId}.jpg');
     await File(picked.path).copy(target.path);
