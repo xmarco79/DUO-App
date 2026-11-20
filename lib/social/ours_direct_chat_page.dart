@@ -251,7 +251,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
  }
  File? source;
  if(action=='new'){final picked=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:96,maxWidth:3200,maxHeight:3200);if(picked==null)return null;source=File(picked.path);}
- else if(exists){source=File(currentPath!);}
+ else if(exists){source=File(currentPath);}
  if(source==null||!await source.exists())return null;
  var zoom=action=='edit'?currentZoom:1.0,rotation=action=='edit'?currentRotation:0.0,dim=action=='edit'?currentDim:.48,opacity=action=='edit'?currentOpacity:.22,offsetX=action=='edit'?currentOffsetX:0.0,offsetY=action=='edit'?currentOffsetY:0.0;
  var gestureZoom=zoom,gestureRotation=rotation;
@@ -279,7 +279,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
     Expanded(child:TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel')))),
     Expanded(child:FilledButton.icon(onPressed:()=>Navigator.pop(ctx,true),icon:const Icon(Icons.check_rounded),label:Text(t('تطبيق الخلفية','Apply wallpaper')))),
    ])
-  ]))))))));
+  ])))))));
  if(saved!=true)return null;
  try{
   var targetPath=currentPath??'';
