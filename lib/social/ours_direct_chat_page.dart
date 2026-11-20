@@ -164,26 +164,30 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  Path getClip(Size size) {
   const r=18.0, tailW=11.0, tailH=9.0;
   final bodyBottom=size.height-tailH;
-  final p=Path()
-   ..moveTo(r,0)..lineTo(size.width-r,0)
-   ..quadraticBezierTo(size.width,0,size.width,r)
-   ..lineTo(size.width,bodyBottom-r)
-   ..quadraticBezierTo(size.width,bodyBottom,size.width-r,bodyBottom);
+  final p=Path();
+  p.moveTo(r,0);
+  p.lineTo(size.width-r,0);
+  p.quadraticBezierTo(size.width,0,size.width,r);
+  p.lineTo(size.width,bodyBottom-r);
+  p.quadraticBezierTo(size.width,bodyBottom,size.width-r,bodyBottom);
   if(tailOnLeft){
-   p.lineTo(r+tailW,bodyBottom)
-    ..quadraticBezierTo(r+tailW*.45,bodyBottom+tailH*.12,r+tailW*.18,size.height)
-    ..quadraticBezierTo(r+tailW*.12,bodyBottom+tailH*.42,r,bodyBottom);
+   p.lineTo(r+tailW,bodyBottom);
+   p.quadraticBezierTo(r+tailW*.45,bodyBottom+tailH*.12,r+tailW*.18,size.height);
+   p.quadraticBezierTo(r+tailW*.12,bodyBottom+tailH*.42,r,bodyBottom);
   }else{
-   p.lineTo(size.width-r-tailW,bodyBottom)
-    ..quadraticBezierTo(size.width-r-tailW*.45,bodyBottom+tailH*.12,size.width-r-tailW*.18,size.height)
-    ..quadraticBezierTo(size.width-r-tailW*.12,bodyBottom+tailH*.42,size.width-r,bodyBottom);
+   p.lineTo(size.width-r-tailW,bodyBottom);
+   p.quadraticBezierTo(size.width-r-tailW*.45,bodyBottom+tailH*.12,size.width-r-tailW*.18,size.height);
+   p.quadraticBezierTo(size.width-r-tailW*.12,bodyBottom+tailH*.42,size.width-r,bodyBottom);
   }
-  p.lineTo(r,bodyBottom)
-   ..quadraticBezierTo(0,bodyBottom,0,bodyBottom-r)
-   ..lineTo(0,r)..quadraticBezierTo(0,0,r,0);
-  return p..close();
+  p.lineTo(r,bodyBottom);
+  p.quadraticBezierTo(0,bodyBottom,0,bodyBottom-r);
+  p.lineTo(0,r);
+  p.quadraticBezierTo(0,0,r,0);
+  p.close();
+  return p;
  }
- @override bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
+ @override
+ bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
 }
 
 class OursDirectChatPage extends StatefulWidget{
