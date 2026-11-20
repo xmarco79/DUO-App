@@ -78,13 +78,15 @@ const _oursChatThemes = [
 
 class OursAppSettings {
   static final ValueNotifier<Locale> locale = ValueNotifier(const Locale('ar'));
-  static final ValueNotifier<String> fontFamily = ValueNotifier('Amiri');
+  static final ValueNotifier<String> fontFamily = ValueNotifier('Noto Sans Arabic');
 
   static Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     locale.value = Locale(prefs.getString('ours_language') ?? 'ar');
-    final savedFont = prefs.getString('ours_font_family') ?? 'Amiri';
-    fontFamily.value = supportedFonts.contains(savedFont) ? savedFont : 'Amiri';
+    final savedFont = prefs.getString('ours_font_family');
+    final migratedFont = savedFont == null || savedFont == 'Amiri' ? 'Noto Sans Arabic' : savedFont;
+    fontFamily.value = supportedFonts.contains(migratedFont) ? migratedFont : 'Noto Sans Arabic';
+    if (savedFont == null || savedFont == 'Amiri') await prefs.setString('ours_font_family', 'Noto Sans Arabic');
   }
 
   static const supportedFonts = <String>{
@@ -96,7 +98,7 @@ class OursAppSettings {
     'Merriweather','Roboto','Outfit','Space Grotesk'
   };
   static Future<void> setFontFamily(String value) async {
-    final normalized = supportedFonts.contains(value) ? value : 'Amiri';
+    final normalized = supportedFonts.contains(value) ? value : 'Noto Sans Arabic';
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('ours_font_family', normalized);
     fontFamily.value = normalized;
@@ -1955,8 +1957,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   String email = '';
   String? avatarUrl;
   String languageCode = 'ar';
-  String fontFamily = 'Amiri';
+  String fontFamily = 'Noto Sans Arabic';
   String fontCategory = 'all';
+  bool showAllFonts = false;
   bool uploadingAvatar = false;
   bool loading = true;
   bool saving = false;
@@ -1977,8 +1980,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       quietMode = prefs.getBool('ours_quiet_mode') ?? false;
       confirmBeforeDelete = prefs.getBool('ours_confirm_delete') ?? true;
       languageCode = prefs.getString('ours_language') ?? 'ar';
-      final savedFont = prefs.getString('ours_font_family') ?? 'Amiri';
-      fontFamily = OursAppSettings.supportedFonts.contains(savedFont) ? savedFont : 'Amiri';
+      final savedFont = prefs.getString('ours_font_family');
+      final migratedFont = savedFont == null || savedFont == 'Amiri' ? 'Noto Sans Arabic' : savedFont;
+      fontFamily = OursAppSettings.supportedFonts.contains(migratedFont) ? migratedFont : 'Noto Sans Arabic';
+      if (savedFont == null || savedFont == 'Amiri') await prefs.setString('ours_font_family', 'Noto Sans Arabic');
     });
   }
 
@@ -2620,6 +2625,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                                     const SizedBox(height: 3),
                                     Text(fontFamily,
                                       style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+                                    const SizedBox(height: 4),
+                                    Text(oursText(context, 'أهلاً بك في عالم OURS', 'Welcome to OURS'),
+                                      style: GoogleFonts.getFont(fontFamily, color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
                                     Text(oursText(context, 'معاينة مباشرة للخط المختار', 'Live preview of your selected font'),
                                       style: const TextStyle(color: lavender, fontSize: 10)),
                                   ],
@@ -2629,6 +2637,24 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () => setState(() => showAllFonts = !showAllFonts),
+                            icon: Icon(showAllFonts ? Icons.expand_less_rounded : Icons.grid_view_rounded, size: 19),
+                            label: Text(showAllFonts
+                              ? oursText(context, 'إخفاء مكتبة الخطوط', 'Hide font library')
+                              : oursText(context, 'استعراض جميع الخطوط (31)', 'Browse all fonts (31)')),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: gold,
+                              side: BorderSide(color: gold.withOpacity(.45)),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                          ),
+                        ),
+                        if (showAllFonts) ...[
                         const SizedBox(height: 16),
                         Text(oursText(context, 'تصفّح حسب النمط', 'BROWSE BY STYLE'),
                           style: const TextStyle(color: lavender, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .8)),
@@ -2765,15 +2791,17 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                           child: TextButton.icon(
                             onPressed: () async {
                               setState(() {
-                                fontFamily = 'Amiri';
+                                fontFamily = 'Noto Sans Arabic';
                                 fontCategory = 'all';
+                                showAllFonts = false;
                               });
-                              await OursAppSettings.setFontFamily('Amiri');
+                              await OursAppSettings.setFontFamily('Noto Sans Arabic');
                             },
                             icon: const Icon(Icons.restart_alt_rounded, size: 17),
-                            label: Text(oursText(context, 'استعادة الخط التقليدي', 'Restore classic font')),
+                            label: Text(oursText(context, 'استعادة الخط الافتراضي', 'Restore default font')),
                           ),
                         ),
+                        ],
                       ],
                     ),
                   ),
