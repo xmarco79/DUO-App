@@ -489,6 +489,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      ListTile(leading:Icon(Icons.add_photo_alternate_outlined,color:skin.accent),title:Text(t('إضافة ملصق','Add sticker')),onTap:()=>Navigator.pop(ctx,'__add__')),
      ...recent.map((m)=>ListTile(leading:Icon(Icons.sticky_note_2_outlined,color:skin.accent),title:Text((m['file_name']??m['body']).toString()),onTap:()=>Navigator.pop(ctx,m['body'].toString())))
     ])));
+    searchController.dispose();
     if(chosen==null)return;if(chosen=='__add__'){await _uploadSelfStickerFallback();return;}
     await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':chosen,'message_type':'sticker'});return;
    }
