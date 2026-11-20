@@ -1013,7 +1013,16 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
           else if(type=='image')FutureBuilder<String>(future:_signed(path),builder:(c,s){
            if(s.hasError)return Text(t('تعذر تحميل الصورة','Could not load image'),style:TextStyle(color:skin.accent));
            if(!s.hasData)return SizedBox(width:190,height:125,child:Center(child:CircularProgressIndicator(color:skin.accent)));
-           return GestureDetector(onTap:()=>_openImageActions(s.data!),child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Stack(alignment:Alignment.bottomRight,children:[ConstrainedBox(constraints:const BoxConstraints(maxWidth:280,maxHeight:360),child:Image.network(s.data!,width:280,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Padding(padding:const EdgeInsets.all(18),child:Text(t('تعذر عرض الصورة','Image unavailable'),style:TextStyle(color:skin.accent))))),PositionedDirectional(end:8,bottom:8,child:ClipRRect(borderRadius:BorderRadius.circular(22),child:BackdropFilter(filter:ImageFilter.blur(sigmaX:12,sigmaY:12),child:Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.28),border:Border.all(color:Colors.white.withValues(alpha:.15)),borderRadius:BorderRadius.circular(22)),child:Row(mainAxisSize:MainAxisSize.min,children:[Text(_time(m['created_at']),style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w600)),if(mine)Padding(padding:const EdgeInsetsDirectional.only(start:4),child:Icon(m['read_at']!=null?Icons.done_all_rounded:Icons.done_rounded,color:m['read_at']!=null?const Color(0xFFB7D7FF):Colors.white70,size:13))]))))])));
+           return GestureDetector(
+            onTap:()=>_openImageActions(s.data!),
+            child:ClipRRect(
+             borderRadius:BorderRadius.circular(16),
+             child:Stack(alignment:Alignment.bottomRight,children:[
+              ConstrainedBox(constraints:const BoxConstraints(maxWidth:280,maxHeight:360),child:Image.network(s.data!,width:280,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Padding(padding:const EdgeInsets.all(18),child:Text(t('تعذر عرض الصورة','Image unavailable'),style:TextStyle(color:skin.accent))))),
+              PositionedDirectional(end:8,bottom:8,child:ClipRRect(borderRadius:BorderRadius.circular(22),child:BackdropFilter(filter:ImageFilter.blur(sigmaX:12,sigmaY:12),child:Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.28),border:Border.all(color:Colors.white.withValues(alpha:.15)),borderRadius:BorderRadius.circular(22)),child:Row(mainAxisSize:MainAxisSize.min,children:[Text(_time(m['created_at']),style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w600)),if(mine)Padding(padding:const EdgeInsetsDirectional.only(start:4),child:Icon(m['read_at']!=null?Icons.done_all_rounded:Icons.done_rounded,color:m['read_at']!=null?const Color(0xFFB7D7FF):Colors.white70,size:13))])))),
+             ]),
+            ),
+           );
           })
           else if(type=='file')InkWell(onTap:()=>_downloadFile(path,name:m['file_name']?.toString()),child:Row(mainAxisSize:MainAxisSize.min,children:[
            Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),
