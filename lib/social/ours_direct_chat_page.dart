@@ -644,7 +644,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   source.dispose();image.dispose();picture.dispose();codec.dispose();if(data==null)throw Exception('Image export failed');return data.buffer.asUint8List();
  }
  Future<String?> _previewMedia({required Uint8List bytes,required String name,required bool video}) async{
-  var mode='normal',filter=0;var crop=1.0;var drawing=false;var strokes=<List<Offset>>[];var activeStroke=<Offset>[];
+  var mode='normal',filter=0;var crop=1.0;var drawing=false;var hd=true;var strokes=<List<Offset>>[];var activeStroke=<Offset>[];
   _editedPreviewBytes=null;
   return await showDialog<String>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setEditor)=>Dialog(
    backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
@@ -662,10 +662,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      Row(children:[
       _previewTool(t('قص','Crop'),Icons.crop_rounded,crop>1.01,()=>setEditor(()=>crop=crop>=1.8?1.0:crop+.2)),
       _previewTool(t('رسم','Draw'),Icons.draw_rounded,drawing,()=>setEditor(()=>drawing=!drawing)),
-      _previewTool(t('الفلاتر','Filters'),Icons.filter_vintage_rounded,filter!=0,()=>setEditor(()=>filter=(filter+1)%4)),
-      _previewTool('HD',Icons.hd_rounded,true,()=>{})
+      _previewTool(t('الفلاتر','Filters'),Icons.filter_vintage_rounded,filter!=0,()=>setEditor(()=>filter=(filter+1)%8)),
+      _previewTool('HD',Icons.hd_rounded,hd,()=>setEditor(()=>hd=!hd))
      ]),
-     const SizedBox(height:8),Row(children:[Expanded(child:Text(t('جودة أصلية عالية','Original high quality'),style:TextStyle(color:skin.accent,fontSize:11))),Text(t('فلتر '+(filter+1).toString()+' / 4','Filter '+(filter+1).toString()+' / 4'),style:TextStyle(color:skin.accent,fontSize:10)),IconButton(onPressed:()=>setEditor((){filter=0;crop=1;drawing=false;strokes.clear();activeStroke.clear();}),icon:Icon(Icons.restart_alt_rounded,color:skin.accent))]),
+     const SizedBox(height:8),Row(children:[Expanded(child:Text(hd?t('الجودة الأصلية · دون ضغط إضافي','Original quality · no extra compression'):t('جودة متوازنة · حجم أقل','Balanced quality · smaller size'),style:TextStyle(color:skin.accent,fontSize:11))),Text(t('فلتر '+(filter+1).toString()+' / 8','Filter '+(filter+1).toString()+' / 4'),style:TextStyle(color:skin.accent,fontSize:10)),IconButton(onPressed:()=>setEditor((){filter=0;crop=1;drawing=false;strokes.clear();activeStroke.clear();}),icon:Icon(Icons.restart_alt_rounded,color:skin.accent))]),
      Wrap(spacing:7,children:[
       ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setEditor(()=>mode='normal')),
       ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setEditor(()=>mode='once')),
@@ -1056,9 +1056,9 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity>220){setState(()=>timestampMessageId=timestampMessageId==m['id'].toString()?null:m['id'].toString());}else if(velocity< -220){setState(()=>replyTo=m);}},
-        child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isVisualMessage?0:5,shadowColor:isVisualMessage?Colors.transparent:skin.accent.withValues(alpha:.20),clipBehavior:Clip.antiAlias,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isVisualMessage?EdgeInsets.zero:const EdgeInsets.fromLTRB(16,12,16,17),
-         decoration:isVisualMessage?const BoxDecoration():BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:highlightedMessageId==m['id'].toString()?[skin.accent.withValues(alpha:.42),skin.partner.withValues(alpha:.96)]:mine?[Color.lerp(skin.mine,Colors.white,.055)!,Color.lerp(skin.mine,skin.bg,.16)!]:[Color.lerp(skin.partner,Colors.white,.045)!,Color.lerp(skin.partner,skin.bg,.12)!]),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.26):_lavender.withValues(alpha:.18)),width:highlightedMessageId==m['id'].toString()?1.7:.85)),
+        child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:5,shadowColor:skin.accent.withValues(alpha:.20),clipBehavior:Clip.antiAlias,child:Container(
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(13,9,13,11),
+         decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55): (mine?skin.mine:skin.partner),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14)),width:highlightedMessageId==m['id'].toString()?1.5:.65)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
@@ -1116,7 +1116,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
           ]))
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
           else SelectableText(path,style:const TextStyle(color:Colors.white,fontSize:16,height:1.45)),
-          if(mine)Padding(padding:const EdgeInsets.only(top:5),child:Align(alignment:AlignmentDirectional.centerEnd,child:Text(m['read_at']!=null?t('مقروءة','Read'):t('تم الإرسال','Sent'),style:TextStyle(color:skin.accent.withValues(alpha:.78),fontSize:9,fontWeight:FontWeight.w600))))
+          
          ]))
         ))))
        ),
