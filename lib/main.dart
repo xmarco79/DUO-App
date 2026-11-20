@@ -1983,7 +1983,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       final savedFont = prefs.getString('ours_font_family');
       final migratedFont = savedFont == null || savedFont == 'Amiri' ? 'Noto Sans Arabic' : savedFont;
       fontFamily = OursAppSettings.supportedFonts.contains(migratedFont) ? migratedFont : 'Noto Sans Arabic';
-      if (savedFont == null || savedFont == 'Amiri') await prefs.setString('ours_font_family', 'Noto Sans Arabic');
+      if (savedFont == null || savedFont == 'Amiri') {
+        fontFamily = 'Noto Sans Arabic';
+        await prefs.setString('ours_font_family', 'Noto Sans Arabic');
+      }
     });
   }
 
