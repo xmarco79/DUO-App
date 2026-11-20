@@ -747,19 +747,24 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    try{final result=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['png','jpg','jpeg','webp','gif'],withData:true);if(result==null||result.files.isEmpty)return;final file=result.files.single,bytes=file.bytes??(file.path==null?null:await File(file.path!).readAsBytes());if(bytes==null)return;await _upload(bytes,'sticker_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+file.name.split('.').last.toLowerCase(),'sticker');}
    catch(e){_show(t('تعذر إضافة الملصق: $e','Could not add sticker: $e'));}
   }
- Future<void> _playVideo(String path)async{
+ Future<void> _playVideo(String path) async {
   VideoPlayerController? controller;
-  try{
-   final url=await _signed(path);controller=VideoPlayerController.networkUrl(Uri.parse(url));
+  try {
+   final url = await _signed(path);
+   controller = VideoPlayerController.networkUrl(Uri.parse(url));
    await controller.initialize();
-   if(!mounted){await controller.dispose();return;}
-   await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>Dialog(backgroundColor:Colors.black,insetPadding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[
-    AspectRatio(aspectRatio:player.value.aspectRatio,child:VideoPlayer(player)),
-    Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>setModal(()=>player.value.isPlaying?player.pause():player.play()),icon:Icon(player.value.isPlaying?Icons.pause:Icons.play_arrow,color:Colors.white)),IconButton(onPressed:()=>setModal(()=>controller!.seekTo(Duration.zero)),icon:const Icon(Icons.replay,color:Colors.white))]),
-    TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إغلاق','Close'),style:const TextStyle(color:Colors.white)))
+   final player = controller;
+   if (!mounted) { await player.dispose(); return; }
+   await showDialog<void>(context: context, barrierColor: Colors.black, builder: (ctx) => StatefulBuilder(builder: (ctx, setModal) => Dialog(backgroundColor: Colors.black, insetPadding: const EdgeInsets.all(12), child: Column(mainAxisSize: MainAxisSize.min, children: [
+    AspectRatio(aspectRatio: player.value.aspectRatio, child: VideoPlayer(player)),
+    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+     IconButton(onPressed: () => setModal(() { player.value.isPlaying ? player.pause() : player.play(); }), icon: Icon(player.value.isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white)),
+     IconButton(onPressed: () => setModal(() { player.seekTo(Duration.zero); }), icon: const Icon(Icons.replay, color: Colors.white))
+    ]),
+    TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t('إغلاق','Close'), style: const TextStyle(color: Colors.white)))
    ]))));
-  }catch(e){_show(t('تعذر تشغيل الفيديو. تحقق من الاتصال.','Could not play video. Check your connection.'));}
-  finally{await controller?.dispose();}
+  } catch (e) { _show(t('تعذر تشغيل الفيديو. تحقق من الاتصال.','Could not play video. Check your connection.')); }
+  finally { await controller?.dispose(); }
  }
  Future<void> _consumeTemporaryMedia(String messageId) async{
   VideoPlayerController? videoController;
