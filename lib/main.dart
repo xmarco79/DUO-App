@@ -78,13 +78,13 @@ const _oursChatThemes = [
 
 class OursAppSettings {
   static final ValueNotifier<Locale> locale = ValueNotifier(const Locale('ar'));
-  static final ValueNotifier<String> fontFamily = ValueNotifier('Cairo');
+  static final ValueNotifier<String> fontFamily = ValueNotifier('Amiri');
 
   static Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     locale.value = Locale(prefs.getString('ours_language') ?? 'ar');
-    final savedFont = prefs.getString('ours_font_family') ?? 'Cairo';
-    fontFamily.value = supportedFonts.contains(savedFont) ? savedFont : 'Cairo';
+    final savedFont = prefs.getString('ours_font_family') ?? 'Amiri';
+    fontFamily.value = supportedFonts.contains(savedFont) ? savedFont : 'Amiri';
   }
 
   static const supportedFonts = <String>{
@@ -96,7 +96,7 @@ class OursAppSettings {
     'Merriweather','Roboto','Outfit','Space Grotesk'
   };
   static Future<void> setFontFamily(String value) async {
-    final normalized = supportedFonts.contains(value) ? value : 'Cairo';
+    final normalized = supportedFonts.contains(value) ? value : 'Amiri';
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('ours_font_family', normalized);
     fontFamily.value = normalized;
@@ -1955,7 +1955,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   String email = '';
   String? avatarUrl;
   String languageCode = 'ar';
-  String fontFamily = 'Cairo';
+  String fontFamily = 'Amiri';
+  String fontCategory = 'all';
   bool uploadingAvatar = false;
   bool loading = true;
   bool saving = false;
@@ -1976,8 +1977,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       quietMode = prefs.getBool('ours_quiet_mode') ?? false;
       confirmBeforeDelete = prefs.getBool('ours_confirm_delete') ?? true;
       languageCode = prefs.getString('ours_language') ?? 'ar';
-      final savedFont = prefs.getString('ours_font_family') ?? 'Cairo';
-      fontFamily = OursAppSettings.supportedFonts.contains(savedFont) ? savedFont : 'Cairo';
+      final savedFont = prefs.getString('ours_font_family') ?? 'Amiri';
+      fontFamily = OursAppSettings.supportedFonts.contains(savedFont) ? savedFont : 'Amiri';
     });
   }
 
@@ -2292,6 +2293,40 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final fontOptions = const <Map<String, String>>[
+      {'name':'Amiri','group':'classic','sample':'أهلاً بك في عالمنا'},
+      {'name':'Scheherazade New','group':'classic','sample':'جمال الحروف العربية'},
+      {'name':'Markazi Text','group':'classic','sample':'لغة الضاد'},
+      {'name':'Aref Ruqaa','group':'classic','sample':'أهلاً وسهلاً'},
+      {'name':'Lateef','group':'classic','sample':'حروف تنبض بالجمال'},
+      {'name':'Cairo','group':'modern','sample':'أهلاً بك في عالمنا'},
+      {'name':'Tajawal','group':'modern','sample':'جمال الحروف العربية'},
+      {'name':'Almarai','group':'modern','sample':'لغة الضاد'},
+      {'name':'Noto Sans Arabic','group':'modern','sample':'أهلاً وسهلاً'},
+      {'name':'IBM Plex Sans Arabic','group':'modern','sample':'حروف تنبض بالجمال'},
+      {'name':'Mada','group':'modern','sample':'أهلاً بك في عالمنا'},
+      {'name':'Readex Pro','group':'modern','sample':'جمال الحروف العربية'},
+      {'name':'Alexandria','group':'modern','sample':'لغة الضاد'},
+      {'name':'Noto Kufi Arabic','group':'modern','sample':'أهلاً وسهلاً'},
+      {'name':'Rubik','group':'modern','sample':'OURS — YOUR WORLD'},
+      {'name':'Changa','group':'display','sample':'حروف تنبض بالجمال'},
+      {'name':'El Messiri','group':'display','sample':'أهلاً بك في عالمنا'},
+      {'name':'Reem Kufi','group':'display','sample':'جمال الحروف العربية'},
+      {'name':'Baloo Bhaijaan 2','group':'display','sample':'لغة الضاد'},
+      {'name':'Lemonada','group':'display','sample':'أهلاً وسهلاً'},
+      {'name':'Harmattan','group':'display','sample':'حروف تنبض بالجمال'},
+      {'name':'Inter','group':'latin','sample':'OURS — YOUR WORLD'},
+      {'name':'Poppins','group':'latin','sample':'Private Universe'},
+      {'name':'Montserrat','group':'latin','sample':'Made for two'},
+      {'name':'Nunito','group':'latin','sample':'OURS — YOUR WORLD'},
+      {'name':'Raleway','group':'latin','sample':'Private Universe'},
+      {'name':'Playfair Display','group':'latin','sample':'Made for two'},
+      {'name':'Merriweather','group':'latin','sample':'OURS — YOUR WORLD'},
+      {'name':'Roboto','group':'latin','sample':'Private Universe'},
+      {'name':'Outfit','group':'latin','sample':'Made for two'},
+      {'name':'Space Grotesk','group':'latin','sample':'OURS — YOUR WORLD'},
+    ];
+    final visibleFonts = fontOptions.where((font) => fontCategory == 'all' || font['group'] == fontCategory).toList();
     final displayName = displayNameController.text.trim();
     final accountTitle = displayName.isNotEmpty
         ? displayName
@@ -2515,95 +2550,228 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   ),
                   Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(children: [
-                          const Icon(Icons.text_fields_rounded, color: gold),
-                          const SizedBox(width: 10),
-                          Expanded(child: Text(oursText(context, 'خطوط التطبيق', 'App fonts'),
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
-                        ]),
-                        const SizedBox(height: 6),
-                        Text(oursText(context, 'معاينة مباشرة قبل اعتماد الخط على كامل التطبيق',
-                            'Live preview before applying the font app-wide'),
-                            style: const TextStyle(color: lavender, fontSize: 11)),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          value: OursAppSettings.supportedFonts.contains(fontFamily) ? fontFamily : 'Cairo',
-                          isExpanded: true,
-                          decoration: InputDecoration(labelText:oursText(context,'اختر الخط','Choose a font'),prefixIcon:const Icon(Icons.font_download_outlined)),
-                          items: const [
-                            DropdownMenuItem(value:'Cairo',child:Text('Cairo · عربي')),
-                            DropdownMenuItem(value:'Tajawal',child:Text('Tajawal · عربي')),
-                            DropdownMenuItem(value:'Almarai',child:Text('Almarai · عربي')),
-                            DropdownMenuItem(value:'Noto Sans Arabic',child:Text('Noto Sans Arabic · عربي')),
-                            DropdownMenuItem(value:'IBM Plex Sans Arabic',child:Text('IBM Plex Sans Arabic · عربي')),
-                            DropdownMenuItem(value:'Changa',child:Text('Changa · عربي')),
-                            DropdownMenuItem(value:'Mada',child:Text('Mada · عربي')),
-                            DropdownMenuItem(value:'Readex Pro',child:Text('Readex Pro · عربي')),
-                            DropdownMenuItem(value:'El Messiri',child:Text('El Messiri · عربي')),
-                            DropdownMenuItem(value:'Amiri',child:Text('Amiri · عربي')),
-                            DropdownMenuItem(value:'Lateef',child:Text('Lateef · عربي')),
-                            DropdownMenuItem(value:'Reem Kufi',child:Text('Reem Kufi · عربي')),
-                            DropdownMenuItem(value:'Rubik',child:Text('Rubik · عربي/لاتيني')),
-                            DropdownMenuItem(value:'Alexandria',child:Text('Alexandria · عربي/لاتيني')),
-                            DropdownMenuItem(value:'Noto Kufi Arabic',child:Text('Noto Kufi Arabic · عربي')),
-                            DropdownMenuItem(value:'Baloo Bhaijaan 2',child:Text('Baloo Bhaijaan 2 · عربي')),
-                            DropdownMenuItem(value:'Lemonada',child:Text('Lemonada · عربي')),
-                            DropdownMenuItem(value:'Scheherazade New',child:Text('Scheherazade New · عربي')),
-                            DropdownMenuItem(value:'Aref Ruqaa',child:Text('Aref Ruqaa · عربي')),
-                            DropdownMenuItem(value:'Harmattan',child:Text('Harmattan · عربي')),
-                            DropdownMenuItem(value:'Markazi Text',child:Text('Markazi Text · عربي')),
-                            DropdownMenuItem(value:'Inter',child:Text('Inter · English')),
-                            DropdownMenuItem(value:'Poppins',child:Text('Poppins · English')),
-                            DropdownMenuItem(value:'Montserrat',child:Text('Montserrat · English')),
-                            DropdownMenuItem(value:'Nunito',child:Text('Nunito · English')),
-                            DropdownMenuItem(value:'Raleway',child:Text('Raleway · English')),
-                            DropdownMenuItem(value:'Playfair Display',child:Text('Playfair Display · English')),
-                            DropdownMenuItem(value:'Merriweather',child:Text('Merriweather · English')),
-                            DropdownMenuItem(value:'Roboto',child:Text('Roboto · English')),
-                            DropdownMenuItem(value:'Outfit',child:Text('Outfit · English')),
-                            DropdownMenuItem(value:'Space Grotesk',child:Text('Space Grotesk · English')),
+                        Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [gold.withOpacity(.24), lavender.withOpacity(.10)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: gold.withOpacity(.24)),
+                              ),
+                              child: const Icon(Icons.text_fields_rounded, color: gold, size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(oursText(context, 'مكتبة الخطوط', 'Font library'),
+                                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                                  const SizedBox(height: 3),
+                                  Text(oursText(context, 'اختر طابعًا يعبّر عنك — التغيير يطبق على التطبيق كاملًا',
+                                    'Choose your style — changes apply throughout the app'),
+                                    style: const TextStyle(color: lavender, fontSize: 10.5, height: 1.35)),
+                                ],
+                              ),
+                            ),
                           ],
-                          onChanged:(selected) async {
-                            if(selected==null)return;
-                            setState(()=>fontFamily=selected);
-                            await OursAppSettings.setFontFamily(selected);
-                          },
                         ),
-                        const SizedBox(height:14),
+                        const SizedBox(height: 14),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [gold.withOpacity(.13), purple.withOpacity(.72), navy.withOpacity(.85)],
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: gold.withOpacity(.28)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: gold.withOpacity(.13),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(Icons.auto_awesome_rounded, color: gold, size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(oursText(context, 'الخط الحالي', 'CURRENT FONT'),
+                                      style: TextStyle(color: gold.withOpacity(.9), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1.1)),
+                                    const SizedBox(height: 3),
+                                    Text(fontFamily,
+                                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+                                    Text(oursText(context, 'معاينة مباشرة للخط المختار', 'Live preview of your selected font'),
+                                      style: const TextStyle(color: lavender, fontSize: 10)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.check_circle_rounded, color: gold, size: 22),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(oursText(context, 'تصفّح حسب النمط', 'BROWSE BY STYLE'),
+                          style: const TextStyle(color: lavender, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .8)),
+                        const SizedBox(height: 9),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              ['all', oursText(context, 'الكل', 'All')],
+                              ['classic', oursText(context, 'تقليدي', 'Classic')],
+                              ['modern', oursText(context, 'عصري', 'Modern')],
+                              ['display', oursText(context, 'مميز', 'Display')],
+                              ['latin', oursText(context, 'إنجليزي', 'Latin')],
+                            ].map((category) {
+                              final selected = fontCategory == category[0];
+                              return Padding(
+                                padding: const EdgeInsetsDirectional.only(end: 7),
+                                child: ChoiceChip(
+                                  label: Text(category[1]),
+                                  selected: selected,
+                                  onSelected: (_) => setState(() => fontCategory = category[0]),
+                                  showCheckmark: false,
+                                  labelStyle: TextStyle(
+                                    color: selected ? navy : lavender,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  selectedColor: gold,
+                                  backgroundColor: navy.withOpacity(.65),
+                                  side: BorderSide(color: selected ? gold : lavender.withOpacity(.18)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: visibleFonts.length,
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 9,
+                            mainAxisSpacing: 9,
+                            childAspectRatio: 1.30,
+                          ),
+                          itemBuilder: (context, index) {
+                            final font = visibleFonts[index];
+                            final name = font['name']!;
+                            final selected = fontFamily == name;
+                            return Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(15),
+                                onTap: () async {
+                                  setState(() => fontFamily = name);
+                                  await OursAppSettings.setFontFamily(name);
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: selected ? gold.withOpacity(.13) : navy.withOpacity(.62),
+                                    borderRadius: BorderRadius.circular(15),
+                                    border: Border.all(
+                                      color: selected ? gold : lavender.withOpacity(.14),
+                                      width: selected ? 1.5 : 1,
+                                    ),
+                                    boxShadow: selected ? [
+                                      BoxShadow(color: gold.withOpacity(.08), blurRadius: 13, spreadRadius: 1),
+                                    ] : null,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(color: selected ? gold : Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                                          ),
+                                          if (selected) const Icon(Icons.check_circle_rounded, color: gold, size: 16),
+                                        ],
+                                      ),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: AlignmentDirectional.centerStart,
+                                        child: Text(font['sample']!,
+                                          maxLines: 1,
+                                          style: GoogleFonts.getFont(name, color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+                                      ),
+                                      Text(name == 'Amiri' || name == 'Scheherazade New' || name == 'Markazi Text' || name == 'Aref Ruqaa' || name == 'Lateef'
+                                          ? oursText(context, 'طابع عربي تقليدي', 'Traditional Arabic')
+                                          : font['group'] == 'latin' ? 'LATIN TYPEFACE' : oursText(context, 'خط عربي', 'Arabic typeface'),
+                                        style: const TextStyle(color: lavender, fontSize: 9)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(15),
+                          decoration: BoxDecoration(
                             color: navy.withOpacity(.72),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: gold.withOpacity(.16)),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: lavender.withOpacity(.16)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(oursText(context, 'معاينة OURS', 'OURS preview'),
-                                  style: const TextStyle(color: gold, fontSize: 11)),
-                              const SizedBox(height: 8),
+                              Text(oursText(context, 'شكل الخط داخل OURS', 'HOW IT LOOKS IN OURS'),
+                                style: const TextStyle(color: gold, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .7)),
+                              const SizedBox(height: 10),
                               Text(oursText(context, 'مرحبًا بك في عالمنا الخاص', 'Welcome to our private universe'),
-                                  style: GoogleFonts.getFont(fontFamily, color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 4),
-                              Text('The little details make OURS feel like home.',
-                                  style: GoogleFonts.getFont(fontFamily, color: lavender, fontSize: 12)),
+                                style: GoogleFonts.getFont(fontFamily, color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 5),
+                              Text(oursText(context, 'التفاصيل الصغيرة تصنع تجربة أجمل.', 'Little details make the experience beautiful.'),
+                                style: GoogleFonts.getFont(fontFamily, color: lavender, fontSize: 13)),
+                              const SizedBox(height: 5),
+                              Text('OURS  ·  MADE FOR TWO',
+                                style: GoogleFonts.getFont(fontFamily, color: gold.withOpacity(.9), fontSize: 10, letterSpacing: 1.1)),
                             ],
                           ),
                         ),
                         Align(
                           alignment: AlignmentDirectional.centerEnd,
-                          child: TextButton(
+                          child: TextButton.icon(
                             onPressed: () async {
-                              setState(() => fontFamily = 'Cairo');
-                              await OursAppSettings.setFontFamily('Cairo');
+                              setState(() {
+                                fontFamily = 'Amiri';
+                                fontCategory = 'all';
+                              });
+                              await OursAppSettings.setFontFamily('Amiri');
                             },
-                            child: Text(oursText(context, 'استعادة الخط الافتراضي', 'Restore default font')),
+                            icon: const Icon(Icons.restart_alt_rounded, size: 17),
+                            label: Text(oursText(context, 'استعادة الخط التقليدي', 'Restore classic font')),
                           ),
                         ),
                       ],
