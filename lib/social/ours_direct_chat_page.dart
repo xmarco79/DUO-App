@@ -203,7 +203,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Map<String,dynamic>? replyTo;
  RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
  Timer? typingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId;
- bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22;_ChatSkin skin=_skins.first;
+ bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22,wallpaperZoom=1,wallpaperRotation=0,wallpaperDim=.55;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
  int _streakCount(){
@@ -255,7 +255,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final found=_skins.where((s)=>s.id==id);
   final savedWallpaper=p.getString('ours_direct_wallpaper_'+widget.conversationId);
   final savedOpacity=p.getDouble('ours_direct_wallpaper_opacity_'+widget.conversationId)??.22;
-  if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=savedWallpaper;wallpaperOpacity=savedOpacity.clamp(.08,.45).toDouble();});
+  final savedZoom=p.getDouble('ours_direct_wallpaper_zoom_'+widget.conversationId)??1.0;
+  final savedRotation=p.getDouble('ours_direct_wallpaper_rotation_'+widget.conversationId)??0.0;
+  final savedDim=p.getDouble('ours_direct_wallpaper_dim_'+widget.conversationId)??.55;
+  if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=savedWallpaper;wallpaperOpacity=savedOpacity.clamp(.08,.45).toDouble();wallpaperZoom=savedZoom.clamp(1.0,2.5).toDouble();wallpaperRotation=savedRotation;wallpaperDim=savedDim.clamp(.15,.85).toDouble();});
  }
  Future<void> _chooseSkin() async{
   final selected=await showModalBottomSheet<_ChatSkin>(
@@ -349,49 +352,74 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(elapsed.inHours<24)return t('آخر ظهور منذ ${elapsed.inHours} ساعة','Last seen ${elapsed.inHours}h ago');
   return t('آخر ظهور ${_oursDate(seen,true,withYear:false)}','Last seen ${_oursDate(seen,false,withYear:false)}');
  }
- Future<void> _chooseWallpaper() async{
-  var opacity=wallpaperOpacity;
-  final action=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF171326),showDragHandle:true,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(18,8,18,18),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-   Text(t('خلفية المحادثة','Chat wallpaper'),style:const TextStyle(color:_gold,fontSize:18,fontWeight:FontWeight.w800)),
-   const SizedBox(height:8),
-   Text(t('اختر صورة مستقلة عن الثيم، واضبط وضوحها حتى تبقى الرسائل سهلة القراءة.','Choose a wallpaper independently from the theme and adjust its visibility for readable messages.'),style:const TextStyle(color:_lavender,fontSize:12)),
-   const SizedBox(height:12),
-   Row(children:[Expanded(child:Text(t('وضوح الخلفية','Wallpaper visibility'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w700))),Text('${(opacity*100).round()}%',style:TextStyle(color:skin.accent))]),
-   Slider(value:opacity,min:.08,max:.45,onChanged:(v)=>setModal(()=>opacity=v),activeColor:skin.accent),
-   const SizedBox(height:8),
-   Wrap(spacing:8,runSpacing:8,children:[
-    OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'clear'),icon:const Icon(Icons.layers_clear_outlined),label:Text(t('إزالة الخلفية','Remove wallpaper'))),
-    OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'save'),icon:const Icon(Icons.tune_rounded),label:Text(t('حفظ الوضوح','Save visibility'))),
-    FilledButton.icon(onPressed:()=>Navigator.pop(ctx,'choose'),icon:const Icon(Icons.photo_library_outlined),label:Text(t('اختيار صورة','Choose image')))
-   ])
-  ])))));
-  if(action==null)return;
-  final prefs=await SharedPreferences.getInstance();
-  if(action=='clear'){
-   final old=wallpaperPath;
-   await prefs.remove('ours_direct_wallpaper_'+widget.conversationId);
-   if(mounted)setState(()=>wallpaperPath=null);
-   if(old!=null){try{final file=File(old);if(await file.exists())await file.delete();}catch(_){}}
+ Future<void> _chooseWallpaper() async {
+  var opacity = wallpaperOpacity, zoom = wallpaperZoom, rotation = wallpaperRotation, dim = wallpaperDim;
+  final action = await showModalBottomSheet<String>(context: context, backgroundColor: const Color(0xFF171326), showDragHandle: true, isScrollControlled: true,
+    builder: (sheetContext) => StatefulBuilder(builder: (ctx, setModal) => SafeArea(child: Padding(
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
+      child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(t('خلفية المحادثة', 'Chat wallpaper'), style: const TextStyle(color: _gold, fontSize: 18, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        Text(t('اضبط التكبير والدوران والتعتيم قبل التطبيق. المعاينة لا ترسل أي رسالة.', 'Adjust zoom, rotation and dimming before applying. Preview never sends a message.'), style: const TextStyle(color: _lavender, fontSize: 12)),
+        if (wallpaperPath != null && File(wallpaperPath!).existsSync()) ...[
+          const SizedBox(height: 12),
+          ClipRRect(borderRadius: BorderRadius.circular(14), child: SizedBox(height: 150, width: double.infinity, child: Stack(fit: StackFit.expand, children: [
+            Transform.rotate(angle: rotation, child: Transform.scale(scale: zoom, child: Image.file(File(wallpaperPath!), fit: BoxFit.cover))),
+            ColoredBox(color: skin.bg.withValues(alpha: dim)),
+          ]))),
+        ],
+        const SizedBox(height: 12),
+        Row(children: [Expanded(child: Text(t('تكبير الصورة', 'Image zoom'), style: TextStyle(color: skin.accent, fontWeight: FontWeight.w700))), Text(zoom.toStringAsFixed(1) + '×', style: TextStyle(color: skin.accent))]),
+        Slider(value: zoom, min: 1, max: 2.5, divisions: 15, onChanged: (v) => setModal(() => zoom = v), activeColor: skin.accent),
+        Row(children: [Expanded(child: Text(t('تعتيم الخلفية', 'Background dimming'), style: TextStyle(color: skin.accent, fontWeight: FontWeight.w700))), Text((dim * 100).round().toString() + '%', style: TextStyle(color: skin.accent))]),
+        Slider(value: dim, min: .15, max: .85, divisions: 14, onChanged: (v) => setModal(() => dim = v), activeColor: skin.accent),
+        Row(children: [Expanded(child: Text(t('وضوح الخلفية', 'Wallpaper visibility'), style: TextStyle(color: skin.accent, fontWeight: FontWeight.w700))), Text((opacity * 100).round().toString() + '%', style: TextStyle(color: skin.accent))]),
+        Slider(value: opacity, min: .08, max: .45, divisions: 37, onChanged: (v) => setModal(() => opacity = v), activeColor: skin.accent),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          OutlinedButton.icon(onPressed: () => setModal(() => rotation = (rotation + math.pi / 2) % (math.pi * 2)), icon: const Icon(Icons.rotate_right_rounded), label: Text(t('تدوير 90°', 'Rotate 90°'))),
+          OutlinedButton.icon(onPressed: () => setModal(() { zoom = 1; rotation = 0; dim = .55; opacity = .22; }), icon: const Icon(Icons.restart_alt_rounded), label: Text(t('إعادة الضبط', 'Reset'))),
+        ]),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          OutlinedButton.icon(onPressed: () => Navigator.pop(ctx, 'clear'), icon: const Icon(Icons.layers_clear_outlined), label: Text(t('إزالة الخلفية', 'Remove wallpaper'))),
+          OutlinedButton.icon(onPressed: () => Navigator.pop(ctx, 'save'), icon: const Icon(Icons.tune_rounded), label: Text(t('حفظ الإعدادات', 'Save settings'))),
+          FilledButton.icon(onPressed: () => Navigator.pop(ctx, 'choose'), icon: const Icon(Icons.photo_library_outlined), label: Text(t('اختيار صورة', 'Choose image'))),
+        ]),
+      ])),
+    )))),
+  );
+  if (action == null) return;
+  final prefs = await SharedPreferences.getInstance();
+  if (action == 'clear') {
+    final old = wallpaperPath; await prefs.remove('ours_direct_wallpaper_' + widget.conversationId);
+    if (mounted) setState(() => wallpaperPath = null);
+    if (old != null) { try { final file = File(old); if (await file.exists()) await file.delete(); } catch (_) {} }
   }
-  if(action=='save'){
-   await prefs.setDouble('ours_direct_wallpaper_opacity_'+widget.conversationId,opacity);
-   if(mounted)setState(()=>wallpaperOpacity=opacity);
+  if (action == 'save' || action == 'choose') {
+    await prefs.setDouble('ours_direct_wallpaper_opacity_' + widget.conversationId, opacity);
+    await prefs.setDouble('ours_direct_wallpaper_zoom_' + widget.conversationId, zoom);
+    await prefs.setDouble('ours_direct_wallpaper_rotation_' + widget.conversationId, rotation);
+    await prefs.setDouble('ours_direct_wallpaper_dim_' + widget.conversationId, dim);
+    if (action == 'save' && mounted) setState(() { wallpaperOpacity = opacity; wallpaperZoom = zoom; wallpaperRotation = rotation; wallpaperDim = dim; });
   }
-  if(action=='choose'){
-   try{
-    final picked=await picker.pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);
-    if(picked==null)return;
-    final approved=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('معاينة الخلفية','Preview wallpaper'),style:TextStyle(color:skin.accent)),content:ClipRRect(borderRadius:BorderRadius.circular(14),child:Image.file(File(picked.path),height:230,width:280,fit:BoxFit.cover)),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(t('تطبيق','Apply')))]));
-    if(approved!=true)return;
-    final dir=await getApplicationDocumentsDirectory();
-    final target=File('${dir.path}/ours_chat_wallpaper_${widget.conversationId}.jpg');
-    await File(picked.path).copy(target.path);
-    await prefs.setString('ours_direct_wallpaper_'+widget.conversationId,target.path);
-    await prefs.setDouble('ours_direct_wallpaper_opacity_'+widget.conversationId,opacity);
-    if(mounted)setState((){wallpaperPath=target.path;wallpaperOpacity=opacity;});
-   }catch(e){_show(t('تعذر تطبيق الخلفية. حاول اختيار صورة أخرى.','Could not apply wallpaper. Try another image.'));}
+  if (action == 'choose') {
+    try {
+      final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 94, maxWidth: 2800, maxHeight: 2800);
+      if (picked == null || !mounted) return;
+      final approved = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(backgroundColor: skin.bg,
+        title: Text(t('معاينة الخلفية', 'Preview wallpaper'), style: TextStyle(color: skin.accent)),
+        content: ClipRRect(borderRadius: BorderRadius.circular(14), child: SizedBox(width: 280, height: 230, child: Stack(fit: StackFit.expand, children: [
+          Transform.rotate(angle: rotation, child: Transform.scale(scale: zoom, child: Image.file(File(picked.path), fit: BoxFit.cover))),
+          ColoredBox(color: skin.bg.withValues(alpha: dim)),
+        ]))),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t('إلغاء', 'Cancel'))), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t('تطبيق', 'Apply')))]));
+      if (approved != true) return;
+      final dir = await getApplicationDocumentsDirectory(); final target = File(dir.path + '/ours_chat_wallpaper_' + widget.conversationId + '.jpg');
+      await File(picked.path).copy(target.path); await prefs.setString('ours_direct_wallpaper_' + widget.conversationId, target.path);
+      if (mounted) setState(() { wallpaperPath = target.path; wallpaperOpacity = opacity; wallpaperZoom = zoom; wallpaperRotation = rotation; wallpaperDim = dim; });
+    } catch (_) { if (mounted) _show(t('تعذر تطبيق الخلفية. حاول اختيار صورة أخرى.', 'Could not apply wallpaper. Try another image.')); }
   }
- }
+}
  Future<void> _load() async{
   try{
    final hidden=await db.from('ours_direct_message_hides').select('message_id').eq('user_id',uid);
@@ -765,8 +793,8 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    ]),
    body:Stack(children:[
     if(wallpaperPath==null)Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
-    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>CustomPaint(painter:_ChatAtmospherePainter(skin))))),
-    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:(1-wallpaperOpacity).clamp(.35,.82).toDouble())))),
+    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ClipRect(child:Transform.rotate(angle:wallpaperRotation,child:Transform.scale(scale:wallpaperZoom,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>CustomPaint(painter:_ChatAtmospherePainter(skin)))))))),
+    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:wallpaperDim)))),
     Column(children:[
     Expanded(child:loading?Center(child:CircularProgressIndicator(color:skin.accent)):messages.isEmpty
      ?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
