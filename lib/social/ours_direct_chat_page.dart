@@ -169,7 +169,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Map<String,dynamic>? replyTo;
  RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
  Timer? typingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId;
- bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22;_ChatSkin skin=_skins.first;
+ bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22,wallpaperDim=.34,wallpaperBlur=0;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
  int _streakCount(){
@@ -221,7 +221,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final found=_skins.where((s)=>s.id==id);
   final savedWallpaper=p.getString('ours_direct_wallpaper_'+widget.conversationId);
   final savedOpacity=p.getDouble('ours_direct_wallpaper_opacity_'+widget.conversationId)??.22;
-  if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=savedWallpaper;wallpaperOpacity=savedOpacity.clamp(.08,.45).toDouble();});
+  final savedDim=p.getDouble('ours_direct_wallpaper_dim_'+widget.conversationId)??.34;
+  final savedBlur=p.getDouble('ours_direct_wallpaper_blur_'+widget.conversationId)??0;
+  if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=savedWallpaper;wallpaperOpacity=savedOpacity.clamp(.08,.85).toDouble();wallpaperDim=savedDim.clamp(0,.75).toDouble();wallpaperBlur=savedBlur.clamp(0,12).toDouble();});
  }
  Future<void> _chooseSkin() async{
   final selected=await showModalBottomSheet<_ChatSkin>(
@@ -304,6 +306,20 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    unawaited(live.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));
   });
  }
+ String _readReceipt(dynamic value){
+  final raw=value?.toString();
+  if(raw==null||raw.isEmpty)return t('تم الإرسال','Sent');
+  final seen=DateTime.tryParse(raw)?.toLocal();
+  if(seen==null)return t('تمت المشاهدة','Seen');
+  final minutes=DateTime.now().difference(seen).inMinutes;
+  if(minutes<=0)return t('مقروءة الآن','Seen just now');
+  if(minutes==1)return t('مقروءة منذ دقيقة','Seen 1 minute ago');
+  if(minutes<60)return t('مقروءة منذ ${minutes} دقيقة','Seen ${minutes} minutes ago');
+  final hours=minutes~/60;
+  if(hours==1)return t('مقروءة منذ ساعة','Seen 1 hour ago');
+  if(hours<24)return t('مقروءة منذ ${hours} ساعة','Seen ${hours} hours ago');
+  return t('تمت المشاهدة ${_oursDate(seen,true,withYear:false)}','Seen ${_oursDate(seen,false,withYear:false)}');
+ }
  String _presenceLabel(){
   if(partnerTyping)return t('يكتب الآن…','Typing…');
   if(partnerOnline)return t('متصل الآن','Online now');
@@ -316,46 +332,58 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   return t('آخر ظهور ${_oursDate(seen,true,withYear:false)}','Last seen ${_oursDate(seen,false,withYear:false)}');
  }
  Future<void> _chooseWallpaper() async{
-  var opacity=wallpaperOpacity;
-  final action=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF171326),showDragHandle:true,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(18,8,18,18),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-   Text(t('خلفية المحادثة','Chat wallpaper'),style:const TextStyle(color:_gold,fontSize:18,fontWeight:FontWeight.w800)),
-   const SizedBox(height:8),
-   Text(t('اختر صورة مستقلة عن الثيم، واضبط وضوحها حتى تبقى الرسائل سهلة القراءة.','Choose a wallpaper independently from the theme and adjust its visibility for readable messages.'),style:const TextStyle(color:_lavender,fontSize:12)),
+  var opacity=wallpaperOpacity,dim=wallpaperDim,blur=wallpaperBlur;
+  final action=await showModalBottomSheet<String>(context:context,isScrollControlled:true,backgroundColor:const Color(0xFF171326),showDragHandle:true,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(18,8,18,20),child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Row(children:[Icon(Icons.wallpaper_rounded,color:skin.accent,size:23),const SizedBox(width:9),Text(t('استوديو خلفية المحادثة','Chat wallpaper studio'),style:const TextStyle(color:_gold,fontSize:18,fontWeight:FontWeight.w900))]),
+   const SizedBox(height:6),Text(t('خصص الصورة ووازنها مع ألوان الثيم دون أن تطغى على الرسائل.','Fine-tune the image and balance it with your theme without overpowering messages.'),style:const TextStyle(color:_lavender,fontSize:12,height:1.5)),
+   const SizedBox(height:14),
+   Container(height:104,width:double.infinity,clipBehavior:Clip.antiAlias,decoration:BoxDecoration(borderRadius:BorderRadius.circular(17),border:Border.all(color:skin.accent.withValues(alpha:.3))),child:Stack(fit:StackFit.expand,children:[
+    CustomPaint(painter:_ChatAtmospherePainter(skin)),
+    if(wallpaperPath!=null)Opacity(opacity:opacity,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())),
+    ColoredBox(color:skin.bg.withValues(alpha:dim)),
+    Align(alignment:Alignment.centerRight,child:Container(margin:const EdgeInsets.all(10),padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:skin.mine,borderRadius:BorderRadius.circular(14)),child:Text(t('معاينة الرسائل','Message preview'),style:const TextStyle(color:Colors.white,fontSize:12))))
+   ])),
    const SizedBox(height:12),
-   Row(children:[Expanded(child:Text(t('وضوح الخلفية','Wallpaper visibility'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w700))),Text('${(opacity*100).round()}%',style:TextStyle(color:skin.accent))]),
-   Slider(value:opacity,min:.08,max:.45,onChanged:(v)=>setModal(()=>opacity=v),activeColor:skin.accent),
+   _wallpaperSliderLabel(t('وضوح الصورة','Image visibility'),opacity),
+   Slider(value:opacity.clamp(.08,.85),min:.08,max:.85,onChanged:(v)=>setModal(()=>opacity=v),activeColor:skin.accent),
+   _wallpaperSliderLabel(t('تعتيم متناسق مع الثيم','Theme blending'),dim),
+   Slider(value:dim.clamp(0,.75),min:0,max:.75,onChanged:(v)=>setModal(()=>dim=v),activeColor:skin.accent),
+   _wallpaperSliderLabel(t('تمويه الخلفية','Background blur'),blur,percent:false),
+   Slider(value:blur.clamp(0,12),min:0,max:12,onChanged:(v)=>setModal(()=>blur=v),activeColor:skin.accent),
    const SizedBox(height:8),
    Wrap(spacing:8,runSpacing:8,children:[
-    OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'clear'),icon:const Icon(Icons.layers_clear_outlined),label:Text(t('إزالة الخلفية','Remove wallpaper'))),
-    OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'save'),icon:const Icon(Icons.tune_rounded),label:Text(t('حفظ الوضوح','Save visibility'))),
+    OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'clear'),icon:const Icon(Icons.layers_clear_outlined),label:Text(t('إزالة الصورة','Remove image'))),
+    OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'save'),icon:const Icon(Icons.tune_rounded),label:Text(t('تطبيق الإعدادات','Apply settings'))),
     FilledButton.icon(onPressed:()=>Navigator.pop(ctx,'choose'),icon:const Icon(Icons.photo_library_outlined),label:Text(t('اختيار صورة','Choose image')))
    ])
   ])))));
   if(action==null)return;
   final prefs=await SharedPreferences.getInstance();
+  Future<void> saveSettings()async{
+   await prefs.setDouble('ours_direct_wallpaper_opacity_'+widget.conversationId,opacity);
+   await prefs.setDouble('ours_direct_wallpaper_dim_'+widget.conversationId,dim);
+   await prefs.setDouble('ours_direct_wallpaper_blur_'+widget.conversationId,blur);
+   if(mounted)setState(()=>{wallpaperOpacity=opacity,wallpaperDim=dim,wallpaperBlur=blur});
+  }
   if(action=='clear'){
-   final old=wallpaperPath;
-   await prefs.remove('ours_direct_wallpaper_'+widget.conversationId);
+   final old=wallpaperPath;await prefs.remove('ours_direct_wallpaper_'+widget.conversationId);
    if(mounted)setState(()=>wallpaperPath=null);
    if(old!=null){try{final file=File(old);if(await file.exists())await file.delete();}catch(_){}}
-  }
-  if(action=='save'){
-   await prefs.setDouble('ours_direct_wallpaper_opacity_'+widget.conversationId,opacity);
-   if(mounted)setState(()=>wallpaperOpacity=opacity);
-  }
-  if(action=='choose'){
+   await saveSettings();
+  }else if(action=='save'){await saveSettings();}
+  else if(action=='choose'){
    try{
-    final picked=await picker.pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);
-    if(picked==null)return;
+    final picked=await picker.pickImage(source:ImageSource.gallery,imageQuality:96,maxWidth:3200,maxHeight:3200);if(picked==null)return;
     final dir=await getApplicationDocumentsDirectory();
     final target=File('${dir.path}/ours_chat_wallpaper_${widget.conversationId}.jpg');
     await File(picked.path).copy(target.path);
     await prefs.setString('ours_direct_wallpaper_'+widget.conversationId,target.path);
-    await prefs.setDouble('ours_direct_wallpaper_opacity_'+widget.conversationId,opacity);
-    if(mounted)setState((){wallpaperPath=target.path;wallpaperOpacity=opacity;});
+    await saveSettings();
+    if(mounted)setState(()=>wallpaperPath=target.path);
    }catch(e){_show(t('تعذر تطبيق الخلفية. حاول اختيار صورة أخرى.','Could not apply wallpaper. Try another image.'));}
   }
  }
+ Widget _wallpaperSliderLabel(String label,double value,{bool percent=true})=>Row(children:[Expanded(child:Text(label,style:TextStyle(color:skin.accent,fontWeight:FontWeight.w700,fontSize:12))),Text(percent?'${(value*100).round()}%':'${value.toStringAsFixed(1)}',style:TextStyle(color:skin.accent,fontFeatures:const [ui.FontFeature.tabularFigures()]))]);
  Future<void> _load() async{
   try{
    final hidden=await db.from('ours_direct_message_hides').select('message_id').eq('user_id',uid);
@@ -717,8 +745,8 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    ]),
    body:Stack(children:[
     Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
-    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Opacity(opacity:wallpaperOpacity,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())))),
-    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:.48)))),
+    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:wallpaperBlur,sigmaY:wallpaperBlur),child:Opacity(opacity:wallpaperOpacity,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()))))),
+    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:wallpaperDim)))),
     Column(children:[
     Expanded(child:loading?Center(child:CircularProgressIndicator(color:skin.accent)):messages.isEmpty
      ?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
@@ -738,8 +766,8 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
         child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:(type=='image'||type=='video'||type=='view_once'||type=='view_twice')?EdgeInsets.zero:const EdgeInsets.symmetric(horizontal:14,vertical:11),
-         decoration:(type=='image'||type=='video'||type=='view_once'||type=='view_twice')?null:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),borderRadius:BorderRadius.circular(17),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:(type=='image'||type=='video'||type=='view_once'||type=='view_twice')?EdgeInsets.zero:const EdgeInsets.symmetric(horizontal:11,vertical:8),
+         decoration:(type=='image'||type=='video'||type=='view_once'||type=='view_twice')?null:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),borderRadius:BorderRadiusDirectional.only(topStart:const Radius.circular(17),topEnd:const Radius.circular(17),bottomStart:Radius.circular(mine?17:5),bottomEnd:Radius.circular(mine?5:17)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
@@ -773,7 +801,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
           ]))
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
           else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
-          if(mine)Padding(padding:const EdgeInsets.only(top:3),child:Align(alignment:AlignmentDirectional.centerEnd,child:Icon(m['read_at']!=null?Icons.done_all_rounded:Icons.done_rounded,color:m['read_at']!=null?skin.accent:skin.accent.withValues(alpha:.55),size:13)))
+          if(mine)Padding(padding:const EdgeInsets.only(top:4),child:Align(alignment:AlignmentDirectional.centerEnd,child:Text(_readReceipt(m['read_at']),style:TextStyle(color:m['read_at']!=null?skin.accent:skin.accent.withValues(alpha:.62),fontSize:9,fontWeight:FontWeight.w600))))
          ]))
         ))
        )
