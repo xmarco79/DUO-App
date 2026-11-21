@@ -915,6 +915,8 @@ class _ChatPageState extends State<ChatPage> {
         return 'ملف';
       case 'audio':
         return 'رسالة صوتية';
+      case 'video':
+        return 'فيديو';
       default:
         final body = item['body']?.toString() ?? '';
         return body.length > 70 ? '${body.substring(0, 70)}…' : body;
@@ -993,7 +995,7 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> sendImage() async {
-    if (uploadingImage || sending) return;
+    if (uploadingImage || uploadingVideo || uploadingFile || sending) return;
 
     try {
       final picked = await imagePicker.pickImage(
@@ -1121,7 +1123,7 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> sendFile() async {
-    if (uploadingFile || uploadingImage || sending) return;
+    if (uploadingFile || uploadingImage || uploadingVideo || sending) return;
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -1186,7 +1188,7 @@ class _ChatPageState extends State<ChatPage> {
 
 
   Future<void> startAudioRecording() async {
-    if (recordingAudio || sending || uploadingImage || uploadingFile) return;
+    if (recordingAudio || sending || uploadingImage || uploadingFile || uploadingVideo) return;
     final recorder = audioRecorder ??= AudioRecorder();
     try {
       final permitted = await recorder.hasPermission();
@@ -1632,11 +1634,11 @@ class _ChatPageState extends State<ChatPage> {
                                 maxWidth: MediaQuery.of(context).size.width * 0.80,
                               ),
                               margin: EdgeInsets.only(bottom: groupedWithPrevious ? 4 : 12),
-                              padding: isImageMessage ? EdgeInsets.zero : const EdgeInsets.symmetric(
+                              padding: (isImageMessage || isVideoMessage) ? EdgeInsets.zero : const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 12,
                               ),
-                              decoration: isImageMessage ? null : BoxDecoration(
+                              decoration: (isImageMessage || isVideoMessage) ? null : BoxDecoration(
                                 gradient: LinearGradient(colors: isMe ? chatTheme.mineGradient : chatTheme.partnerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(19),
