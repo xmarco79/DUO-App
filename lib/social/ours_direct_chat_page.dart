@@ -45,9 +45,12 @@ const _skins=[
 ];
 
 
-Uint8List _processOursImage(Uint8List bytes,{required int filter,required int ratio,required double offsetX,required double offsetY,required bool hd}){
- final source=img.decodeImage(bytes);
- if(source==null)throw Exception('Unsupported image');
+Uint8List _processOursImage(Uint8List bytes,{required int filter,required int ratio,required double offsetX,required double offsetY,required bool hd,int maxDimension=4096}){
+ final decoded=img.decodeImage(bytes);
+ if(decoded==null)throw Exception('Unsupported image');
+ var source=decoded;
+ final longest=math.max(source.width,source.height);
+ if(longest>maxDimension){final scale=maxDimension/longest;source=img.copyResize(source,width:(source.width*scale).round(),height:(source.height*scale).round());}
  const ratios=<double?>[null,1,4/5,16/9];
  final targetRatio=ratios[ratio];
  var cropW=source.width,cropH=source.height;
@@ -471,7 +474,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   const filterNamesAr=['أصلي','مضيء','دافئ','سينمائي','أحادي','ذهبي','بارد','قديم','حيوي','ناعم','داكن','شروق'];
   var filter=0,ratio=0,offsetX=.5,offsetY=.5,hd=true,mode='normal';
   Uint8List edited=bytes;
-  void refresh(){edited=_processOursImage(bytes,filter:filter,ratio:ratio,offsetX:offsetX,offsetY:offsetY,hd:hd);}
+  void refresh(){edited=_processOursImage(bytes,filter:filter,ratio:ratio,offsetX:offsetX,offsetY:offsetY,hd:hd,maxDimension:1200);}
   refresh();
   return await showDialog<Map<String,dynamic>>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>Dialog(
    backgroundColor:const Color(0xFF171326),insetPadding:const EdgeInsets.symmetric(horizontal:12,vertical:22),
@@ -503,7 +506,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     Row(children:[
      Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel')))),
      const SizedBox(width:9),
-     Expanded(child:FilledButton(onPressed:()=>Navigator.pop(ctx,{'bytes':edited,'mode':mode}),child:Text(t('اعتماد وإرسال','Apply & send'))))
+     Expanded(child:FilledButton(onPressed:()=>Navigator.pop(ctx,{'bytes':_processOursImage(bytes,filter:filter,ratio:ratio,offsetX:offsetX,offsetY:offsetY,hd:hd,maxDimension:hd?4096:1600),'mode':mode}),child:Text(t('اعتماد وإرسال','Apply & send'))))
     ])
    ]))),
   )));
