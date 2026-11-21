@@ -1074,7 +1074,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
    }
   }catch(_){_notice(t('تعذر اختيار الصورة','Could not select image'));}
  }
- Future<void> _previewSelfVideo(String path)async{
+ Future<void> _previewSelfVideo(String path,{required String extension})async{
   final controller=VideoPlayerController.file(File(path));
   try{
    await controller.initialize();
@@ -1090,7 +1090,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
     ]),
     actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(t('إرسال','Send')))]
    )));
-   if(accepted==true){final file=File(path);if(await file.exists())await _uploadSelf(await file.readAsBytes(),'self_video_'+DateTime.now().microsecondsSinceEpoch.toString()+'.mp4','video');}
+   if(accepted==true){final file=File(path);if(await file.exists())await _uploadSelf(await file.readAsBytes(),'self_video_'+DateTime.now().microsecondsSinceEpoch.toString()+'.'+extension,'video');}
   }catch(_){_notice(t('تعذر معاينة الفيديو','Could not preview video'));}
   finally{await controller.dispose();}
  }
@@ -1100,7 +1100,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
    if(file==null)return;
    final ext=file.name.split('.').last.toLowerCase();
    if(!['mp4','mov','webm'].contains(ext)){_notice(t('صيغة الفيديو غير مدعومة','Unsupported video format'));return;}
-   await _previewSelfVideo(file.path);
+   await _previewSelfVideo(file.path,extension:ext);
   }catch(_){_notice(t('تعذر اختيار الفيديو','Could not select video'));}
  }
  Future<void> _pickFile()async{
