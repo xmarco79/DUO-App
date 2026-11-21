@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - feature/full-ours-worlds
+      - feature/ours-two-person-expansion
+      - feature/ours-chat-polish-build721
+  pull_request:
+    branches:
+      - feature/full-ours-worlds
   workflow_dispatch:
 
 jobs:
@@ -21,6 +26,59 @@ jobs:
 
       - name: Generate Android project
         run: flutter create --platforms=android --org com.ours --project-name ours .
+
+      - name: Configure reliable Maven Central mirror
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          candidates = [Path("android/settings.gradle.kts"), Path("android/settings.gradle")]
+          settings = next((p for p in candidates if p.exists()), None)
+          if settings is None:
+              raise SystemExit("Android settings.gradle file was not generated")
+
+          text = settings.read_text()
+          kotlin_dsl = settings.suffix == ".kts"
+          mirror = (
+              'maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2/") }'
+              if kotlin_dsl else
+              "maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }"
+          )
+
+          def add_mirror(block_name, source):
+              match = re.search(r"\b" + re.escape(block_name) + r"\s*\{", source)
+              if not match:
+                  return source, False
+              start = match.end()
+              depth = 1
+              i = start
+              while i < len(source) and depth:
+                  if source[i] == "{":
+                      depth += 1
+                  elif source[i] == "}":
+                      depth -= 1
+                  i += 1
+              block = source[match.start():i]
+              if "maven-central.storage-download.googleapis.com" in block:
+                  return source, False
+              repos = re.search(r"repositories\s*\{", block)
+              if not repos:
+                  return source, False
+              insert_at = match.start() + repos.end()
+              return source[:insert_at] + "\n        " + mirror + source[insert_at:], True
+
+          changed = False
+          for block_name in ("pluginManagement", "dependencyResolutionManagement"):
+              text, did_change = add_mirror(block_name, text)
+              changed = changed or did_change
+
+          if not changed:
+              raise SystemExit("Could not add Maven mirror to Gradle repository configuration")
+          settings.write_text(text)
+          print("Added Google-hosted Maven Central mirror before the default repositories.")
+          PY
 
       - name: Configure Firebase Android app
         shell: bash
@@ -89,6 +147,8 @@ jobs:
           manifest = Path('android/app/src/main/AndroidManifest.xml')
           content = manifest.read_text()
           permissions = [
+              '    <uses-permission android:name="android.permission.INTERNET" />',
+              '    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />',
               '    <uses-permission android:name="android.permission.RECORD_AUDIO" />',
               '    <uses-permission android:name="android.permission.CAMERA" />',
               '    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />',
@@ -100,53 +160,81 @@ jobs:
           manifest.write_text(content)
           PY
 
-      - name: Generate refined OURS Android icon
+      - name: Generate Android launcher icon from repository artwork
         shell: bash
         run: |
           python3 -m pip install --quiet Pillow
           python3 - <<'PY'
           from pathlib import Path
-          from PIL import Image, ImageDraw
-          import math
+          from PIL import Image, ImageFile
 
+          source_path = Path("assets/ours_icon.png")
+          if not source_path.exists():
+              raise SystemExit("Launcher image asset missing: assets/ours_icon.png")
+          ImageFile.LOAD_TRUNCATED_IMAGES = True
+          source = Image.open(source_path).convert("RGBA")
           size = 1024
-          image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-          pixels = image.load()
-          for y in range(size):
-              t = y / (size - 1)
-              top = (19, 18, 34)
-              bottom = (47, 35, 62)
-              color = tuple(round(top[i] * (1-t) + bottom[i] * t) for i in range(3))
-              for x in range(size):
-                  pixels[x, y] = (*color, 255)
-
-          mask = Image.new("L", (size, size), 0)
-          ImageDraw.Draw(mask).rounded_rectangle((0, 0, size-1, size-1), radius=230, fill=255)
-          image.putalpha(mask)
-          draw = ImageDraw.Draw(image)
-
-          # Fine orbital frame and a restrained central infinity mark.
-          draw.ellipse((110, 110, 914, 914), outline=(217, 188, 134, 34), width=5)
-          points = []
-          for step in range(1600):
-              t = 2 * math.pi * step / 1599
-              x = 512 + 250 * math.cos(t)
-              y = 510 + 145 * math.sin(2 * t)
-              points.append((round(x), round(y)))
-          draw.line(points, fill=(226, 204, 158, 255), width=43, joint="curve")
-          draw.ellipse((730, 250, 778, 298), fill=(226, 204, 158, 255))
-          draw.ellipse((257, 704, 285, 732), fill=(185, 162, 213, 230))
-
+          source = source.resize((size, size), Image.Resampling.LANCZOS)
+          # Legacy icons contain the complete supplied art. Adaptive art is inset so masks don't crop it.
           sizes = {"mdpi":48, "hdpi":72, "xhdpi":96, "xxhdpi":144, "xxxhdpi":192}
           for density, pixels in sizes.items():
-              target = Path(f"android/app/src/main/res/mipmap-{density}/ic_launcher.png")
-              target.parent.mkdir(parents=True, exist_ok=True)
-              image.resize((pixels, pixels), Image.Resampling.LANCZOS).save(target, format="PNG", optimize=True)
+              folder = Path(f"android/app/src/main/res/mipmap-{density}")
+              folder.mkdir(parents=True, exist_ok=True)
+              source.resize((pixels,pixels),Image.Resampling.LANCZOS).save(folder/"ic_launcher.png",format="PNG",optimize=True)
+              source.resize((pixels,pixels),Image.Resampling.LANCZOS).save(folder/"ic_launcher_round.png",format="PNG",optimize=True)
+              adaptive_fg = Image.new("RGBA",(size,size),(0,0,0,0))
+              inset = source.resize((860,860),Image.Resampling.LANCZOS)
+              adaptive_fg.alpha_composite(inset,((size-860)//2,(size-860)//2))
+              adaptive_fg.resize((pixels,pixels),Image.Resampling.LANCZOS).save(folder/"ic_launcher_foreground.png",format="PNG",optimize=True)
+          adaptive = '''<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ours_icon_background" />
+              <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+          </adaptive-icon>
+          '''
+          adaptive_dir = Path("android/app/src/main/res/mipmap-anydpi-v26")
+          adaptive_dir.mkdir(parents=True, exist_ok=True)
+          (adaptive_dir/"ic_launcher.xml").write_text(adaptive)
+          (adaptive_dir/"ic_launcher_round.xml").write_text(adaptive)
+          colors = Path("android/app/src/main/res/values/colors.xml")
+          colors.parent.mkdir(parents=True, exist_ok=True)
+          color_text = colors.read_text() if colors.exists() else '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
+          definition = '<color name="ours_icon_background">#020105</color>'
+          if '<color name="ours_icon_background">' in color_text:
+              import re
+              color_text = re.sub(r'<color name="ours_icon_background">.*?</color>',definition,color_text)
+          else:
+              color_text = color_text.replace('</resources>',f'    {definition}\n</resources>')
+          colors.write_text(color_text)
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          manifest_text = manifest.read_text()
+          import re
+          manifest_text = re.sub(r'android:label="[^"]*"', 'android:label="OURS"',manifest_text,count=1)
+          manifest_text = re.sub(r'android:icon="[^"]*"', 'android:icon="@mipmap/ic_launcher"',manifest_text,count=1)
+          if 'android:roundIcon=' in manifest_text:
+              manifest_text = re.sub(r'android:roundIcon="[^"]*"', 'android:roundIcon="@mipmap/ic_launcher_round"',manifest_text,count=1)
+          else:
+              manifest_text = manifest_text.replace('android:icon="@mipmap/ic_launcher"', 'android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round"',1)
+          manifest.write_text(manifest_text)
           Path("build").mkdir(parents=True, exist_ok=True)
-          image.save("build/ours_icon_preview.png", format="PNG", optimize=True)
-          print("Generated a fresh OURS launcher icon in all Android densities.")
+          source.save("build/ours_icon_preview.png",format="PNG",optimize=True)
+          print("Installed the exact supplied OURS artwork in Android launcher icon resources.")
           PY
-          rm -f android/app/src/main/res/drawable/ours_icon.xml
+
+      - name: Set Android app display name
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          content = manifest.read_text()
+          updated, count = re.subn(r'android:label="[^"]*"', 'android:label="OURS"', content, count=1)
+          if count != 1:
+              raise SystemExit("Could not set Android application label")
+          manifest.write_text(updated)
+          print("Android launcher label set to OURS.")
+          PY
 
       - name: Set Android compile SDK
         shell: bash
@@ -298,7 +386,51 @@ jobs:
           PY
 
       - name: Build APK
-        run: flutter build apk --release
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Release build attempt $attempt/3"
+            if flutter build apk --release; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Gradle dependency resolution failed; retrying after a short backoff."
+              sleep $((attempt * 20))
+            fi
+          done
+          echo "Release APK build failed after three attempts."
+          exit 1
+
+      - name: Sign APK with v1 and v2 for Android compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "Android SDK root: $SDK_ROOT"
+          echo "Available build-tools:"
+          ls -la "$SDK_ROOT/build-tools" || true
+          APKSIGNER="$(find "$SDK_ROOT/build-tools" -name apksigner -print | sort -V | tail -n 1)"
+          KEYSTORE="$HOME/.android/debug.keystore"
+          test -s "$APK"
+          test -n "$APKSIGNER"
+          test -x "$APKSIGNER"
+          test -s "$KEYSTORE"
+          echo "Using apksigner: $APKSIGNER"
+          echo "Using debug keystore: $KEYSTORE"
+          "$APKSIGNER" sign \
+            --ks "$KEYSTORE" \
+            --ks-key-alias androiddebugkey \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --min-sdk-version 23 \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out "$APK.compat" "$APK"
+          mv "$APK.compat" "$APK"
+          echo "APK re-signed with both v1 and v2 schemes."
 
       - name: Validate release APK
         shell: bash
@@ -316,8 +448,13 @@ jobs:
 
           BADGING="$($AAPT dump badging "$APK")"
           echo "$BADGING" | grep -F "package: name='com.ours.ours'"
-          "$APKSIGNER" verify --verbose "$APK"
-          echo "APK validation passed."
+          VERIFY_OUTPUT="$("$APKSIGNER" verify --verbose "$APK")"
+          echo "$VERIFY_OUTPUT"
+          # V1 is informational here; the supported Android baseline is validated with V2/V3.
+          echo "V1 signature status is informational; Android API 24+ compatibility is verified through V2/V3."
+          echo "$VERIFY_OUTPUT" | grep -F "Verified using v2 scheme (APK Signature Scheme v2): true"
+          echo "$VERIFY_OUTPUT" | grep -F "Verified using v3 scheme (APK Signature Scheme v3): true"
+          echo "APK validation passed with verified V2 and V3 signatures."
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
