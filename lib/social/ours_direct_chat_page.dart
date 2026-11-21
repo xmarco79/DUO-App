@@ -520,8 +520,35 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Future<bool> _previewVideoFile(String path) async{
   final controller=VideoPlayerController.file(File(path));
   try{await controller.initialize();}catch(_){await controller.dispose();return false;}
-  final confirmed=await showDialog<bool>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>AlertDialog(backgroundColor:skin.bg,title:Text(t('معاينة الفيديو','Video preview')),content:Column(mainAxisSize:MainAxisSize.min,children:[if(controller.value.isInitialized)AspectRatio(aspectRatio:controller.value.aspectRatio,child:VideoPlayer(controller)),const SizedBox(height:10),Row(mainAxisAlignment:MainAxisAlignment.center,children:[IconButton(onPressed:()=>setModal(()=>controller.value.isPlaying?controller.pause():controller.play()),icon:Icon(controller.value.isPlaying?Icons.pause:Icons.play_arrow,color:skin.accent)),IconButton(onPressed:()=>setModal(()=>controller.seekTo(Duration.zero)),icon:Icon(Icons.replay,color:skin.accent))]),Text(t('يمكنك مشاهدة المقطع قبل إرساله.','Preview the clip before sending.'),style:TextStyle(color:skin.accent,fontSize:12),textAlign:TextAlign.center)]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(t('إرسال','Send')))])));
-  await controller.dispose();return confirmed==true;
+  var loop=true,speed=1.0;
+  await controller.setLooping(loop);
+  final confirmed=await showDialog<bool>(context:context,barrierDismissible:false,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>Dialog(
+   backgroundColor:const Color(0xFF171326),insetPadding:const EdgeInsets.all(16),
+   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24),side:BorderSide(color:skin.accent.withValues(alpha:.22))),
+   child:Padding(padding:const EdgeInsets.all(15),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Row(children:[Icon(Icons.movie_filter_rounded,color:skin.accent),const SizedBox(width:8),Expanded(child:Text(t('معاينة الفيديو','Video preview'),style:const TextStyle(color:_gold,fontWeight:FontWeight.w900,fontSize:17))),IconButton(onPressed:()=>Navigator.pop(ctx,false),icon:const Icon(Icons.close,color:_lavender))]),
+    ClipRRect(borderRadius:BorderRadius.circular(15),child:AspectRatio(aspectRatio:controller.value.aspectRatio>0?controller.value.aspectRatio:16/9,child:VideoPlayer(controller))),
+    const SizedBox(height:9),
+    VideoProgressIndicator(controller,allowScrubbing:true,colors:VideoProgressColors(playedColor:skin.accent,bufferedColor:Colors.white38,backgroundColor:Colors.white12)),
+    Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+     IconButton.filled(onPressed:()=>setModal(()=>controller.value.isPlaying?controller.pause():controller.play()),style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:Icon(controller.value.isPlaying?Icons.pause_rounded:Icons.play_arrow_rounded)),
+     IconButton(onPressed:()=>setModal(()=>controller.seekTo(Duration.zero)),icon:Icon(Icons.replay_rounded,color:skin.accent)),
+     const Spacer(),
+     Text(t('السرعة','Speed'),style:TextStyle(color:_lavender,fontSize:11)),
+     const SizedBox(width:5),
+     DropdownButton<double>(value:speed,dropdownColor:skin.bg,underline:const SizedBox.shrink(),style:TextStyle(color:skin.accent,fontSize:12),items:const [0.5,0.75,1.0,1.25,1.5,2.0].map((v)=>DropdownMenuItem(value:v,child:Text('${v}x'))).toList(),onChanged:(v){if(v==null)return;setModal(() {speed=v;controller.setPlaybackSpeed(v);});}),
+    ]),
+    SwitchListTile.adaptive(contentPadding:EdgeInsets.zero,dense:true,value:loop,activeColor:skin.accent,title:Text(t('تكرار المقطع أثناء المعاينة','Loop during preview'),style:const TextStyle(color:Colors.white,fontSize:12)),onChanged:(v)=>setModal(() {loop=v;controller.setLooping(v);})),
+    Row(children:[
+     Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel')))),
+     const SizedBox(width:9),
+     Expanded(child:FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(t('إرسال الفيديو','Send video'))))
+    ])
+   ])),
+  )));
+  await controller.pause();
+  await controller.dispose();
+  return confirmed==true;
  }
  Future<void> _pickVideo() async{
   try{
