@@ -1068,6 +1068,72 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  Future<void> sendVideo() async {
+    if (uploadingImage || uploadingFile || sending) return;
+    VideoPlayerController? preview;
+    try {
+      final picked = await imagePicker.pickVideo(source: ImageSource.gallery, maxDuration: const Duration(minutes: 2));
+      if (picked == null || !mounted) return;
+      final extension = picked.name.contains('.') ? picked.name.split('.').last.toLowerCase() : '';
+      if (!{'mp4', 'mov', 'webm'}.contains(extension)) {
+        showMessage('صيغة الفيديو غير مدعومة. استخدم MP4 أو MOV أو WEBM');
+        return;
+      }
+      final bytes = await picked.readAsBytes();
+      if (bytes.isEmpty || bytes.length > 20 * 1024 * 1024) {
+        showMessage(bytes.isEmpty ? 'الفيديو المحدد فارغ' : 'حجم الفيديو يتجاوز الحد المسموح (20 ميجابايت)');
+        return;
+      }
+      preview = VideoPlayerController.file(File(picked.path));
+      await preview.initialize();
+      if (!mounted) return;
+      final accepted = await showDialog<bool>(context: context, barrierDismissible: false, builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) => AlertDialog(
+          backgroundColor: purple,
+          title: const Text('معاينة الفيديو'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            AspectRatio(aspectRatio: preview!.value.aspectRatio, child: VideoPlayer(preview!)),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              IconButton(onPressed: () => setModal(() => preview!.value.isPlaying ? preview!.pause() : preview!.play()), icon: Icon(preview!.value.isPlaying ? Icons.pause : Icons.play_arrow, color: gold)),
+              IconButton(onPressed: () => setModal(() => preview!.seekTo(Duration.zero)), icon: const Icon(Icons.replay, color: gold)),
+            ]),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('إرسال')),
+          ],
+        ),
+      ));
+      await preview.dispose();
+      preview = null;
+      if (accepted != true || !mounted) return;
+
+      setState(() => uploadingImage = true);
+      final mime = extension == 'mov' ? 'video/quicktime' : extension == 'webm' ? 'video/webm' : 'video/mp4';
+      final storagePath = '${widget.spaceId}/$currentUserId/${DateTime.now().microsecondsSinceEpoch}.$extension';
+      await db.storage.from('duo-private').uploadBinary(storagePath, bytes, fileOptions: FileOptions(contentType: mime, cacheControl: '3600', upsert: false));
+      try {
+        await db.from('duo_messages').insert({
+          'space_id': widget.spaceId,
+          'sender_id': currentUserId,
+          'body': storagePath,
+          'message_type': 'video',
+          if (replyingTo != null) 'reply_to': replyingTo!['id'],
+        });
+        if (mounted) setState(() => replyingTo = null);
+      } catch (_) {
+        await db.storage.from('duo-private').remove([storagePath]);
+        rethrow;
+      }
+      if (mounted) showMessage('تم إرسال الفيديو');
+    } catch (e) {
+      if (mounted) showMessage('تعذر إرسال الفيديو: $e');
+    } finally {
+      await preview?.dispose();
+      if (mounted) setState(() => uploadingImage = false);
+    }
+  }
+
   Future<void> sendFile() async {
     if (uploadingFile || uploadingImage || sending) return;
     try {
@@ -1570,20 +1636,21 @@ class _ChatPageState extends State<ChatPage> {
                                 maxWidth: MediaQuery.of(context).size.width * 0.80,
                               ),
                               margin: EdgeInsets.only(bottom: groupedWithPrevious ? 4 : 12),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 11,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: isMe ? chatTheme.mineGradient : chatTheme.partnerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(19),
-                                  topRight: const Radius.circular(19),
-                                  bottomLeft: Radius.circular(isMe ? 19 : 5),
-                                  bottomRight: Radius.circular(isMe ? 5 : 19),
-                                ),
-                                border: Border.all(color: chatTheme.accent.withValues(alpha: 0.18)),
-                              ),
+                              padding: (item['message_type'] == 'image' || item['message_type'] == 'video')
+                                  ? EdgeInsets.zero
+                                  : const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                              decoration: (item['message_type'] == 'image' || item['message_type'] == 'video')
+                                  ? null
+                                  : BoxDecoration(
+                                      gradient: LinearGradient(colors: isMe ? chatTheme.mineGradient : chatTheme.partnerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: const Radius.circular(19),
+                                        topRight: const Radius.circular(19),
+                                        bottomLeft: Radius.circular(isMe ? 19 : 5),
+                                        bottomRight: Radius.circular(isMe ? 5 : 19),
+                                      ),
+                                      border: Border.all(color: chatTheme.accent.withValues(alpha: 0.18)),
+                                    ),
                               child: IntrinsicWidth(child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
@@ -1770,6 +1837,11 @@ class _ChatPageState extends State<ChatPage> {
                   tooltip: 'إرسال ملف',
                   onPressed: uploadingFile || uploadingImage || sending ? null : sendFile,
                   icon: uploadingFile ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: gold, strokeWidth: 2)) : const Icon(Icons.attach_file, color: gold),
+                ),
+                IconButton(
+                  tooltip: 'إرسال فيديو',
+                  onPressed: uploadingImage || uploadingFile || sending ? null : sendVideo,
+                  icon: const Icon(Icons.videocam_outlined, color: gold),
                 ),
                 IconButton(
                   tooltip: 'إرسال صورة',
