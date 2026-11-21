@@ -1138,7 +1138,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   final p=await SharedPreferences.getInstance();
   final id=p.getString('ours_self_skin')??'ours';
   final found=_skins.where((x)=>x.id==id);
-  if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=p.getString('ours_self_wallpaper');});
+  if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=p.getString('ours_self_wallpaper');wallpaperOpacity=(p.getDouble('ours_self_wallpaper_opacity')??.24).clamp(.08,.85).toDouble();wallpaperDim=(p.getDouble('ours_self_wallpaper_dim')??.32).clamp(0,.75).toDouble();wallpaperBlur=(p.getDouble('ours_self_wallpaper_blur')??0).clamp(0,12).toDouble();});
  }
  Future<void> _chooseTheme()async{
   final selected=await showModalBottomSheet<String>(context:context,backgroundColor:_navy,showDragHandle:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.62,child:ListView(padding:const EdgeInsets.all(14),children:[
