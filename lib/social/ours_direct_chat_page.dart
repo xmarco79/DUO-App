@@ -1074,6 +1074,35 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
    }
   }catch(_){_notice(t('تعذر اختيار الصورة','Could not select image'));}
  }
+ Future<void> _previewSelfVideo(String path)async{
+  final controller=VideoPlayerController.file(File(path));
+  try{
+   await controller.initialize();
+   if(!mounted){await controller.dispose();return;}
+   final accepted=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>AlertDialog(
+    backgroundColor:skin.bg,title:Text(t('معاينة الفيديو','Video preview')),
+    content:Column(mainAxisSize:MainAxisSize.min,children:[
+     AspectRatio(aspectRatio:controller.value.aspectRatio,child:VideoPlayer(controller)),
+     Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+      IconButton(onPressed:()=>setModal(()=>controller.value.isPlaying?controller.pause():controller.play()),icon:Icon(controller.value.isPlaying?Icons.pause:Icons.play_arrow,color:skin.accent)),
+      IconButton(onPressed:()=>setModal(()=>controller.seekTo(Duration.zero)),icon:Icon(Icons.replay,color:skin.accent))
+     ])
+    ]),
+    actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(t('إرسال','Send')))]
+   )));
+   if(accepted==true){final file=File(path);if(await file.exists())await _uploadSelf(await file.readAsBytes(),'self_video_'+DateTime.now().microsecondsSinceEpoch.toString()+'.mp4','video');}
+  }catch(_){_notice(t('تعذر معاينة الفيديو','Could not preview video'));}
+  finally{await controller.dispose();}
+ }
+ Future<void> _pickVideoSelf()async{
+  try{
+   final file=await picker.pickVideo(source:ImageSource.gallery,maxDuration:const Duration(minutes:2));
+   if(file==null)return;
+   final ext=file.name.split('.').last.toLowerCase();
+   if(!['mp4','mov','webm'].contains(ext)){_notice(t('صيغة الفيديو غير مدعومة','Unsupported video format'));return;}
+   await _previewSelfVideo(file.path);
+  }catch(_){_notice(t('تعذر اختيار الفيديو','Could not select video'));}
+ }
  Future<void> _pickFile()async{
   try{final result=await FilePicker.platform.pickFiles(withData:true);if(result==null||result.files.isEmpty)return;
    final f=result.files.single,bytes=f.bytes??(f.path==null?null:await File(f.path!).readAsBytes());
@@ -1083,10 +1112,11 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  Future<void> _showAttachments()async{
   final choice=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
    ListTile(leading:Icon(Icons.image_outlined,color:skin.accent),title:Text(t('صورة','Photo')),onTap:()=>Navigator.pop(ctx,'image')),
+   ListTile(leading:Icon(Icons.videocam_outlined,color:skin.accent),title:Text(t('فيديو','Video')),onTap:()=>Navigator.pop(ctx,'video')),
    ListTile(leading:Icon(Icons.sticky_note_2_outlined,color:skin.accent),title:Text(t('ملصق من المعرض','Sticker from gallery')),onTap:()=>Navigator.pop(ctx,'sticker')),
    ListTile(leading:Icon(Icons.insert_drive_file_outlined,color:skin.accent),title:Text(t('ملف','File')),onTap:()=>Navigator.pop(ctx,'file'))
   ])));
-  if(choice=='image')await _pickImage();if(choice=='sticker')await _pickImage(sticker:true);if(choice=='file')await _pickFile();
+  if(choice=='image')await _pickImage();if(choice=='video')await _pickVideoSelf();if(choice=='sticker')await _pickImage(sticker:true);if(choice=='file')await _pickFile();
  }
  Future<void> _startRecording()async{
   final r=recorder??=AudioRecorder();
