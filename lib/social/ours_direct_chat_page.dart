@@ -52,18 +52,18 @@ Uint8List _processOursImage(Uint8List bytes,{required int filter,required int ra
  final targetRatio=ratios[ratio];
  var cropW=source.width,cropH=source.height;
  if(targetRatio!=null){
-  if(source.width/source.height>targetRatio){cropW=(source.height*targetRatio).round().clamp(1,source.width);}
-  else{cropH=(source.width/targetRatio).round().clamp(1,source.height);}
+  if(source.width/source.height>targetRatio){cropW=(source.height*targetRatio).round().clamp(1,source.width).toInt();}
+  else{cropH=(source.width/targetRatio).round().clamp(1,source.height).toInt();}
  }
- final left=((source.width-cropW)*offsetX).round().clamp(0,source.width-cropW);
- final top=((source.height-cropH)*offsetY).round().clamp(0,source.height-cropH);
+ final left=((source.width-cropW)*offsetX).round().clamp(0,source.width-cropW).toInt();
+ final top=((source.height-cropH)*offsetY).round().clamp(0,source.height-cropH).toInt();
  final output=img.Image(width:cropW,height:cropH,numChannels:3);
  const profiles=<List<double>>[
   [1,1,0,0],[1.12,1.08,0,3],[.82,1.12,8,2],[1.18,1.10,-5,0],
   [.0,1.12,0,5],[1.25,1.05,4,4],[.92,1.18,-7,-3],[1.08,.92,12,5],
   [1.35,1.12,0,-4],[.72,1.06,5,7],[1.10,1.22,-3,-5],[.88,1.02,15,8],
  ];
- final profile=profiles[filter.clamp(0,profiles.length-1)];
+ final profile=profiles[filter.clamp(0,profiles.length-1).toInt()];
  for(var y=0;y<cropH;y++){
   for(var x=0;x<cropW;x++){
    final p=source.getPixel(left+x,top+y);
@@ -484,24 +484,24 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     const SizedBox(height:10),
     Row(children:[Text(t('الفلاتر الاحترافية','Pro filters'),style:TextStyle(color:skin.accent,fontSize:12,fontWeight:FontWeight.w800)),const Spacer(),Text('${filter+1}/12',style:TextStyle(color:skin.accent,fontSize:10))]),
     const SizedBox(height:7),
-    SizedBox(height:54,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:12,separatorBuilder:(_,__)=>const SizedBox(width:7),itemBuilder:(c,i)=>ChoiceChip(label:Text(ar?filterNamesAr[i]:filterNames[i]),selected:filter==i,onSelected:(_)=>setModal(()=>{filter=i,refresh()}),selectedColor:skin.accent.withValues(alpha:.24),labelStyle:TextStyle(color:filter==i?Colors.white:_lavender,fontSize:10),side:BorderSide(color:skin.accent.withValues(alpha:filter==i?.7:.2))))),
+    SizedBox(height:54,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:12,separatorBuilder:(_,__)=>const SizedBox(width:7),itemBuilder:(c,i)=>ChoiceChip(label:Text(ar?filterNamesAr[i]:filterNames[i]),selected:filter==i,onSelected:(_)=>setModal(() {filter=i;refresh();}),selectedColor:skin.accent.withValues(alpha:.24),labelStyle:TextStyle(color:filter==i?Colors.white:_lavender,fontSize:10),side:BorderSide(color:skin.accent.withValues(alpha:filter==i ? .7 : .2))))),
     const SizedBox(height:8),
-    Row(children:[Text(t('القص ونسبة الأبعاد','Crop & aspect ratio'),style:TextStyle(color:skin.accent,fontSize:12,fontWeight:FontWeight.w800)),const Spacer(),Switch(value:hd,activeColor:skin.accent,onChanged:(v)=>setModal(()=>{hd=v,refresh()}),materialTapTargetSize:MaterialTapTargetSize.shrinkWrap),Text('HD',style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900))]),
+    Row(children:[Text(t('القص ونسبة الأبعاد','Crop & aspect ratio'),style:TextStyle(color:skin.accent,fontSize:12,fontWeight:FontWeight.w800)),const Spacer(),Switch(value:hd,activeColor:skin.accent,onChanged:(v)=>setModal(() {hd=v;refresh();}),materialTapTargetSize:MaterialTapTargetSize.shrinkWrap),Text('HD',style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900))]),
     Wrap(spacing:6,runSpacing:4,children:[
-     for(var i=0;i<4;i++)ChoiceChip(label:Text([t('أصلية','Original'), '1:1','4:5','16:9'][i]),selected:ratio==i,onSelected:(_)=>setModal(()=>{ratio=i,refresh()}),selectedColor:skin.accent.withValues(alpha:.24),labelStyle:TextStyle(color:ratio==i?Colors.white:_lavender,fontSize:10))
+     for(var i=0;i<4;i++)ChoiceChip(label:Text([t('أصلية','Original'), '1:1','4:5','16:9'][i]),selected:ratio==i,onSelected:(_)=>setModal(() {ratio=i;refresh();}),selectedColor:skin.accent.withValues(alpha:.24),labelStyle:TextStyle(color:ratio==i?Colors.white:_lavender,fontSize:10))
     ]),
     if(ratio!=0)Row(children:[
-     Expanded(child:Slider(value:offsetX,min:0,max:1,onChanged:(v)=>setModal(()=>{offsetX=v,refresh()}),activeColor:skin.accent)),
-     Expanded(child:Slider(value:offsetY,min:0,max:1,onChanged:(v)=>setModal(()=>{offsetY=v,refresh()}),activeColor:skin.accent)),
+     Expanded(child:Slider(value:offsetX,min:0,max:1,onChanged:(v)=>setModal(() {offsetX=v;refresh();}),activeColor:skin.accent)),
+     Expanded(child:Slider(value:offsetY,min:0,max:1,onChanged:(v)=>setModal(() {offsetY=v;refresh();}),activeColor:skin.accent)),
     ]),
     if(mode=='normal')Wrap(spacing:5,children:[
-     ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setModal(()=>mode='normal')),
-     ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setModal(()=>mode='once')),
-     ChoiceChip(label:Text(t('مرتين','Twice')),selected:mode=='twice',onSelected:(_)=>setModal(()=>mode='twice')),
+     ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setModal(() {mode='normal';})),
+     ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setModal(() {mode='once';})),
+     ChoiceChip(label:Text(t('مرتين','Twice')),selected:mode=='twice',onSelected:(_)=>setModal(() {mode='twice';})),
     ]) else Wrap(spacing:5,children:[
-     ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setModal(()=>mode='normal')),
-     ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setModal(()=>mode='once')),
-     ChoiceChip(label:Text(t('مرتين','Twice')),selected:mode=='twice',onSelected:(_)=>setModal(()=>mode='twice')),
+     ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setModal(() {mode='normal';})),
+     ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setModal(() {mode='once';})),
+     ChoiceChip(label:Text(t('مرتين','Twice')),selected:mode=='twice',onSelected:(_)=>setModal(() {mode='twice';})),
     ]),
     const SizedBox(height:8),
     Row(children:[
