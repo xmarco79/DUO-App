@@ -722,8 +722,10 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       final createdAt=DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal();
       final previousAt=i>0?DateTime.tryParse(messages[i-1]['created_at']?.toString()??'')?.toLocal():null;
       final showDate=createdAt!=null&&(previousAt==null||DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt));
+      final showTimeDivider=createdAt!=null&&previousAt!=null&&createdAt.difference(previousAt)>const Duration(minutes:5);
       return Column(mainAxisSize:MainAxisSize.min,children:[
        if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:6),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.82),borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.18))),child:Text(_dateLabel(createdAt),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700))))),
+       if(showTimeDivider)Padding(padding:const EdgeInsets.symmetric(vertical:9),child:Center(child(Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:5),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.72),borderRadius:BorderRadius.circular(14),border:Border.all(color:skin.accent.withValues(alpha:.12))),child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w600))))),
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
@@ -763,10 +765,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
           ]))
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
           else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
-          const SizedBox(height:4),Align(alignment:AlignmentDirectional.centerEnd,child:Row(mainAxisSize:MainAxisSize.min,children:[
-           Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)),
-           if(mine)Padding(padding:const EdgeInsetsDirectional.only(start:5),child:Icon(m['read_at']!=null?Icons.done_all_rounded:Icons.done_rounded,color:m['read_at']!=null?skin.accent:skin.accent.withValues(alpha:.55),size:13))
-          ]))
+          if(mine)Padding(padding:const EdgeInsets.only(top:3),child:Align(alignment:AlignmentDirectional.centerEnd,child:Icon(m['read_at']!=null?Icons.done_all_rounded:Icons.done_rounded,color:m['read_at']!=null?skin.accent:skin.accent.withValues(alpha:.55),size:13)))
          ]))
         ))
        )
