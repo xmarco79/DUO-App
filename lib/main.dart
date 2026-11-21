@@ -1694,9 +1694,9 @@ class _ChatPageState extends State<ChatPage> {
                                       isMine: isMe,
                                     )
                                   else if (item['message_type'] == 'video')
-                                    OursSharedChatVideoBubble(videoPath: item['body']?.toString() ?? '', signedUrl: signedImageUrl(item['body']?.toString() ?? ''), onRetry: () { signedImageUrls.remove(item['body']?.toString() ?? ''); if (mounted) setState(() {}); })
+                                    OursSharedChatVideoBubble(signedUrl: signedImageUrl(item['body']?.toString() ?? ''), onRetry: () { signedImageUrls.remove(item['body']?.toString() ?? ''); if (mounted) setState(() {}); })
                                   else if (item['message_type'] == 'video')
-                                    OursSharedChatVideoBubble(videoPath: item['body']?.toString() ?? '', signedUrl: signedImageUrl(item['body']?.toString() ?? ''), onRetry: () { signedImageUrls.remove(item['body']?.toString() ?? ''); if (mounted) setState(() {}); })
+                                    OursSharedChatVideoBubble(signedUrl: signedImageUrl(item['body']?.toString() ?? ''), onRetry: () { signedImageUrls.remove(item['body']?.toString() ?? ''); if (mounted) setState(() {}); })
                                   else if (item['message_type'] == 'image')
                                     FutureBuilder<String>(
                                       future: signedImageUrl(
@@ -2651,10 +2651,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 }
 
 class OursSharedChatVideoBubble extends StatefulWidget {
-  final String videoPath;
   final Future<String> signedUrl;
   final VoidCallback onRetry;
-  const OursSharedChatVideoBubble({super.key, required this.videoPath, required this.signedUrl, required this.onRetry});
+  const OursSharedChatVideoBubble({super.key, required this.signedUrl, required this.onRetry});
   @override
   State<OursSharedChatVideoBubble> createState() => _OursSharedChatVideoBubbleState();
 }
