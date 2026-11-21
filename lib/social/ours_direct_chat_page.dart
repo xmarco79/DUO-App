@@ -730,8 +730,8 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
         child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),
-         decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),borderRadius:BorderRadius.circular(17),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:(type=='image'||type=='video'||type=='view_once'||type=='view_twice')?EdgeInsets.zero:const EdgeInsets.symmetric(horizontal:14,vertical:11),
+         decoration:(type=='image'||type=='video'||type=='view_once'||type=='view_twice')?null:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),borderRadius:BorderRadius.circular(17),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
@@ -1040,7 +1040,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   finally{if(mounted)setState(()=>sending=false);}
  }
  String _selfMime(String name){
-  const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
+  const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif','mp4':'video/mp4','mov':'video/quicktime','webm':'video/webm','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
   return types[name.split('.').last.toLowerCase()]??'';
  }
  Future<void> _uploadSelf(Uint8List bytes,String name,String type)async{
@@ -1106,7 +1106,11 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  }
  Future<String> _signedSelf(String path){
   final old=urls[path];if(old!=null)return old;
-  final future=db.storage.from('ours-direct-media').createSignedUrl(path,900);urls[path]=future;return future;
+  final future=db.storage.from('ours-direct-media').createSignedUrl(path,900);urls[path]=future;
+  future.then((_){Future<void>.delayed(const Duration(minutes:10),(){
+   if(identical(urls[path],future)){urls.remove(path);if(mounted)setState((){});}
+  });},onError:(_){if(identical(urls[path],future))urls.remove(path);});
+  return future;
  }
  Future<void> _openSelfImage(String path)async{
   try{final url=await _signedSelf(path);if(!mounted)return;
@@ -1186,8 +1190,8 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
        if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_selfDate(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
        if(showTimeDivider)Padding(padding:const EdgeInsets.symmetric(vertical:9),child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:5),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.78),borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.16))),child:Text(_selfTime(row['created_at']),style:TextStyle(color:skin.accent,fontSize:10))))),
        Align(alignment:AlignmentDirectional.centerEnd,child:GestureDetector(onLongPress:()=>_noteActions(row),child:Container(
-        constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.84),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),
-        decoration:BoxDecoration(color:skin.mine,borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.2))),
+        constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.84),margin:const EdgeInsets.symmetric(vertical:5),padding:(type=='image'||type=='video')?EdgeInsets.zero:const EdgeInsets.symmetric(horizontal:14,vertical:11),
+        decoration:(type=='image'||type=='video')?null:BoxDecoration(color:skin.mine,borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.2))),
         child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
          if(row['reply_to']!=null&&rows.any((r)=>r['id'].toString()==row['reply_to'].toString()))
           Builder(builder:(ctx){final original=rows.firstWhere((r)=>r['id'].toString()==row['reply_to'].toString());return InkWell(onTap:()=>_jumpSelfMessage(original['id'].toString()),child:Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.4),borderRadius:BorderRadius.circular(8)),child:Text((original['body']??original['file_name']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))));}),
