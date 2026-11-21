@@ -1163,27 +1163,34 @@ class _ChatPageState extends State<ChatPage> {
     } catch (e) { if (mounted) showMessage('تعذر فتح الملف: $e'); }
   }
   Future<String> signedImageUrl(String path) {
+    if (path.trim().isEmpty) return Future.error(Exception('مسار الوسائط فارغ'));
     final cached = signedImageUrls[path];
     if (cached != null) return cached;
 
-    final future = db.storage
-        .from('duo-private')
-        .createSignedUrl(path, 900);
+    final future = () async {
+      Object? lastError;
+      for (var attempt = 0; attempt < 3; attempt++) {
+        try {
+          return await db.storage.from('duo-private').createSignedUrl(path, 3600);
+        } catch (error) {
+          lastError = error;
+          if (attempt < 2) await Future<void>.delayed(Duration(milliseconds: 350 * (attempt + 1)));
+        }
+      }
+      throw lastError ?? Exception('تعذر إنشاء رابط الوسائط');
+    }();
     signedImageUrls[path] = future;
 
-    // Refresh before the 15-minute signed URL expires.
+    // Cache a signed link for a short time, then renew it before it expires.
     future.then((_) {
-      Future<void>.delayed(const Duration(minutes: 10), () {
+      Future<void>.delayed(const Duration(minutes: 45), () {
         if (!identical(signedImageUrls[path], future)) return;
         signedImageUrls.remove(path);
         if (mounted) setState(() {});
       });
     }, onError: (Object _) {
-      if (identical(signedImageUrls[path], future)) {
-        signedImageUrls.remove(path);
-      }
+      if (identical(signedImageUrls[path], future)) signedImageUrls.remove(path);
     });
-
     return future;
   }
 
