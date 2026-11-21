@@ -397,7 +397,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final safe=name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
   final path=widget.conversationId+'/'+uid+'/'+DateTime.now().microsecondsSinceEpoch.toString()+'_'+safe;
   try{
-   await db.storage.from(_bucket).uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
+   await _uploadRetry(_bucket,path,bytes,mime);
    try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':type,'max_views':maxViews??1,'file_name':name,'file_size':bytes.length,'mime_type':mime});}
    catch(_){await db.storage.from(_bucket).remove([path]);rethrow;}
   }catch(e){_show(t('تعذر رفع المرفق. تحقق من الاتصال.','Could not upload the attachment. Check your connection.'));}finally{if(mounted)setState(()=>uploading=false);}
@@ -567,9 +567,18 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){_show(t('تعذر إرسال التسجيل: $e','Could not send recording: $e'));}
   finally{if(p!=null&&await File(p).exists())await File(p).delete();if(mounted)setState((){sending=false;recordingPath=null;});}
  }
+ Future<void> _uploadRetry(String bucket,String path,Uint8List bytes,String mime)async{
+  Object? lastError;
+  for(var attempt=0;attempt<3;attempt++){
+   try{await db.storage.from(bucket).uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));return;}
+   catch(e){lastError=e;try{await db.storage.from(bucket).createSignedUrl(path,900);return;}catch(_){}if(attempt<2)await Future<void>.delayed(Duration(milliseconds:500*(attempt+1)));}
+  }
+  throw lastError??Exception('Upload failed');
+ }
  Future<String> _signed(String path){
-  final old=urls[path];if(old!=null)return old;final f=db.storage.from(_bucket).createSignedUrl(path,900);urls[path]=f;
-  f.then((_){Future<void>.delayed(const Duration(minutes:10),(){if(identical(urls[path],f)){urls.remove(path);if(mounted)setState((){});}});},onError:(_){if(identical(urls[path],f))urls.remove(path);});return f;
+  final old=urls[path];if(old!=null)return old;
+  final f=()async{Object? last;for(var attempt=0;attempt<3;attempt++){try{return await db.storage.from(_bucket).createSignedUrl(path,3600);}catch(e){last=e;if(attempt<2)await Future<void>.delayed(Duration(milliseconds:350*(attempt+1)));}}throw last??Exception('Signed URL failed');}();urls[path]=f;
+  f.then((_){Future<void>.delayed(const Duration(minutes:45),(){if(identical(urls[path],f)){urls.remove(path);if(mounted)setState((){});}});},onError:(_){if(identical(urls[path],f))urls.remove(path);});return f;
  }
  Future<void> _openFile(String path) async{
   try{final url=await _signed(path);if(!await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication))_show(t('تعذر فتح الملف','Could not open file'));}
@@ -1028,7 +1037,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   final safe=name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
   final path='self/'+uid+'/'+DateTime.now().microsecondsSinceEpoch.toString()+'_'+safe;
   try{
-   await db.storage.from('ours-direct-media').uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
+   await _uploadRetry('ours-direct-media',path,bytes,mime);
    try{
     final row=await db.from('ours_self_messages').insert({'user_id':uid,'body':path,'message_type':type,'file_name':name,'file_size':bytes.length,'mime_type':mime,'reply_to':replyTo?['id']}).select().single();
     if(mounted&&!rows.any((r)=>r['id'].toString()==row['id'].toString()))setState(()=>rows.add(Map<String,dynamic>.from(row)));
