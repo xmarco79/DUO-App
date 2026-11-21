@@ -1518,6 +1518,14 @@ class _ChatPageState extends State<ChatPage> {
                           final groupedWithPrevious = index > 0 &&
                               !showDate &&
                               displayedMessages[index - 1]['sender_id'] == item['sender_id'];
+                          final previousMessageTime = index > 0
+                              ? DateTime.tryParse(displayedMessages[index - 1]['created_at']?.toString() ?? '')
+                              : null;
+                          final currentMessageTime = DateTime.tryParse(item['created_at']?.toString() ?? '');
+                          final showGapTime = previousMessageTime != null &&
+                              currentMessageTime != null &&
+                              currentMessageTime.difference(previousMessageTime).inMinutes > 5;
+                          final isImageMessage = item['message_type'] == 'image';
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -1534,6 +1542,20 @@ class _ChatPageState extends State<ChatPage> {
                                     child: Text(_formatChatDate(item['created_at']), style: TextStyle(color: chatTheme.accent, fontSize: 10)),
                                   ),
                                 ),
+                              if (showGapTime)
+                                Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 10, top: 2),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: chatTheme.partner.withValues(alpha: 0.78),
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(color: chatTheme.accent.withValues(alpha: 0.16)),
+                                    ),
+                                    child: Text(_formatMessageTime(item['created_at']),
+                                      style: TextStyle(color: chatTheme.accent, fontSize: 10, fontWeight: FontWeight.w600)),
+                                  ),
+                                ),
                               Align(
                             alignment: isMe
                                 ? AlignmentDirectional.centerEnd
@@ -1545,11 +1567,11 @@ class _ChatPageState extends State<ChatPage> {
                                 maxWidth: MediaQuery.of(context).size.width * 0.80,
                               ),
                               margin: EdgeInsets.only(bottom: groupedWithPrevious ? 4 : 12),
-                              padding: const EdgeInsets.symmetric(
+                              padding: isImageMessage ? EdgeInsets.zero : const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 12,
                               ),
-                              decoration: BoxDecoration(
+                              decoration: isImageMessage ? null : BoxDecoration(
                                 gradient: LinearGradient(colors: isMe ? chatTheme.mineGradient : chatTheme.partnerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(19),
@@ -1647,13 +1669,18 @@ class _ChatPageState extends State<ChatPage> {
                                               width: 220,
                                               fit: BoxFit.cover,
                                             errorBuilder: (_, __, ___) =>
-                                                const SizedBox(
-                                              width: 190,
-                                              height: 100,
+                                                SizedBox(
+                                              width: 220,
+                                              height: 120,
                                               child: Center(
-                                                child: Text(
-                                                  'تعذر عرض الصورة',
-                                                  style: TextStyle(color: lavender),
+                                                child: TextButton.icon(
+                                                  onPressed: () {
+                                                    final imagePath = item['body']?.toString() ?? '';
+                                                    signedImageUrls.remove(imagePath);
+                                                    if (mounted) setState(() {});
+                                                  },
+                                                  icon: const Icon(Icons.refresh_rounded, color: gold),
+                                                  label: const Text('إعادة تحميل الصورة', style: TextStyle(color: lavender)),
                                                 ),
                                               ),
                                             ),
@@ -1665,6 +1692,7 @@ class _ChatPageState extends State<ChatPage> {
                                   else
                                     SelectableText(
                                       item['body']?.toString() ?? '',
+                                      textAlign: TextAlign.center,
                                       style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5),
                                     ),
                                   if (item['deleted_at'] == null)
@@ -1675,20 +1703,8 @@ class _ChatPageState extends State<ChatPage> {
                                         spaceId: widget.spaceId,
                                       ),
                                     ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        _formatMessageTime(item['created_at']),
-                                        style: const TextStyle(color: lavender, fontSize: 10),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      if (isMe && item['deleted_at'] == null)
-                                        const Icon(Icons.check_rounded, color: lavender, size: 13),
-
-                                    ],
-                                  ),
+                                  if (!isImageMessage && item['deleted_at'] == null)
+                                    const SizedBox(height: 4),
                                 ],
                               ),
                             ),
@@ -1701,14 +1717,13 @@ class _ChatPageState extends State<ChatPage> {
                       ),
           ),
           Container(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
+            margin: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [chatTheme.mine, chatTheme.background], begin: Alignment.centerLeft, end: Alignment.centerRight),
-              border: Border(
-                top: BorderSide(
-                  color: chatTheme.accent.withValues(alpha: 0.2),
-                ),
-              ),
+              gradient: LinearGradient(colors: [chatTheme.mine.withValues(alpha: 0.96), chatTheme.background], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24), bottom: Radius.circular(20)),
+              border: Border.all(color: chatTheme.accent.withValues(alpha: 0.20)),
+              boxShadow: [BoxShadow(color: chatTheme.accent.withValues(alpha: 0.06), blurRadius: 18, spreadRadius: 1)],
             ),
             child: Row(
               children: [
