@@ -1092,9 +1092,9 @@ class _ChatPageState extends State<ChatPage> {
           backgroundColor: purple,
           title: const Text('معاينة الفيديو'),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            AspectRatio(aspectRatio: preview!.value.aspectRatio, child: VideoPlayer(preview!)),
+            AspectRatio(aspectRatio: preview.value.aspectRatio, child: VideoPlayer(preview)),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              IconButton(onPressed: () => setModal(() => preview!.value.isPlaying ? preview!.pause() : preview!.play()), icon: Icon(preview!.value.isPlaying ? Icons.pause : Icons.play_arrow, color: gold)),
+              IconButton(onPressed: () => setModal(() => preview.value.isPlaying ? preview!.pause() : preview!.play()), icon: Icon(preview.value.isPlaying ? Icons.pause : Icons.play_arrow, color: gold)),
               IconButton(onPressed: () => setModal(() => preview!.seekTo(Duration.zero)), icon: const Icon(Icons.replay, color: gold)),
             ]),
           ]),
@@ -1104,7 +1104,7 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ),
       ));
-      await preview!.dispose();
+      await preview.dispose();
       preview = null;
       if (accepted != true || !mounted) return;
 
