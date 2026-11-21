@@ -1127,7 +1127,7 @@ class OursSelfChatPage extends StatefulWidget{
 class _OursSelfChatPageState extends State<OursSelfChatPage>{
  final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController(),picker=ImagePicker();
  final Map<String,Future<String>> urls={};final List<Map<String,dynamic>> rows=[];
- RealtimeChannel? channel;AudioRecorder? recorder;String? recordingPath,wallpaperPath;
+ RealtimeChannel? channel;AudioRecorder? recorder;String? recordingPath,wallpaperPath;double wallpaperOpacity=.24,wallpaperDim=.32,wallpaperBlur=0;
  Map<String,dynamic>? replyTo;_ChatSkin skin=_skins.first;
  bool loading=true,sending=false,uploading=false,recording=false;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
@@ -1150,22 +1150,49 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   if(mounted)setState(()=>skin=_skins.firstWhere((x)=>x.id==selected,orElse:()=>_skins.first));
  }
  Future<void> _chooseWallpaper()async{
-  final action=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-   ListTile(leading:Icon(Icons.photo_library_outlined,color:skin.accent),title:Text(t('اختيار خلفية','Choose wallpaper')),onTap:()=>Navigator.pop(ctx,'choose')),
-   ListTile(leading:Icon(Icons.layers_clear_outlined,color:skin.accent),title:Text(t('إزالة الخلفية','Remove wallpaper')),onTap:()=>Navigator.pop(ctx,'clear'))
-  ])));
+  var opacity=wallpaperOpacity,dim=wallpaperDim,blur=wallpaperBlur;
+  final action=await showModalBottomSheet<String>(context:context,isScrollControlled:true,backgroundColor:const Color(0xFF171326),showDragHandle:true,builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(18,8,18,20),child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Row(children:[Icon(Icons.wallpaper_rounded,color:skin.accent,size:22),const SizedBox(width:9),Text(t('استوديو خلفية ملاحظاتك','Notes wallpaper studio'),style:const TextStyle(color:_gold,fontSize:17,fontWeight:FontWeight.w900))]),
+   const SizedBox(height:10),
+   Container(height:96,width:double.infinity,clipBehavior:Clip.antiAlias,decoration:BoxDecoration(borderRadius:BorderRadius.circular(16),border:Border.all(color:skin.accent.withValues(alpha:.3))),child:Stack(fit:StackFit.expand,children:[
+    CustomPaint(painter:_ChatAtmospherePainter(skin)),
+    if(wallpaperPath!=null)Opacity(opacity:opacity,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())),
+    ColoredBox(color:skin.bg.withValues(alpha:dim)),
+    Center(child:Text(t('معاينة الخلفية','Wallpaper preview'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700)))
+   ])),
+   const SizedBox(height:10),
+   Row(children:[Expanded(child:Text(t('وضوح الصورة','Image visibility'),style:TextStyle(color:skin.accent))),Text('${(opacity*100).round()}%')]),
+   Slider(value:opacity,min:.08,max:.85,onChanged:(v)=>setModal(()=>opacity=v),activeColor:skin.accent),
+   Row(children:[Expanded(child:Text(t('دمجها مع الثيم','Blend with theme'),style:TextStyle(color:skin.accent))),Text('${(dim*100).round()}%')]),
+   Slider(value:dim,min:0,max:.75,onChanged:(v)=>setModal(()=>dim=v),activeColor:skin.accent),
+   Row(children:[Expanded(child:Text(t('التمويه','Blur'),style:TextStyle(color:skin.accent))),Text(blur.toStringAsFixed(1))]),
+   Slider(value:blur,min:0,max:12,onChanged:(v)=>setModal(()=>blur=v),activeColor:skin.accent),
+   Wrap(spacing:8,children:[
+    OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'clear'),icon:const Icon(Icons.layers_clear_outlined),label:Text(t('إزالة','Remove'))),
+    OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'save'),icon:const Icon(Icons.tune_rounded),label:Text(t('تطبيق','Apply'))),
+    FilledButton.icon(onPressed:()=>Navigator.pop(ctx,'choose'),icon:const Icon(Icons.photo_library_outlined),label:Text(t('اختيار صورة','Choose image')))
+   ])
+  ])))));
   if(action==null)return;
   final prefs=await SharedPreferences.getInstance();
+  Future<void> save()async{
+   await prefs.setDouble('ours_self_wallpaper_opacity',opacity);
+   await prefs.setDouble('ours_self_wallpaper_dim',dim);
+   await prefs.setDouble('ours_self_wallpaper_blur',blur);
+   if(mounted)setState(() {wallpaperOpacity=opacity;wallpaperDim=dim;wallpaperBlur=blur;});
+  }
   if(action=='clear'){
    final old=wallpaperPath;await prefs.remove('ours_self_wallpaper');
    if(mounted)setState(()=>wallpaperPath=null);
    if(old!=null){try{final file=File(old);if(await file.exists())await file.delete();}catch(_){}}
-  }else{
+   await save();
+  }else if(action=='save'){await save();}
+  else{
    try{
-    final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:92,maxWidth:2400,maxHeight:2400);if(f==null)return;
+    final f=await picker.pickImage(source:ImageSource.gallery,imageQuality:96,maxWidth:3200,maxHeight:3200);if(f==null)return;
     final dir=await getApplicationDocumentsDirectory(),target=File('${dir.path}/ours_self_wallpaper.jpg');
     await File(f.path).copy(target.path);await prefs.setString('ours_self_wallpaper',target.path);
-    if(mounted)setState(()=>wallpaperPath=target.path);
+    await save();if(mounted)setState(()=>wallpaperPath=target.path);
    }catch(_){_notice(t('تعذر تطبيق الخلفية','Could not apply wallpaper'));}
   }
  }
@@ -1366,7 +1393,8 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   ]),
   body:Stack(children:[
    Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
-   if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:Opacity(opacity:.24,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())))),
+   if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:wallpaperBlur,sigmaY:wallpaperBlur),child:Opacity(opacity:wallpaperOpacity,child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()))))),
+   if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:wallpaperDim)))),
    Column(children:[
     Expanded(child:loading?Center(child:CircularProgressIndicator(color:skin.accent)):rows.isEmpty
      ?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
