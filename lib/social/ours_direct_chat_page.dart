@@ -69,7 +69,7 @@ Uint8List _processOursImage(Uint8List bytes,{required int filter,required int ra
    final p=source.getPixel(left+x,top+y);
    final r=p.r.toDouble(),g=p.g.toDouble(),b=p.b.toDouble();
    final luminance=.299*r+.587*g+.114*b;
-   double transform(double value)=>((luminance+(value-luminance)*profile[0]-127.5)*profile[1]+127.5+profile[3]).clamp(0,255);
+   double transform(double value)=>((luminance+(value-luminance)*profile[0]-127.5)*profile[1]+127.5+profile[3]).clamp(0,255).toDouble();
    final nr=(transform(r)+profile[2]).clamp(0,255).round();
    final ng=transform(g).clamp(0,255).round();
    final nb=(transform(b)-profile[2]).clamp(0,255).round();
@@ -381,11 +381,11 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    ])),
    const SizedBox(height:12),
    _wallpaperSliderLabel(t('وضوح الصورة','Image visibility'),opacity),
-   Slider(value:opacity.clamp(.08,.85),min:.08,max:.85,onChanged:(v)=>setModal(()=>opacity=v),activeColor:skin.accent),
+   Slider(value:opacity.clamp(.08,.85).toDouble(),min:.08,max:.85,onChanged:(v)=>setModal(()=>opacity=v),activeColor:skin.accent),
    _wallpaperSliderLabel(t('تعتيم متناسق مع الثيم','Theme blending'),dim),
-   Slider(value:dim.clamp(0,.75),min:0,max:.75,onChanged:(v)=>setModal(()=>dim=v),activeColor:skin.accent),
+   Slider(value:dim.clamp(0,.75).toDouble(),min:0,max:.75,onChanged:(v)=>setModal(()=>dim=v),activeColor:skin.accent),
    _wallpaperSliderLabel(t('تمويه الخلفية','Background blur'),blur,percent:false),
-   Slider(value:blur.clamp(0,12),min:0,max:12,onChanged:(v)=>setModal(()=>blur=v),activeColor:skin.accent),
+   Slider(value:blur.clamp(0,12).toDouble(),min:0,max:12,onChanged:(v)=>setModal(()=>blur=v),activeColor:skin.accent),
    const SizedBox(height:8),
    Wrap(spacing:8,runSpacing:8,children:[
     OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'clear'),icon:const Icon(Icons.layers_clear_outlined),label:Text(t('إزالة الصورة','Remove image'))),
