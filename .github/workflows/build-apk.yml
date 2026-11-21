@@ -5,6 +5,7 @@ on:
     branches:
       - feature/full-ours-worlds
       - feature/ours-two-person-expansion
+      - feature/ours-chat-polish-build721
   pull_request:
     branches:
       - feature/full-ours-worlds
