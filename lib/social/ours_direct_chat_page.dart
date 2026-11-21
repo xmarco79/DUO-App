@@ -732,7 +732,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       final previousAt=i>0?DateTime.tryParse(messages[i-1]['created_at']?.toString()??'')?.toLocal():null;
       final showDate=createdAt!=null&&(previousAt==null||createdAt.difference(previousAt).inMinutes>5||DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt));
       return Column(mainAxisSize:MainAxisSize.min,children:[
-       if (showDate && createdAt != null)
+       if (showDate)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Center(
@@ -756,7 +756,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),
          decoration:(type=='image'||type=='video'||type=='sticker')?null:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),borderRadius:BorderRadius.circular(17),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
-         padding:(type=='image'||type=='video'||type=='sticker')?EdgeInsets.zero:const EdgeInsets.all(10),child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
+         child:Padding(padding:(type=='image'||type=='video'||type=='sticker')?EdgeInsets.zero:const EdgeInsets.all(10),child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
             final original=messages.firstWhere((r)=>r['id'].toString()==m['reply_to'].toString());
@@ -790,7 +790,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
           else SelectableText(path,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,height:1.4)),
           if(type=='text')const SizedBox(height:0),
-         ]))
+         ])))
         ))
        )
       ]);
