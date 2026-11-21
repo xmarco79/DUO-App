@@ -901,6 +901,26 @@ class _OursAiPageState extends State<OursAiPage>{
   ]));
 }
 
+class _DirectVideoBubble extends StatefulWidget {
+ final String url; final _ChatSkin skin;
+ const _DirectVideoBubble({required this.url,required this.skin});
+ @override State<_DirectVideoBubble> createState()=>_DirectVideoBubbleState();
+}
+class _DirectVideoBubbleState extends State<_DirectVideoBubble>{
+ late final VideoPlayerController controller;bool failed=false;
+ @override void initState(){super.initState();controller=VideoPlayerController.networkUrl(Uri.parse(widget.url));controller.initialize().then((_){if(mounted)setState((){});}).catchError((_){if(mounted)setState(()=>failed=true);});}
+ @override void dispose(){controller.dispose();super.dispose();}
+ @override Widget build(BuildContext context){
+  if(failed)return SizedBox(width:210,height:140,child:Center(child:Text('تعذر تشغيل الفيديو',style:TextStyle(color:widget.skin.accent))));
+  if(!controller.value.isInitialized)return SizedBox(width:210,height:140,child:Center(child:CircularProgressIndicator(color:widget.skin.accent)));
+  return ClipRRect(borderRadius:BorderRadius.circular(12),child:SizedBox(width:230,child:AspectRatio(aspectRatio:controller.value.aspectRatio>0?controller.value.aspectRatio:16/9,child:Stack(alignment:Alignment.center,children:[
+   VideoPlayer(controller),
+   Material(color:Colors.black26,child:InkWell(onTap:(){if(controller.value.isPlaying){controller.pause();}else{controller.play();}setState((){});},child:Center(child:Icon(controller.value.isPlaying?Icons.pause_circle_filled:Icons.play_circle_fill,color:Colors.white,size:46)))),
+   Positioned(left:8,right:8,bottom:7,child:VideoProgressIndicator(controller,allowScrubbing:true,colors:VideoProgressColors(playedColor:widget.skin.accent,bufferedColor:Colors.white54,backgroundColor:Colors.white24)))
+  ]))));
+ }
+}
+
 class _DirectAudioBubble extends StatefulWidget{
  final String path;final _ChatSkin skin;final Future<String> Function(String) signed;final bool ar;
  const _DirectAudioBubble({required this.path,required this.skin,required this.signed,required this.ar});
