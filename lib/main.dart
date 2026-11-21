@@ -2598,6 +2598,103 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   }
 }
 
+class OursInlineVideo extends StatefulWidget {
+  final String url;
+  const OursInlineVideo({super.key, required this.url});
+
+  @override
+  State<OursInlineVideo> createState() => _OursInlineVideoState();
+}
+
+class _OursInlineVideoState extends State<OursInlineVideo> {
+  late final VideoPlayerController controller;
+  bool failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    controller.initialize().then((_) {
+      if (mounted) setState(() {});
+    }).catchError((_) {
+      if (mounted) setState(() => failed = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (failed) {
+      return const SizedBox(
+        width: 220,
+        height: 150,
+        child: Center(child: Text('تعذر تشغيل الفيديو', style: TextStyle(color: lavender))),
+      );
+    }
+    if (!controller.value.isInitialized) {
+      return const SizedBox(
+        width: 220,
+        height: 150,
+        child: Center(child: CircularProgressIndicator(color: gold)),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 230,
+        child: AspectRatio(
+          aspectRatio: controller.value.aspectRatio > 0 ? controller.value.aspectRatio : 16 / 9,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              VideoPlayer(controller),
+              Material(
+                color: Colors.black26,
+                child: InkWell(
+                  onTap: () {
+                    if (controller.value.isPlaying) {
+                      controller.pause();
+                    } else {
+                      controller.play();
+                    }
+                    setState(() {});
+                  },
+                  child: Center(
+                    child: Icon(
+                      controller.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 8,
+                right: 8,
+                bottom: 7,
+                child: VideoProgressIndicator(
+                  controller,
+                  allowScrubbing: true,
+                  colors: const VideoProgressColors(
+                    playedColor: gold,
+                    bufferedColor: Colors.white54,
+                    backgroundColor: Colors.white24,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class AudioMessageBubble extends StatefulWidget {
   final String audioPath;
   final bool isMine;
