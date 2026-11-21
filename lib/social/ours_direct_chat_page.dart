@@ -1161,10 +1161,12 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
       final date=DateTime.tryParse(row['created_at']?.toString()??'')?.toLocal();
       final previous=i+1<rows.length?DateTime.tryParse(rows[rows.length-2-i]['created_at']?.toString()??'')?.toLocal():null;
       final showDate=date!=null&&(previous==null||DateUtils.dateOnly(date)!=DateUtils.dateOnly(previous));
+      final showTimeDivider=!showDate&&date!=null&&previous!=null&&date.difference(previous)>const Duration(minutes:5);
       return Column(children:[
        if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_selfDate(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
+       if(showTimeDivider)Padding(padding:const EdgeInsets.symmetric(vertical:9),child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:5),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.78),borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.16))),child:Text(_selfTime(row['created_at']),style:TextStyle(color:skin.accent,fontSize:10))))),
        Align(alignment:AlignmentDirectional.centerEnd,child:GestureDetector(onLongPress:()=>_noteActions(row),child:Container(
-        constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.84),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.fromLTRB(13,10,13,8),
+        constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.84),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),
         decoration:BoxDecoration(color:skin.mine,borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.2))),
         child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
          if(row['reply_to']!=null&&rows.any((r)=>r['id'].toString()==row['reply_to'].toString()))
@@ -1172,8 +1174,9 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
          if(type=='image'||type=='sticker')FutureBuilder<String>(future:_signedSelf(body),builder:(c,s)=>s.hasData?GestureDetector(onTap:()=>_openSelfImage(body),child:ClipRRect(borderRadius:BorderRadius.circular(12),child:Image.network(s.data!,width:225,height:220,fit:BoxFit.cover))):SizedBox(width:180,height:130,child:Center(child:CircularProgressIndicator(color:skin.accent))))
          else if(type=='file')InkWell(onTap:()=>_openSelfFile(body),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text((row['file_name']??body.split('/').last).toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white)),Text('${((row['file_size'] as num?)?.toInt()??0)/1024>1024?(((row['file_size'] as num?)?.toInt()??0)/1048576).toStringAsFixed(1)+' MB':(((row['file_size'] as num?)?.toInt()??0)/1024).toStringAsFixed(0)+' KB'} · ${(row['mime_type']??'').toString()}',style:TextStyle(color:skin.accent,fontSize:10))]))]))
          else if(type=='audio')_DirectAudioBubble(path:body,skin:skin,signed:_signedSelf,ar:ar)
+         else if(type=='video')FutureBuilder<String>(future:_signedSelf(body),builder:(c,s)=>s.hasData?_DirectVideoBubble(url:s.data!,skin:skin):SizedBox(width:180,height:130,child:Center(child:CircularProgressIndicator(color:skin.accent))))
          else SelectableText(body,style:const TextStyle(color:Colors.white,height:1.5)),
-         const SizedBox(height:5),Row(mainAxisSize:MainAxisSize.min,children:[if(row['pinned']==true)Icon(Icons.push_pin_rounded,color:skin.accent,size:12),Text(_selfTime(row['created_at']),style:TextStyle(color:skin.accent,fontSize:10))])
+         if(row['pinned']==true)Padding(padding:const EdgeInsets.only(top:4),child:Icon(Icons.push_pin_rounded,color:skin.accent,size:12))
         ]))
        )))
       ]);
