@@ -133,6 +133,7 @@ class OursApp extends StatelessWidget {
         ),
         theme: ThemeData(
           brightness: Brightness.dark,
+          fontFamily: 'sans-serif',
           scaffoldBackgroundColor: navy,
           colorScheme: const ColorScheme.dark(
             primary: gold,
@@ -1639,16 +1640,16 @@ class _ChatPageState extends State<ChatPage> {
                               margin: EdgeInsets.only(bottom: groupedWithPrevious ? 4 : 12),
                               padding: (item['message_type'] == 'image' || item['message_type'] == 'video')
                                   ? EdgeInsets.zero
-                                  : const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                  : const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
                               decoration: (item['message_type'] == 'image' || item['message_type'] == 'video')
                                   ? null
                                   : BoxDecoration(
                                       gradient: LinearGradient(colors: isMe ? chatTheme.mineGradient : chatTheme.partnerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: const Radius.circular(19),
-                                        topRight: const Radius.circular(19),
-                                        bottomLeft: Radius.circular(isMe ? 19 : 5),
-                                        bottomRight: Radius.circular(isMe ? 5 : 19),
+                                      borderRadius: BorderRadiusDirectional.only(
+                                        topStart: const Radius.circular(19),
+                                        topEnd: const Radius.circular(19),
+                                        bottomStart: Radius.circular(isMe ? 19 : 5),
+                                        bottomEnd: Radius.circular(isMe ? 5 : 19),
                                       ),
                                       border: Border.all(color: chatTheme.accent.withValues(alpha: 0.18)),
                                     ),
