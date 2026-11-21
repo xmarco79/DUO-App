@@ -392,7 +392,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   return types[name.split('.').last.toLowerCase()]??'';
  }
  Future<void> _upload(Uint8List bytes,String name,String type,{int? maxViews}) async{
-  if(bytes.isEmpty)return;if(bytes.length>20*1024*1024){_show(t('الحد الأقصى 20 ميجابايت','Maximum size is 20 MB'));return;}
+  if(bytes.isEmpty)return;
+  final maxBytes=type=='video'?100*1024*1024:20*1024*1024;
+  if(bytes.length>maxBytes){_show(t(type=='video'?'الحد الأقصى للفيديو 100 ميجابايت':'الحد الأقصى 20 ميجابايت',type=='video'?'Maximum video size is 100 MB':'Maximum size is 20 MB'));return;}
   final mime=_mime(name);if(mime.isEmpty){_show(t('نوع الملف غير مدعوم','Unsupported file type'));return;}setState(()=>uploading=true);
   final safe=name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
   final path=widget.conversationId+'/'+uid+'/'+DateTime.now().microsecondsSinceEpoch.toString()+'_'+safe;
