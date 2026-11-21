@@ -721,16 +721,16 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       final m=messages[i];final mine=m['sender_id']==me;final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';
       final createdAt=DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal();
       final previousAt=i>0?DateTime.tryParse(messages[i-1]['created_at']?.toString()??'')?.toLocal():null;
-      final showDate=createdAt!=null&&(previousAt==null||DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt));
+      final showDate=createdAt!=null&&(previousAt==null||createdAt.difference(previousAt).inMinutes>5||DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt));
       return Column(mainAxisSize:MainAxisSize.min,children:[
-       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:6),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.82),borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.18))),child:Text(_dateLabel(createdAt),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700))))),
+       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:6),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.82),borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.18))),child:Text(previousAt==null?_dateLabel(createdAt):DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt)?'${_dateLabel(createdAt)} · ${_time(m['created_at'])':_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700))))),
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
         child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(10),
-         decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),borderRadius:BorderRadius.circular(17),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
-         child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+         decoration:(type=='image'||type=='video'||type=='sticker')?null:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),borderRadius:BorderRadius.circular(17),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
+         padding:(type=='image'||type=='video'||type=='sticker')?EdgeInsets.zero:const EdgeInsets.all(10),child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
             final original=messages.firstWhere((r)=>r['id'].toString()==m['reply_to'].toString());
@@ -762,11 +762,8 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
            ]))
           ]))
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
-          else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
-          const SizedBox(height:4),Align(alignment:AlignmentDirectional.centerEnd,child:Row(mainAxisSize:MainAxisSize.min,children:[
-           Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)),
-           if(mine)Padding(padding:const EdgeInsetsDirectional.only(start:5),child:Icon(m['read_at']!=null?Icons.done_all_rounded:Icons.done_rounded,color:m['read_at']!=null?skin.accent:skin.accent.withValues(alpha:.55),size:13))
-          ]))
+          else SelectableText(path,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,height:1.4)),
+          if(type=='text')const SizedBox(height:0),
          ]))
         ))
        )
