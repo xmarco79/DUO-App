@@ -216,6 +216,7 @@ jobs:
           else:
               manifest_text = manifest_text.replace('android:icon="@mipmap/ic_launcher"', 'android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round"',1)
           manifest.write_text(manifest_text)
+          Path("build").mkdir(parents=True, exist_ok=True)
           source.save("build/ours_icon_preview.png",format="PNG",optimize=True)
           print("Installed the exact supplied OURS artwork in Android launcher icon resources.")
           PY
