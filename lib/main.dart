@@ -1581,6 +1581,7 @@ class _ChatPageState extends State<ChatPage> {
                               currentMessageTime != null &&
                               currentMessageTime.difference(previousMessageTime) > const Duration(minutes: 5);
                           final isImageMessage = item['message_type'] == 'image';
+                          final isVideoMessage = item['message_type'] == 'video';
 
                           final isVideoMessage = item['message_type'] == 'video';
                           return Column(
