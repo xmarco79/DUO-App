@@ -1524,7 +1524,7 @@ class _ChatPageState extends State<ChatPage> {
                           final currentMessageTime = DateTime.tryParse(item['created_at']?.toString() ?? '');
                           final showGapTime = previousMessageTime != null &&
                               currentMessageTime != null &&
-                              currentMessageTime.difference(previousMessageTime).inMinutes > 5;
+                              currentMessageTime.difference(previousMessageTime) > const Duration(minutes: 5);
                           final isImageMessage = item['message_type'] == 'image';
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
