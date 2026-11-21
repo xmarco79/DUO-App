@@ -1444,6 +1444,16 @@ class _ChatPageState extends State<ChatPage> {
         ),
         centerTitle: false,
         backgroundColor: chatTheme.background,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [chatTheme.background, chatTheme.mine.withValues(alpha: 0.55), chatTheme.background],
+            ),
+            border: Border(bottom: BorderSide(color: chatTheme.accent.withValues(alpha: 0.16))),
+          ),
+        ),
         actions: [
           IconButton(
             tooltip: 'مظهر المحادثة',
