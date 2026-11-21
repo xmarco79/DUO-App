@@ -696,8 +696,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
     onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:widget.partnerId))),
     child:Row(children:[
      Stack(clipBehavior:Clip.none,children:[
-      Container(padding:const EdgeInsets.all(2),decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:skin.accent.withValues(alpha:.7),width:1.4))),
-      CircleAvatar(radius:21,backgroundColor:skin.partner,child:Text((localPartnerName??widget.partnerName).trim().isEmpty?'O':(localPartnerName??widget.partnerName).trim().substring(0,1).toUpperCase(),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900,fontSize:17))),
+      Container(padding:const EdgeInsets.all(2),decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:skin.accent.withValues(alpha:.7),width:1.4)),child:CircleAvatar(radius:19,backgroundColor:skin.partner,child:Text((localPartnerName??widget.partnerName).trim().isEmpty?'O':(localPartnerName??widget.partnerName).trim().substring(0,1).toUpperCase(),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900,fontSize:17)))),
       Positioned(right:0,bottom:0,child:Container(width:11,height:11,decoration:BoxDecoration(color:partnerOnline?const Color(0xFF70D9A0):const Color(0xFF777181),shape:BoxShape.circle,border:Border.all(color:skin.bg,width:2))))
      ]),
      const SizedBox(width:10),
