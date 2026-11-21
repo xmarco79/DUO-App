@@ -160,23 +160,24 @@ jobs:
           manifest.write_text(content)
           PY
 
-      - name: Generate OURS launcher icon from artwork
+      - name: Generate Android launcher icon from supplied artwork
         shell: bash
         run: |
-          python3 -m pip install --quiet Pillow cairosvg
+          python3 -m pip install --quiet Pillow
           python3 - <<'PY'
           from pathlib import Path
           from PIL import Image
-          import cairosvg, re
+          import base64
 
-          svg = Path("assets/ours_launcher.svg")
-          if not svg.exists():
-              raise SystemExit("OURS launcher artwork asset missing")
-          cairosvg.svg2png(url=str(svg), write_to="build/ours_icon_source.png", output_width=1024, output_height=1024)
-          source = Image.open("build/ours_icon_source.png").convert("RGBA")
+          encoded = Path("assets/ours_launcher.jpg.base64").read_text().strip()
+          source_bytes = base64.b64decode(encoded, validate=True)
+          source_path = Path("build/ours_supplied_icon.jpg")
+          source_path.parent.mkdir(parents=True, exist_ok=True)
+          source_path.write_bytes(source_bytes)
+          source = Image.open(source_path).convert("RGBA")
           size = 1024
           source = source.resize((size, size), Image.Resampling.LANCZOS)
-          # Legacy icons use the complete artwork. Adaptive icons are inset to survive Android's mask.
+          # Legacy icons contain the complete supplied art. Adaptive art is inset so masks don't crop it.
           sizes = {"mdpi":48, "hdpi":72, "xhdpi":96, "xxhdpi":144, "xxxhdpi":192}
           for density, pixels in sizes.items():
               folder = Path(f"android/app/src/main/res/mipmap-{density}")
@@ -201,13 +202,15 @@ jobs:
           colors.parent.mkdir(parents=True, exist_ok=True)
           color_text = colors.read_text() if colors.exists() else '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
           definition = '<color name="ours_icon_background">#020105</color>'
-          if re.search(r'<color name="ours_icon_background">.*?</color>',color_text):
+          if '<color name="ours_icon_background">' in color_text:
+              import re
               color_text = re.sub(r'<color name="ours_icon_background">.*?</color>',definition,color_text)
           else:
               color_text = color_text.replace('</resources>',f'    {definition}\n</resources>')
           colors.write_text(color_text)
           manifest = Path("android/app/src/main/AndroidManifest.xml")
           manifest_text = manifest.read_text()
+          import re
           manifest_text = re.sub(r'android:label="[^"]*"', 'android:label="OURS"',manifest_text,count=1)
           manifest_text = re.sub(r'android:icon="[^"]*"', 'android:icon="@mipmap/ic_launcher"',manifest_text,count=1)
           if 'android:roundIcon=' in manifest_text:
@@ -215,9 +218,8 @@ jobs:
           else:
               manifest_text = manifest_text.replace('android:icon="@mipmap/ic_launcher"', 'android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round"',1)
           manifest.write_text(manifest_text)
-          Path("build").mkdir(parents=True,exist_ok=True)
           source.save("build/ours_icon_preview.png",format="PNG",optimize=True)
-          print("Generated full-artwork OURS launcher icons for legacy and adaptive Android launchers.")
+          print("Installed the exact supplied OURS artwork in Android launcher icon resources.")
           PY
 
       - name: Set Android app display name
