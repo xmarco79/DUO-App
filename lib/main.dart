@@ -2677,70 +2677,49 @@ class ChatVideoBubble extends StatefulWidget {
   @override
   State<ChatVideoBubble> createState() => _ChatVideoBubbleState();
 }
-
-class _ChatVideoBubbleState extends State<ChatVideoBubble> {
-  @override
-  Widget build(BuildContext context) => FutureBuilder<String>(
-    future: widget.signedUrl,
-    builder: (context, snapshot) {
-      if (snapshot.hasError) return SizedBox(width: 220, height: 130, child: Center(child: TextButton.icon(onPressed: widget.onRetry, icon: const Icon(Icons.refresh, color: gold), label: const Text('إعادة تحميل الفيديو', style: TextStyle(color: lavender)))));
-      if (!snapshot.hasData) return const SizedBox(width: 220, height: 130, child: Center(child: CircularProgressIndicator(color: gold)));
-      return _ChatVideoPlayer(url: snapshot.data!);
-    });
-}
-
-class _ChatVideoPlayer extends StatefulWidget {
-  final String url;
-  const _ChatVideoPlayer({required this.url});
-  @override
-  State<_ChatVideoPlayer> createState() => _ChatVideoPlayerState();
-}
-class _ChatVideoPlayerState extends State<_ChatVideoPlayer> {
-  late final VideoPlayerController controller;
-  bool initialized = false;
-  Object? error;
-  @override
-  void initState() { super.initState(); controller = VideoPlayerController.networkUrl(Uri.parse(widget.url)); controller.initialize().then((_) { if (mounted) setState(() => initialized = true); }).catchError((e) { if (mounted) setState(() => error = e); }); }
-  @override
-  void dispose() { controller.dispose(); super.dispose(); }
-  @override
-  Widget build(BuildContext context) {
-    if (error != null) return const SizedBox(width: 220, height: 130, child: Center(child: Text('تعذر تشغيل الفيديو', style: TextStyle(color: lavender))));
-    if (!initialized) return const SizedBox(width: 220, height: 130, child: Center(child: CircularProgressIndicator(color: gold)));
-    return ClipRRect(borderRadius: BorderRadius.circular(12), child: SizedBox(width: 240, child: AspectRatio(aspectRatio: controller.value.aspectRatio > 0 ? controller.value.aspectRatio : 16/9, child: Stack(alignment: Alignment.center, children: [VideoPlayer(controller), IconButton(iconSize: 48, onPressed: () { setState(() {}); controller.value.isPlaying ? controller.pause() : controller.play(); }, icon: Icon(controller.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill, color: Colors.white.withValues(alpha: .92)))]))));
-  }
-}
-
-class ChatVideoBubble extends StatefulWidget {
-  final String videoPath;
-  final Future<String> signedUrl;
-  final VoidCallback onRetry;
-  const ChatVideoBubble({super.key, required this.videoPath, required this.signedUrl, required this.onRetry});
-  @override
-  State<ChatVideoBubble> createState() => _ChatVideoBubbleState();
-}
 class _ChatVideoBubbleState extends State<ChatVideoBubble> {
   @override
   Widget build(BuildContext context) => FutureBuilder<String>(future: widget.signedUrl, builder: (context, snapshot) {
     if (snapshot.hasError) return SizedBox(width: 220, height: 130, child: Center(child: TextButton.icon(onPressed: widget.onRetry, icon: const Icon(Icons.refresh, color: gold), label: const Text('إعادة تحميل الفيديو', style: TextStyle(color: lavender)))));
     if (!snapshot.hasData) return const SizedBox(width: 220, height: 130, child: Center(child: CircularProgressIndicator(color: gold)));
-    return _ChatVideoPlayer(url: snapshot.data!);
+    return _ChatVideoPlayer(url: snapshot.data!, onRetry: widget.onRetry);
   });
 }
-class _ChatVideoPlayer extends StatefulWidget { final String url; const _ChatVideoPlayer({required this.url}); @override State<_ChatVideoPlayer> createState() => _ChatVideoPlayerState(); }
+class _ChatVideoPlayer extends StatefulWidget {
+  final String url;
+  final VoidCallback onRetry;
+  const _ChatVideoPlayer({required this.url, required this.onRetry});
+  @override
+  State<_ChatVideoPlayer> createState() => _ChatVideoPlayerState();
+}
 class _ChatVideoPlayerState extends State<_ChatVideoPlayer> {
-  late final VideoPlayerController controller;
+  late VideoPlayerController controller;
   bool ready = false, playing = false;
   Object? error;
-  @override void initState() { super.initState(); controller = VideoPlayerController.networkUrl(Uri.parse(widget.url)); controller.initialize().then((_) { if (mounted) setState(() => ready = true); }).catchError((e) { if (mounted) setState(() => error = e); }); }
-  @override void dispose() { controller.dispose(); super.dispose(); }
-  @override Widget build(BuildContext context) {
-    if (error != null) return const SizedBox(width: 220, height: 130, child: Center(child: Text('تعذر تشغيل الفيديو', style: TextStyle(color: lavender))));
+  void _initialize() {
+    controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    controller.initialize().then((_) { if (mounted) setState(() => ready = true); }).catchError((e) { if (mounted) setState(() => error = e); });
+  }
+  @override
+  void initState() { super.initState(); _initialize(); }
+  @override
+  void didUpdateWidget(covariant _ChatVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      controller.dispose();
+      ready = false; playing = false; error = null;
+      _initialize();
+    }
+  }
+  @override
+  void dispose() { controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    if (error != null) return SizedBox(width: 220, height: 130, child: Center(child: TextButton.icon(onPressed: widget.onRetry, icon: const Icon(Icons.refresh, color: gold), label: const Text('إعادة محاولة التشغيل', style: TextStyle(color: lavender)))));
     if (!ready) return const SizedBox(width: 220, height: 130, child: Center(child: CircularProgressIndicator(color: gold)));
     return ClipRRect(borderRadius: BorderRadius.circular(12), child: SizedBox(width: 240, child: AspectRatio(aspectRatio: controller.value.aspectRatio > 0 ? controller.value.aspectRatio : 16/9, child: Stack(alignment: Alignment.center, children: [VideoPlayer(controller), IconButton(iconSize: 48, onPressed: () async { if (playing) { await controller.pause(); } else { await controller.play(); } if (mounted) setState(() => playing = !playing); }, icon: Icon(playing ? Icons.pause_circle_filled : Icons.play_circle_fill, color: Colors.white.withValues(alpha: .92)))]))));
   }
 }
-
 class AudioMessageBubble extends StatefulWidget {
   final String audioPath;
   final bool isMine;
