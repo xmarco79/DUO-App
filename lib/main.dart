@@ -1088,32 +1088,6 @@ class _ChatPageState extends State<ChatPage> {
     finally { if (mounted) setState(() => uploadingVideo = false); }
   }
 
-  Future<void> sendVideo() async {
-    if (uploadingVideo || uploadingImage || uploadingFile || sending) return;
-    try {
-      final picked = await imagePicker.pickVideo(source: ImageSource.gallery);
-      if (picked == null || !mounted) return;
-      final bytes = await picked.readAsBytes();
-      if (bytes.isEmpty) { showMessage('الفيديو المحدد فارغ'); return; }
-      if (bytes.length > 100 * 1024 * 1024) { showMessage('حجم الفيديو يتجاوز 100 ميجابايت'); return; }
-      setState(() => uploadingVideo = true);
-      final extension = picked.name.contains('.') ? picked.name.split('.').last.toLowerCase() : 'mp4';
-      const allowed = {'mp4','mov','m4v','webm'};
-      if (!allowed.contains(extension)) { showMessage('صيغة الفيديو غير مدعومة'); return; }
-      final mime = switch (extension) { 'mov' => 'video/quicktime', 'webm' => 'video/webm', _ => 'video/mp4' };
-      final storagePath = '${widget.spaceId}/$currentUserId/${DateTime.now().microsecondsSinceEpoch}.$extension';
-      await db.storage.from('duo-private').uploadBinary(storagePath, bytes,
-        fileOptions: FileOptions(contentType: mime, cacheControl: '3600', upsert: false));
-      try {
-        await db.from('duo_messages').insert({'space_id': widget.spaceId, 'sender_id': currentUserId,
-          'body': storagePath, 'message_type': 'video', if (replyingTo != null) 'reply_to': replyingTo!['id']});
-        if (mounted) setState(() => replyingTo = null);
-      } catch (_) { await db.storage.from('duo-private').remove([storagePath]); rethrow; }
-      if (mounted) showMessage('تم إرسال الفيديو');
-    } catch (e) { if (mounted) showMessage('تعذر إرسال الفيديو: $e'); }
-    finally { if (mounted) setState(() => uploadingVideo = false); }
-  }
-
   Future<void> sendFile() async {
     if (uploadingFile || uploadingImage || uploadingVideo || sending) return;
     try {
@@ -1607,7 +1581,7 @@ class _ChatPageState extends State<ChatPage> {
                               currentMessageTime != null &&
                               currentMessageTime.difference(previousMessageTime) > const Duration(minutes: 5);
                           final isImageMessage = item['message_type'] == 'image';
-                          final isVideoMessage = item['message_type'] == 'video';
+
                           final isVideoMessage = item['message_type'] == 'video';
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1721,9 +1695,9 @@ class _ChatPageState extends State<ChatPage> {
                                       isMine: isMe,
                                     )
                                   else if (item['message_type'] == 'video')
-                                    ChatVideoBubble(videoPath: item['body']?.toString() ?? '', signedUrl: signedImageUrl(item['body']?.toString() ?? ''), onRetry: () { signedImageUrls.remove(item['body']?.toString() ?? ''); if (mounted) setState(() {}); })
+                                    OursSharedChatVideoBubble(videoPath: item['body']?.toString() ?? '', signedUrl: signedImageUrl(item['body']?.toString() ?? ''), onRetry: () { signedImageUrls.remove(item['body']?.toString() ?? ''); if (mounted) setState(() {}); })
                                   else if (item['message_type'] == 'video')
-                                    ChatVideoBubble(videoPath: item['body']?.toString() ?? '', signedUrl: signedImageUrl(item['body']?.toString() ?? ''), onRetry: () { signedImageUrls.remove(item['body']?.toString() ?? ''); if (mounted) setState(() {}); })
+                                    OursSharedChatVideoBubble(videoPath: item['body']?.toString() ?? '', signedUrl: signedImageUrl(item['body']?.toString() ?? ''), onRetry: () { signedImageUrls.remove(item['body']?.toString() ?? ''); if (mounted) setState(() {}); })
                                   else if (item['message_type'] == 'image')
                                     FutureBuilder<String>(
                                       future: signedImageUrl(
@@ -2677,30 +2651,30 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   }
 }
 
-class ChatVideoBubble extends StatefulWidget {
+class OursSharedChatVideoBubble extends StatefulWidget {
   final String videoPath;
   final Future<String> signedUrl;
   final VoidCallback onRetry;
-  const ChatVideoBubble({super.key, required this.videoPath, required this.signedUrl, required this.onRetry});
+  const OursSharedChatVideoBubble({super.key, required this.videoPath, required this.signedUrl, required this.onRetry});
   @override
-  State<ChatVideoBubble> createState() => _ChatVideoBubbleState();
+  State<OursSharedChatVideoBubble> createState() => _OursSharedChatVideoBubbleState();
 }
-class _ChatVideoBubbleState extends State<ChatVideoBubble> {
+class _OursSharedChatVideoBubbleState extends State<OursSharedChatVideoBubble> {
   @override
   Widget build(BuildContext context) => FutureBuilder<String>(future: widget.signedUrl, builder: (context, snapshot) {
     if (snapshot.hasError) return SizedBox(width: 220, height: 130, child: Center(child: TextButton.icon(onPressed: widget.onRetry, icon: const Icon(Icons.refresh, color: gold), label: const Text('إعادة تحميل الفيديو', style: TextStyle(color: lavender)))));
     if (!snapshot.hasData) return const SizedBox(width: 220, height: 130, child: Center(child: CircularProgressIndicator(color: gold)));
-    return _ChatVideoPlayer(url: snapshot.data!, onRetry: widget.onRetry);
+    return _OursSharedChatVideoPlayer(url: snapshot.data!, onRetry: widget.onRetry);
   });
 }
-class _ChatVideoPlayer extends StatefulWidget {
+class _OursSharedChatVideoPlayer extends StatefulWidget {
   final String url;
   final VoidCallback onRetry;
-  const _ChatVideoPlayer({required this.url, required this.onRetry});
+  const _OursSharedChatVideoPlayer({required this.url, required this.onRetry});
   @override
-  State<_ChatVideoPlayer> createState() => _ChatVideoPlayerState();
+  State<_OursSharedChatVideoPlayer> createState() => _OursSharedChatVideoPlayerState();
 }
-class _ChatVideoPlayerState extends State<_ChatVideoPlayer> {
+class _OursSharedChatVideoPlayerState extends State<_OursSharedChatVideoPlayer> {
   late VideoPlayerController controller;
   bool ready = false, playing = false;
   Object? error;
@@ -2711,7 +2685,7 @@ class _ChatVideoPlayerState extends State<_ChatVideoPlayer> {
   @override
   void initState() { super.initState(); _initialize(); }
   @override
-  void didUpdateWidget(covariant _ChatVideoPlayer oldWidget) {
+  void didUpdateWidget(covariant _OursSharedChatVideoPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
       controller.dispose();
