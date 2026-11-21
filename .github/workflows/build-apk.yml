@@ -199,17 +199,21 @@ jobs:
           (adaptive_dir/"ic_launcher_round.xml").write_text(adaptive)
           colors = Path("android/app/src/main/res/values/colors.xml")
           colors.parent.mkdir(parents=True, exist_ok=True)
-          color_text = colors.read_text() if colors.exists() else '<?xml version="1.0" encoding="utf-8"?>\\n<resources>\\n</resources>\\n'
+          color_text = colors.read_text() if colors.exists() else '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
           definition = '<color name="ours_icon_background">#020105</color>'
           if re.search(r'<color name="ours_icon_background">.*?</color>',color_text):
               color_text = re.sub(r'<color name="ours_icon_background">.*?</color>',definition,color_text)
           else:
-              color_text = color_text.replace('</resources>',f'    {definition}\\n</resources>')
+              color_text = color_text.replace('</resources>',f'    {definition}\n</resources>')
           colors.write_text(color_text)
           manifest = Path("android/app/src/main/AndroidManifest.xml")
           manifest_text = manifest.read_text()
           manifest_text = re.sub(r'android:label="[^"]*"', 'android:label="OURS"',manifest_text,count=1)
           manifest_text = re.sub(r'android:icon="[^"]*"', 'android:icon="@mipmap/ic_launcher"',manifest_text,count=1)
+          if 'android:roundIcon=' in manifest_text:
+              manifest_text = re.sub(r'android:roundIcon="[^"]*"', 'android:roundIcon="@mipmap/ic_launcher_round"',manifest_text,count=1)
+          else:
+              manifest_text = manifest_text.replace('android:icon="@mipmap/ic_launcher"', 'android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round"',1)
           manifest.write_text(manifest_text)
           Path("build").mkdir(parents=True,exist_ok=True)
           source.save("build/ours_icon_preview.png",format="PNG",optimize=True)
