@@ -18,6 +18,7 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 
 // ==================== COLORS ====================
 
@@ -1518,6 +1519,14 @@ class _ChatPageState extends State<ChatPage> {
                           final groupedWithPrevious = index > 0 &&
                               !showDate &&
                               displayedMessages[index - 1]['sender_id'] == item['sender_id'];
+                          final currentAt = DateTime.tryParse(item['created_at']?.toString() ?? '')?.toLocal();
+                          final previousAt = index > 0
+                              ? DateTime.tryParse(displayedMessages[index - 1]['created_at']?.toString() ?? '')?.toLocal()
+                              : null;
+                          final showTimeDivider = !showDate &&
+                              currentAt != null &&
+                              previousAt != null &&
+                              currentAt.difference(previousAt) > const Duration(minutes: 5);
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -1534,6 +1543,22 @@ class _ChatPageState extends State<ChatPage> {
                                     child: Text(_formatChatDate(item['created_at']), style: TextStyle(color: chatTheme.accent, fontSize: 10)),
                                   ),
                                 ),
+                              if (showTimeDivider)
+                                Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(vertical: 9),
+                                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: chatTheme.partner.withValues(alpha: 0.78),
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(color: chatTheme.accent.withValues(alpha: 0.16)),
+                                    ),
+                                    child: Text(
+                                      _formatMessageTime(item['created_at']),
+                                      style: TextStyle(color: chatTheme.accent, fontSize: 10),
+                                    ),
+                                  ),
+                                ),
                               Align(
                             alignment: isMe
                                 ? AlignmentDirectional.centerEnd
@@ -1546,8 +1571,8 @@ class _ChatPageState extends State<ChatPage> {
                               ),
                               margin: EdgeInsets.only(bottom: groupedWithPrevious ? 4 : 12),
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
+                                horizontal: 14,
+                                vertical: 11,
                               ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(colors: isMe ? chatTheme.mineGradient : chatTheme.partnerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
@@ -1662,6 +1687,23 @@ class _ChatPageState extends State<ChatPage> {
                                         );
                                       },
                                     )
+                                  else if (item['message_type'] == 'video')
+                                    FutureBuilder<String>(
+                                      future: signedImageUrl(item['body']?.toString() ?? ''),
+                                      builder: (context, snapshot) {
+                                        if (snapshot.hasError) {
+                                          return const Text('تعذر تحميل الفيديو', style: TextStyle(color: lavender));
+                                        }
+                                        if (!snapshot.hasData) {
+                                          return const SizedBox(
+                                            width: 220,
+                                            height: 150,
+                                            child: Center(child: CircularProgressIndicator(color: gold)),
+                                          );
+                                        }
+                                        return OursInlineVideo(url: snapshot.data!);
+                                      },
+                                    )
                                   else
                                     SelectableText(
                                       item['body']?.toString() ?? '',
@@ -1675,20 +1717,11 @@ class _ChatPageState extends State<ChatPage> {
                                         spaceId: widget.spaceId,
                                       ),
                                     ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        _formatMessageTime(item['created_at']),
-                                        style: const TextStyle(color: lavender, fontSize: 10),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      if (isMe && item['deleted_at'] == null)
-                                        const Icon(Icons.check_rounded, color: lavender, size: 13),
-
-                                    ],
-                                  ),
+                                  if (isMe && item['deleted_at'] == null)
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 4),
+                                      child: Icon(Icons.check_rounded, color: lavender, size: 13),
+                                    ),
                                 ],
                               ),
                             ),
