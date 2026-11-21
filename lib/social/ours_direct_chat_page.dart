@@ -732,7 +732,24 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       final previousAt=i>0?DateTime.tryParse(messages[i-1]['created_at']?.toString()??'')?.toLocal():null;
       final showDate=createdAt!=null&&(previousAt==null||createdAt.difference(previousAt).inMinutes>5||DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt));
       return Column(mainAxisSize:MainAxisSize.min,children:[
-       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:6),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.82),borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.18))),child:Text('${_dateLabel(createdAt)} · ${_time(m['created_at'])}',style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700))))),
+       if (showDate && createdAt != null)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+              decoration: BoxDecoration(
+                color: skin.partner.withValues(alpha: .82),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: skin.accent.withValues(alpha: .18)),
+              ),
+              child: Text(
+                '${_dateLabel(createdAt)} · ${_time(m['created_at'])}',
+                style: TextStyle(color: skin.accent, fontSize: 10, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ),
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
