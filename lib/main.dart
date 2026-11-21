@@ -1084,18 +1084,19 @@ class _ChatPageState extends State<ChatPage> {
         showMessage(bytes.isEmpty ? 'الفيديو المحدد فارغ' : 'حجم الفيديو يتجاوز الحد المسموح (20 ميجابايت)');
         return;
       }
-      preview = VideoPlayerController.file(File(picked.path));
-      await preview.initialize();
+      final controller = VideoPlayerController.file(File(picked.path));
+      preview = controller;
+      await controller.initialize();
       if (!mounted) return;
       final accepted = await showDialog<bool>(context: context, barrierDismissible: false, builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) => AlertDialog(
           backgroundColor: purple,
           title: const Text('معاينة الفيديو'),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            AspectRatio(aspectRatio: preview.value.aspectRatio, child: VideoPlayer(preview)),
+            AspectRatio(aspectRatio: controller.value.aspectRatio, child: VideoPlayer(controller)),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              IconButton(onPressed: () => setModal(() => preview.value.isPlaying ? preview.pause() : preview.play()), icon: Icon(preview.value.isPlaying ? Icons.pause : Icons.play_arrow, color: gold)),
-              IconButton(onPressed: () => setModal(() => preview.seekTo(Duration.zero)), icon: const Icon(Icons.replay, color: gold)),
+              IconButton(onPressed: () => setModal(() => controller.value.isPlaying ? controller.pause() : controller.play()), icon: Icon(controller.value.isPlaying ? Icons.pause : Icons.play_arrow, color: gold)),
+              IconButton(onPressed: () => setModal(() => controller.seekTo(Duration.zero)), icon: const Icon(Icons.replay, color: gold)),
             ]),
           ]),
           actions: [
@@ -1104,7 +1105,7 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ),
       ));
-      await preview.dispose();
+      await controller.dispose();
       preview = null;
       if (accepted != true || !mounted) return;
 
