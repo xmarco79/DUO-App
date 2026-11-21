@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'dart:typed_data';
 import 'notifications/ours_push_service.dart';
 
 import 'package:flutter/material.dart';
@@ -1127,7 +1128,7 @@ class _ChatPageState extends State<ChatPage> {
       if (!opened && mounted) showMessage('تعذر فتح الملف');
     } catch (e) { if (mounted) showMessage('تعذر فتح الملف: $e'); }
   }
-  Future<void> uploadChatMediaWithRetry(String path, List<int> bytes, String contentType) async {
+  Future<void> uploadChatMediaWithRetry(String path, Uint8List bytes, String contentType) async {
     Object? lastError;
     for (var attempt = 0; attempt < 3; attempt++) {
       try {
