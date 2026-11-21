@@ -1545,6 +1545,11 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       backgroundColor: chatTheme.background,
       appBar: AppBar(
+        toolbarHeight: 72,
+        titleSpacing: 8,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        shape: Border(bottom: BorderSide(color: chatTheme.accent.withValues(alpha: .16))),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1872,14 +1877,16 @@ class _ChatPageState extends State<ChatPage> {
                       ),
           ),
           Container(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
+            padding: const EdgeInsets.fromLTRB(10, 9, 10, 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [chatTheme.mine, chatTheme.background], begin: Alignment.centerLeft, end: Alignment.centerRight),
-              border: Border(
-                top: BorderSide(
-                  color: chatTheme.accent.withValues(alpha: 0.2),
-                ),
+              gradient: LinearGradient(
+                colors: [chatTheme.partner.withValues(alpha: .97), chatTheme.background.withValues(alpha: .99)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+              border: Border(top: BorderSide(color: chatTheme.accent.withValues(alpha: .24))),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .14), blurRadius: 16, offset: const Offset(0, -4))],
             ),
             child: Row(
               children: [
@@ -1940,7 +1947,12 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                IconButton(
+                IconButton.filled(
+                  style: IconButton.styleFrom(
+                    backgroundColor: chatTheme.accent,
+                    foregroundColor: chatTheme.background,
+                    fixedSize: const Size(44, 44),
+                  ),
                   onPressed: sending ? null : sendMessage,
                   icon: sending
                       ? const SizedBox(
