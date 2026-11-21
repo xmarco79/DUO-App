@@ -395,7 +395,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     OutlinedButton.icon(onPressed:()=>Navigator.pop(ctx,'save'),icon:const Icon(Icons.tune_rounded),label:Text(t('تطبيق الإعدادات','Apply settings'))),
     FilledButton.icon(onPressed:()=>Navigator.pop(ctx,'choose'),icon:const Icon(Icons.photo_library_outlined),label:Text(t('اختيار صورة','Choose image')))
    ])
-  ])))));
+  ]))))));
   if(action==null)return;
   final prefs=await SharedPreferences.getInstance();
   Future<void> saveSettings()async{
