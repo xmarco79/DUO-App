@@ -754,7 +754,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
         child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(10),
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),
          decoration:(type=='image'||type=='video'||type=='sticker')?null:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),borderRadius:BorderRadius.circular(17),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
          padding:(type=='image'||type=='video'||type=='sticker')?EdgeInsets.zero:const EdgeInsets.all(10),child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
@@ -1046,6 +1046,14 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  String _selfMime(String name){
   const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
   return types[name.split('.').last.toLowerCase()]??'';
+ }
+ Future<void> _uploadRetry(String bucket,String path,Uint8List bytes,String mime)async{
+  Object? lastError;
+  for(var attempt=0;attempt<3;attempt++){
+   try{await db.storage.from(bucket).uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));return;}
+   catch(e){lastError=e;try{await db.storage.from(bucket).createSignedUrl(path,900);return;}catch(_){}if(attempt<2)await Future<void>.delayed(Duration(milliseconds:500*(attempt+1)));}
+  }
+  throw lastError??Exception('Upload failed');
  }
  Future<void> _uploadSelf(Uint8List bytes,String name,String type)async{
   if(bytes.isEmpty)return;if(bytes.length>20*1024*1024){_notice(t('الحد الأقصى 20 ميجابايت','Maximum size is 20 MB'));return;}
