@@ -1104,7 +1104,7 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ),
       ));
-      await preview.dispose();
+      await preview!.dispose();
       preview = null;
       if (accepted != true || !mounted) return;
 
