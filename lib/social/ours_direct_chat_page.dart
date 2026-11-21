@@ -363,7 +363,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    await prefs.setDouble('ours_direct_wallpaper_opacity_'+widget.conversationId,opacity);
    await prefs.setDouble('ours_direct_wallpaper_dim_'+widget.conversationId,dim);
    await prefs.setDouble('ours_direct_wallpaper_blur_'+widget.conversationId,blur);
-   if(mounted)setState(()=>{wallpaperOpacity=opacity,wallpaperDim=dim,wallpaperBlur=blur});
+   if(mounted)setState(() {wallpaperOpacity=opacity;wallpaperDim=dim;wallpaperBlur=blur;});
   }
   if(action=='clear'){
    final old=wallpaperPath;await prefs.remove('ours_direct_wallpaper_'+widget.conversationId);
@@ -555,14 +555,27 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){_show(t('تعذر فتح الصورة: $e','Could not open image: $e'));}
  }
  Future<void> _showAttachments() async{
-  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF29213D),showDragHandle:true,
-   builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    ListTile(leading:Icon(Icons.photo_library_outlined,color:skin.accent),title:Text(t('الوسائط','Media')),subtitle:Text(t('صور ومقاطع فيديو','Photos and videos')),onTap:()=>Navigator.pop(ctx,'media')),
-    ListTile(leading:Icon(Icons.insert_drive_file_outlined,color:skin.accent),title:Text(t('ملف','File')),onTap:()=>Navigator.pop(ctx,'file')),
-    ListTile(leading:Icon(Icons.emoji_emotions_outlined,color:skin.accent),title:Text(t('ملصقاتنا','Our stickers')),onTap:()=>Navigator.pop(ctx,'sticker')),
-   ])));
+  final choice=await showModalBottomSheet<String>(context:context,isScrollControlled:true,backgroundColor:Colors.transparent,showDragHandle:false,builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(10,0,10,12),child:Container(padding:const EdgeInsets.fromLTRB(16,10,16,18),decoration:BoxDecoration(color:const Color(0xFF171326),borderRadius:BorderRadius.circular(26),border:Border.all(color:skin.accent.withValues(alpha:.22)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.28),blurRadius:24,offset:const Offset(0,-5))]),child:Column(mainAxisSize:MainAxisSize.min,children:[
+   Container(width:38,height:4,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.42),borderRadius:BorderRadius.circular(8))),
+   const SizedBox(height:14),Row(children:[Icon(Icons.add_to_photos_rounded,color:skin.accent,size:22),const SizedBox(width:9),Text(t('مشاركة المحتوى','Share something'),style:const TextStyle(color:_gold,fontSize:17,fontWeight:FontWeight.w900))]),
+   const SizedBox(height:4),Align(alignment:AlignmentDirectional.centerStart,child:Text(t('اختر نوع المحتوى الذي تريد إرساله','Choose what you want to share'),style:const TextStyle(color:_lavender,fontSize:11))),
+   const SizedBox(height:16),
+   GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:3,mainAxisSpacing:10,crossAxisSpacing:10,childAspectRatio:1.02,children:[
+    _attachmentTile(ctx,'media',Icons.photo_library_rounded,t('الصور','Photos'),t('المعرض','Gallery')),
+    _attachmentTile(ctx,'video',Icons.movie_creation_rounded,t('فيديو','Video'),t('مقاطعك','Clips')),
+    _attachmentTile(ctx,'file',Icons.folder_zip_rounded,t('ملفات','Files'),t('مستندات','Documents')),
+    _attachmentTile(ctx,'sticker',Icons.auto_awesome_rounded,t('ملصقات','Stickers'),t('حزم OURS','OURS packs')),
+   ])
+  ])))));
   if(choice==null)return;
-  switch(choice){case 'media':await _pickMedia();break;case 'image':await _pickImageWithMode();break;case 'video':await _pickVideo();break;case 'file':await _pickFile();break;case 'sticker':await _sendSticker();break;}
+  switch(choice){case 'media':await _pickMedia();break;case 'video':await _pickVideo();break;case 'file':await _pickFile();break;case 'sticker':await _sendSticker();break;}
+ }
+ Widget _attachmentTile(BuildContext ctx,String value,IconData icon,String title,String subtitle){
+  return Material(color:skin.partner.withValues(alpha:.82),borderRadius:BorderRadius.circular(17),child:InkWell(borderRadius:BorderRadius.circular(17),onTap:()=>Navigator.pop(ctx,value),child:Container(padding:const EdgeInsets.symmetric(horizontal:5,vertical:10),decoration:BoxDecoration(borderRadius:BorderRadius.circular(17),border:Border.all(color:skin.accent.withValues(alpha:.16))),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+   Container(width:42,height:42,decoration:BoxDecoration(gradient:LinearGradient(colors:[skin.accent.withValues(alpha:.24),skin.accent.withValues(alpha:.07)]),shape:BoxShape.circle),child:Icon(icon,color:skin.accent,size:22)),
+   const SizedBox(height:7),Text(title,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:11)),
+   const SizedBox(height:2),Text(subtitle,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:9))
+  ]))));
  }
  Future<void> _pickMedia()async{
   final kind=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
