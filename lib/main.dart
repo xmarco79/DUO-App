@@ -1067,6 +1067,32 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  Future<void> sendVideo() async {
+    if (uploadingVideo || uploadingImage || uploadingFile || sending) return;
+    try {
+      final picked = await imagePicker.pickVideo(source: ImageSource.gallery);
+      if (picked == null || !mounted) return;
+      final bytes = await picked.readAsBytes();
+      if (bytes.isEmpty) { showMessage('الفيديو المحدد فارغ'); return; }
+      if (bytes.length > 100 * 1024 * 1024) { showMessage('حجم الفيديو يتجاوز 100 ميجابايت'); return; }
+      setState(() => uploadingVideo = true);
+      final extension = picked.name.contains('.') ? picked.name.split('.').last.toLowerCase() : 'mp4';
+      const allowed = {'mp4','mov','m4v','webm'};
+      if (!allowed.contains(extension)) { showMessage('صيغة الفيديو غير مدعومة'); return; }
+      final mime = switch (extension) { 'mov' => 'video/quicktime', 'webm' => 'video/webm', _ => 'video/mp4' };
+      final storagePath = '${widget.spaceId}/$currentUserId/${DateTime.now().microsecondsSinceEpoch}.$extension';
+      await db.storage.from('duo-private').uploadBinary(storagePath, bytes,
+        fileOptions: FileOptions(contentType: mime, cacheControl: '3600', upsert: false));
+      try {
+        await db.from('duo_messages').insert({'space_id': widget.spaceId, 'sender_id': currentUserId,
+          'body': storagePath, 'message_type': 'video', if (replyingTo != null) 'reply_to': replyingTo!['id']});
+        if (mounted) setState(() => replyingTo = null);
+      } catch (_) { await db.storage.from('duo-private').remove([storagePath]); rethrow; }
+      if (mounted) showMessage('تم إرسال الفيديو');
+    } catch (e) { if (mounted) showMessage('تعذر إرسال الفيديو: $e'); }
+    finally { if (mounted) setState(() => uploadingVideo = false); }
+  }
+
   Future<void> sendFile() async {
     if (uploadingFile || uploadingImage || sending) return;
     try {
@@ -1536,6 +1562,7 @@ class _ChatPageState extends State<ChatPage> {
                               currentMessageTime != null &&
                               currentMessageTime.difference(previousMessageTime) > const Duration(minutes: 5);
                           final isImageMessage = item['message_type'] == 'image';
+                          final isVideoMessage = item['message_type'] == 'video';
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -1647,6 +1674,8 @@ class _ChatPageState extends State<ChatPage> {
                                       audioPath: item['body']?.toString() ?? '',
                                       isMine: isMe,
                                     )
+                                  else if (item['message_type'] == 'video')
+                                    ChatVideoBubble(videoPath: item['body']?.toString() ?? '', signedUrl: signedImageUrl(item['body']?.toString() ?? ''), onRetry: () { signedImageUrls.remove(item['body']?.toString() ?? ''); if (mounted) setState(() {}); })
                                   else if (item['message_type'] == 'image')
                                     FutureBuilder<String>(
                                       future: signedImageUrl(
@@ -1762,6 +1791,11 @@ class _ChatPageState extends State<ChatPage> {
                   tooltip: 'إرسال ملف',
                   onPressed: uploadingFile || uploadingImage || sending ? null : sendFile,
                   icon: uploadingFile ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: gold, strokeWidth: 2)) : const Icon(Icons.attach_file, color: gold),
+                ),
+                IconButton(
+                  tooltip: 'إرسال فيديو',
+                  onPressed: uploadingVideo || uploadingImage || uploadingFile || sending ? null : sendVideo,
+                  icon: uploadingVideo ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: gold, strokeWidth: 2)) : const Icon(Icons.video_library_outlined, color: gold),
                 ),
                 IconButton(
                   tooltip: 'إرسال صورة',
@@ -2587,6 +2621,48 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               ],
             ),
     );
+  }
+}
+
+class ChatVideoBubble extends StatefulWidget {
+  final String videoPath;
+  final Future<String> signedUrl;
+  final VoidCallback onRetry;
+  const ChatVideoBubble({super.key, required this.videoPath, required this.signedUrl, required this.onRetry});
+  @override
+  State<ChatVideoBubble> createState() => _ChatVideoBubbleState();
+}
+
+class _ChatVideoBubbleState extends State<ChatVideoBubble> {
+  @override
+  Widget build(BuildContext context) => FutureBuilder<String>(
+    future: widget.signedUrl,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) return SizedBox(width: 220, height: 130, child: Center(child: TextButton.icon(onPressed: widget.onRetry, icon: const Icon(Icons.refresh, color: gold), label: const Text('إعادة تحميل الفيديو', style: TextStyle(color: lavender)))));
+      if (!snapshot.hasData) return const SizedBox(width: 220, height: 130, child: Center(child: CircularProgressIndicator(color: gold)));
+      return _ChatVideoPlayer(url: snapshot.data!);
+    });
+}
+
+class _ChatVideoPlayer extends StatefulWidget {
+  final String url;
+  const _ChatVideoPlayer({required this.url});
+  @override
+  State<_ChatVideoPlayer> createState() => _ChatVideoPlayerState();
+}
+class _ChatVideoPlayerState extends State<_ChatVideoPlayer> {
+  late final VideoPlayerController controller;
+  bool initialized = false;
+  Object? error;
+  @override
+  void initState() { super.initState(); controller = VideoPlayerController.networkUrl(Uri.parse(widget.url)); controller.initialize().then((_) { if (mounted) setState(() => initialized = true); }).catchError((e) { if (mounted) setState(() => error = e); }); }
+  @override
+  void dispose() { controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    if (error != null) return const SizedBox(width: 220, height: 130, child: Center(child: Text('تعذر تشغيل الفيديو', style: TextStyle(color: lavender))));
+    if (!initialized) return const SizedBox(width: 220, height: 130, child: Center(child: CircularProgressIndicator(color: gold)));
+    return ClipRRect(borderRadius: BorderRadius.circular(12), child: SizedBox(width: 240, child: AspectRatio(aspectRatio: controller.value.aspectRatio > 0 ? controller.value.aspectRatio : 16/9, child: Stack(alignment: Alignment.center, children: [VideoPlayer(controller), IconButton(iconSize: 48, onPressed: () { setState(() {}); controller.value.isPlaying ? controller.pause() : controller.play(); }, icon: Icon(controller.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill, color: Colors.white.withValues(alpha: .92)))]))));
   }
 }
 
