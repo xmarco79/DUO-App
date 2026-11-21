@@ -1039,15 +1039,7 @@ class _ChatPageState extends State<ChatPage> {
           '${widget.spaceId}/$currentUserId/'
           '${DateTime.now().microsecondsSinceEpoch}.$safeExtension';
 
-      await db.storage.from('duo-private').uploadBinary(
-        storagePath,
-        bytes,
-        fileOptions: FileOptions(
-          contentType: contentType,
-          cacheControl: '3600',
-          upsert: false,
-        ),
-      );
+      await uploadChatMediaWithRetry(storagePath, bytes, contentType);
 
       try {
         await db.from('duo_messages').insert({
@@ -1085,8 +1077,7 @@ class _ChatPageState extends State<ChatPage> {
       if (!allowed.contains(extension)) { showMessage('صيغة الفيديو غير مدعومة'); return; }
       final mime = switch (extension) { 'mov' => 'video/quicktime', 'webm' => 'video/webm', _ => 'video/mp4' };
       final storagePath = '${widget.spaceId}/$currentUserId/${DateTime.now().microsecondsSinceEpoch}.$extension';
-      await db.storage.from('duo-private').uploadBinary(storagePath, bytes,
-        fileOptions: FileOptions(contentType: mime, cacheControl: '3600', upsert: false));
+      await uploadChatMediaWithRetry(storagePath, bytes, mime);
       try {
         await db.from('duo_messages').insert({'space_id': widget.spaceId, 'sender_id': currentUserId,
           'body': storagePath, 'message_type': 'video', if (replyingTo != null) 'reply_to': replyingTo!['id']});
@@ -1162,6 +1153,23 @@ class _ChatPageState extends State<ChatPage> {
       if (!opened && mounted) showMessage('تعذر فتح الملف');
     } catch (e) { if (mounted) showMessage('تعذر فتح الملف: $e'); }
   }
+  Future<void> uploadChatMediaWithRetry(String path, List<int> bytes, String contentType) async {
+    Object? lastError;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        await db.storage.from('duo-private').uploadBinary(path, bytes,
+          fileOptions: FileOptions(contentType: contentType, cacheControl: '3600', upsert: false));
+        return;
+      } catch (error) {
+        lastError = error;
+        // Verify that a timed-out upload actually reached storage before retrying.
+        try { await db.storage.from('duo-private').createSignedUrl(path, 900); return; } catch (_) {}
+        if (attempt < 2) await Future<void>.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+      }
+    }
+    throw lastError ?? Exception('تعذر رفع الوسائط');
+  }
+
   Future<String> signedImageUrl(String path) {
     if (path.trim().isEmpty) return Future.error(Exception('مسار الوسائط فارغ'));
     final cached = signedImageUrls[path];
