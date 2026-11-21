@@ -993,6 +993,75 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  Future<void> _showChatAttachments() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      showDragHandle: false,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 0, 10, 12),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+            decoration: BoxDecoration(
+              color: const Color(0xFF171326),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: chatTheme.accent.withValues(alpha: .24)),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .28), blurRadius: 24, offset: const Offset(0, -5))],
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 38, height: 4, decoration: BoxDecoration(color: chatTheme.accent.withValues(alpha: .45), borderRadius: BorderRadius.circular(8))),
+              const SizedBox(height: 14),
+              Row(children: [
+                Icon(Icons.add_to_photos_rounded, color: chatTheme.accent, size: 22),
+                const SizedBox(width: 9),
+                Text(oursText(context, 'مشاركة المحتوى', 'Share something'), style: const TextStyle(color: gold, fontSize: 17, fontWeight: FontWeight.w900)),
+              ]),
+              const SizedBox(height: 4),
+              Align(alignment: AlignmentDirectional.centerStart, child: Text(oursText(context, 'اختر ما تريد إرساله في محادثتكما', 'Choose what to send in your chat'), style: const TextStyle(color: lavender, fontSize: 11))),
+              const SizedBox(height: 16),
+              GridView.count(
+                shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 3, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.05,
+                children: [
+                  _chatAttachmentTile(sheetContext, 'image', Icons.photo_library_rounded, oursText(context, 'الصور', 'Photos'), oursText(context, 'من المعرض', 'Gallery')),
+                  _chatAttachmentTile(sheetContext, 'video', Icons.movie_creation_rounded, oursText(context, 'فيديو', 'Video'), oursText(context, 'مقاطعك', 'Your clips')),
+                  _chatAttachmentTile(sheetContext, 'file', Icons.folder_zip_rounded, oursText(context, 'ملفات', 'Files'), oursText(context, 'مستندات', 'Documents')),
+                ],
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'image') await sendImage();
+    if (choice == 'video') await sendVideo();
+    if (choice == 'file') await sendFile();
+  }
+
+  Widget _chatAttachmentTile(BuildContext sheetContext, String value, IconData icon, String title, String subtitle) {
+    return Material(
+      color: chatTheme.partner.withValues(alpha: .82),
+      borderRadius: BorderRadius.circular(17),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(17),
+        onTap: () => Navigator.pop(sheetContext, value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(17), border: Border.all(color: chatTheme.accent.withValues(alpha: .16))),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Container(width: 42, height: 42, decoration: BoxDecoration(gradient: LinearGradient(colors: [chatTheme.accent.withValues(alpha: .24), chatTheme.accent.withValues(alpha: .07)]), shape: BoxShape.circle), child: Icon(icon, color: chatTheme.accent, size: 22)),
+            const SizedBox(height: 7),
+            Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11)),
+            const SizedBox(height: 2),
+            Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: chatTheme.accent, fontSize: 9)),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Future<void> sendImage() async {
     if (uploadingImage || sending) return;
 
@@ -1836,28 +1905,15 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                 ] else ...[
                 IconButton(
-                  tooltip: 'إرسال ملف',
-                  onPressed: uploadingFile || uploadingImage || sending ? null : sendFile,
-                  icon: uploadingFile ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: gold, strokeWidth: 2)) : const Icon(Icons.attach_file, color: gold),
-                ),
-                IconButton(
-                  tooltip: 'إرسال فيديو',
-                  onPressed: uploadingImage || uploadingFile || sending ? null : sendVideo,
-                  icon: const Icon(Icons.videocam_outlined, color: gold),
-                ),
-                IconButton(
-                  tooltip: 'إرسال صورة',
-                  onPressed: uploadingImage || uploadingFile || sending ? null : sendImage,
-                  icon: uploadingImage
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: gold,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(Icons.image_outlined, color: gold),
+                  tooltip: oursText(context, 'إرفاق محتوى', 'Attach content'),
+                  onPressed: uploadingImage || uploadingFile || sending ? null : _showChatAttachments,
+                  style: IconButton.styleFrom(
+                    backgroundColor: chatTheme.accent.withValues(alpha: .13),
+                    fixedSize: const Size(42, 42),
+                  ),
+                  icon: uploadingImage || uploadingFile
+                      ? const SizedBox(width: 19, height: 19, child: CircularProgressIndicator(color: gold, strokeWidth: 2))
+                      : Icon(Icons.add_rounded, color: chatTheme.accent, size: 24),
                 ),
                 Expanded(
                   child: TextField(
