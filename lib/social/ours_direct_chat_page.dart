@@ -204,7 +204,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  final Set<String> hiddenIds={};
  Map<String,dynamic>? replyTo;
  RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
- Timer? typingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId;
+ Timer? typingTimer,receiptTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId;
  bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22,wallpaperDim=.34,wallpaperBlur=0;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
@@ -244,7 +244,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    default:return '';
   }
  }
- @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();_startLiveStatus();}
+ @override void initState(){super.initState();localPartnerName=widget.partnerName;receiptTimer=Timer.periodic(const Duration(minutes:1),(_){if(mounted)setState((){});});_loadSkin();_load();_listen();_startLiveStatus();}
  Future<void> _changeLocalNickname() async{
   final prefs=await SharedPreferences.getInstance();final key='ours_partner_alias_${uid}_${widget.partnerId}';
   final controller=TextEditingController(text:prefs.getString(key)??widget.partnerName);
@@ -494,11 +494,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      Expanded(child:Slider(value:offsetX,min:0,max:1,onChanged:(v)=>setModal(() {offsetX=v;refresh();}),activeColor:skin.accent)),
      Expanded(child:Slider(value:offsetY,min:0,max:1,onChanged:(v)=>setModal(() {offsetY=v;refresh();}),activeColor:skin.accent)),
     ]),
-    if(mode=='normal')Wrap(spacing:5,children:[
-     ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setModal(() {mode='normal';})),
-     ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setModal(() {mode='once';})),
-     ChoiceChip(label:Text(t('مرتين','Twice')),selected:mode=='twice',onSelected:(_)=>setModal(() {mode='twice';})),
-    ]) else Wrap(spacing:5,children:[
+    Wrap(spacing:5,children:[
      ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setModal(() {mode='normal';})),
      ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setModal(() {mode='once';})),
      ChoiceChip(label:Text(t('مرتين','Twice')),selected:mode=='twice',onSelected:(_)=>setModal(() {mode='twice';})),
@@ -795,7 +791,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد عناصر بعد','Nothing shared yet'))):ListView(children:found.map((m)=>ListTile(leading:Icon(kind=='media'?Icons.image_outlined:Icons.insert_drive_file_outlined,color:skin.accent),title:Text((m['file_name']??(m['body']??'').toString().split('/').last).toString(),maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])),onTap:(){Navigator.pop(ctx);_openLibraryItem(m);})).toList()))
   ]))));
  }
-   @override void dispose(){typingTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));if(liveChannel!=null){unawaited(liveChannel!.untrack().then<void>((_){}));db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
+   @override void dispose(){typingTimer?.cancel();receiptTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));if(liveChannel!=null){unawaited(liveChannel!.untrack().then<void>((_){}));db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
  @override Widget build(BuildContext context){
   final me=db.auth.currentUser!.id;
   return Scaffold(backgroundColor:skin.bg,appBar:AppBar(
