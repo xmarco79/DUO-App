@@ -170,34 +170,24 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  // The tail is part of the bubble silhouette, not a separate triangle.
+  // Draw one continuous, rounded silhouette; mirror it for the opposite side.
   const tailW = 27.0;
   const tailH = 18.0;
-  final bodyL = tailOnLeft ? tailW * .42 : 0.0;
-  final bodyR = tailOnLeft ? size.width : size.width - tailW * .42;
+  final bodyR = size.width - tailW * .42;
   final bodyBottom = size.height - tailH * .42;
-  final radius = math.min(34.0, math.min((bodyR-bodyL)*.22, bodyBottom*.46));
+  final radius = math.min(34.0, math.min(bodyR*.22, bodyBottom*.46));
+  double x(double value) => tailOnLeft ? size.width-value : value;
   final p = Path()
-   ..moveTo(bodyL+radius, 0)
-   ..lineTo(bodyR-radius, 0)
-   ..cubicTo(bodyR-radius*.42,0,bodyR,radius*.42,bodyR,radius)
-   ..lineTo(bodyR,bodyBottom-radius*.72);
-
-  if (tailOnLeft) {
-   p
-    ..cubicTo(bodyR,bodyBottom+tailH*.10,bodyR-tailW*.10,size.height-tailH*.05,bodyR-tailW*.78,size.height-tailH*.05)
-    ..cubicTo(bodyR-tailW*.42,size.height-tailH*.02,bodyL+tailW*.38,bodyBottom+tailH*.16,bodyL,bodyBottom);
-  } else {
-   p
-    ..cubicTo(bodyR,bodyBottom+tailH*.10,bodyR+tailW*.10,size.height-tailH*.05,size.width,size.height-tailH*.05)
-    ..cubicTo(size.width-tailW*.40,size.height-tailH*.02,bodyR-tailW*.38,bodyBottom+tailH*.16,bodyR-tailW*.12,bodyBottom);
-  }
-
-  p
-   ..lineTo(bodyL+radius,bodyBottom)
-   ..cubicTo(bodyL+radius*.42,bodyBottom,bodyL,bodyBottom-radius*.42,bodyL,bodyBottom-radius)
-   ..lineTo(bodyL,radius)
-   ..cubicTo(bodyL,radius*.42,bodyL+radius*.42,0,bodyL+radius,0)
+   ..moveTo(x(radius),0)
+   ..lineTo(x(bodyR-radius),0)
+   ..cubicTo(x(bodyR-radius*.42),0,x(bodyR),radius*.42,x(bodyR),radius)
+   ..lineTo(x(bodyR),bodyBottom-radius*.72)
+   ..cubicTo(x(bodyR),bodyBottom+tailH*.10,x(bodyR+tailW*.10),size.height-tailH*.05,x(size.width),size.height-tailH*.05)
+   ..cubicTo(x(size.width-tailW*.40),size.height-tailH*.02,x(bodyR-tailW*.38),bodyBottom+tailH*.16,x(bodyR-tailW*.12),bodyBottom)
+   ..lineTo(x(radius),bodyBottom)
+   ..cubicTo(x(radius*.42),bodyBottom,x(0),bodyBottom-radius*.42,x(0),bodyBottom-radius)
+   ..lineTo(x(0),radius)
+   ..cubicTo(x(0),radius*.42,x(radius*.42),0,x(radius),0)
    ..close();
   return p;
  }
