@@ -170,45 +170,45 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  const tailHeight=11.0;
-  final tailWidth=math.min(13.0,size.width*.20);
-  final bodyLeft=tailOnLeft?tailWidth:0.0;
-  final bodyRight=tailOnLeft?size.width:size.width-tailWidth;
-  final bodyWidth=bodyRight-bodyLeft;
-  final bodyBottom=size.height-tailHeight;
-  final radius=math.min(25.0,math.min(bodyWidth*.28,(bodyBottom)*.46));
-  final path=Path()
-   ..moveTo(bodyLeft+radius,0)
-   ..lineTo(bodyRight-radius,0)
-   ..cubicTo(bodyRight-radius*.42,0,bodyRight,radius*.42,bodyRight,radius)
-   ..lineTo(bodyRight,bodyBottom-radius)
-   ..cubicTo(bodyRight,bodyBottom-radius*.42,bodyRight-radius*.42,bodyBottom,bodyRight-radius,bodyBottom);
+  const tailHeight = 7.0;
+  final tailWidth = math.min(11.0, size.width * .16);
+  final left = tailOnLeft ? tailWidth : 0.0;
+  final right = tailOnLeft ? size.width : size.width - tailWidth;
+  final bottom = size.height - tailHeight;
+  final width = right - left;
+  final radius = math.min(21.0, math.min(width * .24, bottom * .42));
+  final path = Path()
+   ..moveTo(left + radius, 0)
+   ..lineTo(right - radius, 0)
+   ..cubicTo(right - radius * .42, 0, right, radius * .42, right, radius)
+   ..lineTo(right, bottom - radius)
+   ..cubicTo(right, bottom - radius * .42, right - radius * .42, bottom, right - radius, bottom);
 
-  if(tailOnLeft){
+  if (tailOnLeft) {
    path
-    ..lineTo(bodyLeft+tailWidth*.92,bodyBottom)
-    ..cubicTo(bodyLeft+tailWidth*.70,bodyBottom+1,bodyLeft+tailWidth*.34,size.height-1,bodyLeft*.12,size.height-1)
-    ..cubicTo(bodyLeft*.02,size.height-1,bodyLeft*.02,bodyBottom+radius*.20,bodyLeft,bodyBottom-radius*.04);
-  }else{
+    ..lineTo(left + radius * .58, bottom)
+    ..cubicTo(left + radius * .34, bottom + .4, left + tailWidth * .70, size.height - .8, left * .12, size.height - .8)
+    ..cubicTo(left * .02, size.height - .8, left * .04, bottom + radius * .16, left, bottom - radius * .02);
+  } else {
    path
-    ..lineTo(bodyRight-tailWidth*.92,bodyBottom)
-    ..cubicTo(bodyRight-tailWidth*.70,bodyBottom+1,bodyRight-tailWidth*.34,size.height-1,size.width-bodyLeft*.12,size.height-1)
-    ..cubicTo(size.width-bodyLeft*.02,size.height-1,size.width-bodyLeft*.02,bodyBottom+radius*.20,bodyRight,bodyBottom-radius*.04);
+    ..lineTo(right - radius * .58, bottom)
+    ..cubicTo(right - radius * .34, bottom + .4, right - tailWidth * .70, size.height - .8, size.width - left * .12, size.height - .8)
+    ..cubicTo(size.width - left * .02, size.height - .8, size.width - left * .04, bottom + radius * .16, right, bottom - radius * .02);
   }
 
   path
-   ..lineTo(bodyLeft+radius,bodyBottom)
-   ..cubicTo(bodyLeft+radius*.42,bodyBottom,bodyLeft,bodyBottom-radius*.42,bodyLeft,bodyBottom-radius)
-   ..lineTo(bodyLeft,radius)
-   ..cubicTo(bodyLeft,radius*.42,bodyLeft+radius*.42,0,bodyLeft+radius,0)
+   ..lineTo(left + radius, bottom)
+   ..cubicTo(left + radius * .42, bottom, left, bottom - radius * .42, left, bottom - radius)
+   ..lineTo(left, radius)
+   ..cubicTo(left, radius * .42, left + radius * .42, 0, left + radius, 0)
    ..close();
   return path;
  }
 
  @override
- bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
+ bool shouldReclip(covariant _MessageBubbleClipper oldClipper) =>
+  oldClipper.tailOnLeft != tailOnLeft;
 }
-
 
 class _OursUnifiedMessageSurface extends StatelessWidget {
  final _ChatSkin skin; final bool isMine,isVisual; final Widget child;
@@ -1024,7 +1024,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    @override void dispose(){typingTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));if(liveChannel!=null){unawaited(liveChannel!.untrack().then<void>((_){}));db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
  @override Widget build(BuildContext context){
   final me=db.auth.currentUser!.id;
-  return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg, elevation:0, scrolledUnderElevation:0, toolbarHeight:76, centerTitle:true, shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.20),width:1)), flexibleSpace:DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[skin.partner.withValues(alpha:.96),skin.bg]))),
+  return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg, elevation:0, scrolledUnderElevation:0, toolbarHeight:68, centerTitle:true, shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),
    title:InkWell(
     borderRadius:BorderRadius.circular(12),
     onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:widget.partnerId))),
@@ -1065,9 +1065,9 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity>220){setState(()=>timestampMessageId=timestampMessageId==m['id'].toString()?null:m['id'].toString());}else if(velocity< -220){setState(()=>replyTo=m);}},
-        child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:5,shadowColor:skin.accent.withValues(alpha:.20),clipBehavior:Clip.antiAlias,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(16,12,16,22),
-         decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55): (mine?skin.mine:skin.partner),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14)),width:highlightedMessageId==m['id'].toString()?1.5:.65)),
+        child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(15,11,15,13),
+         decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55): (mine?skin.mine:skin.partner),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14)),width:highlightedMessageId==m['id'].toString()?1.5:.55)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
@@ -1132,7 +1132,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        if(timestampMessageId==m['id'].toString())Padding(padding:const EdgeInsetsDirectional.only(top:1,bottom:5),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.8),fontSize:10,fontWeight:FontWeight.w600))))
       ]);
      })),
-    SafeArea(top:false,child:Container(margin:const EdgeInsets.fromLTRB(8,4,8,7),padding:const EdgeInsets.fromLTRB(7,9,7,10),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.97),borderRadius:const BorderRadius.vertical(top:Radius.circular(23),bottom:Radius.circular(20)),border:Border.all(color:skin.accent.withValues(alpha:.20)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.18),blurRadius:18,offset:const Offset(0,-4))]),
+    SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(9,9,9,8),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.12),width:.8))),
      child:recording?Row(children:[
       IconButton(onPressed:_cancelRecording,icon:const Icon(Icons.delete_outline,color:Colors.redAccent)),
       Expanded(child:Text(t('جارٍ تسجيل الرسالة الصوتية…','Recording voice message…'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))),
@@ -1143,7 +1143,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       if(replyTo!=null)Container(margin:const EdgeInsets.fromLTRB(12,0,12,6),padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(12)),child:Row(children:[Icon(Icons.reply,color:skin.accent,size:18),const SizedBox(width:8),Expanded(child:Text((replyTo!['body']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:12))),IconButton(onPressed:()=>setState(()=>replyTo=null),icon:const Icon(Icons.close,size:17))])),
       Row(children:[
       IconButton(onPressed:uploading||sending?null:_showAttachments,tooltip:t('إرفاق صورة أو ملف أو ملصق','Attach photo, file or sticker'),icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.add_circle_outline_rounded,color:skin.accent)),
-      Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onChanged:_handleTyping,onSubmitted:(_)=>_sendText(),decoration:InputDecoration(hintText:t('اكتب رسالة…','Write a message…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:11)))),
+      Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onChanged:_handleTyping,onSubmitted:(_)=>_sendText(),decoration:InputDecoration(hintText:t('اكتب رسالة…','Write a message…'),filled:true,fillColor:skin.partner.withValues(alpha:.72),border:OutlineInputBorder(borderRadius:BorderRadius.circular(19),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(19),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(19),borderSide:BorderSide(color:skin.accent.withValues(alpha:.42),width:1)),contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:11)))),
       IconButton(onPressed:uploading||sending?null:_startRecording,icon:Icon(Icons.mic_none_rounded,color:skin.accent)),
       IconButton.filled(onPressed:sending||uploading?null:_sendText,style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
      ])])))
