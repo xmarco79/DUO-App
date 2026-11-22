@@ -165,12 +165,21 @@ class _MediaMessageClipper extends CustomClipper<Path> {
 }
 
 class _MessageBubbleClipper extends CustomClipper<Path> {
- final bool tailOnLeft;
- const _MessageBubbleClipper({required this.tailOnLeft});
+ final bool tailOnLeft; final String style;
+ const _MessageBubbleClipper({required this.tailOnLeft,this.style='classic'});
 
  @override
  Path getClip(Size size) {
-  // Single continuous silhouette matching the supplied capsule + curved tail.
+  if(style=='pill'||style=='soft'||style=='rounded'){
+   final r=style=='pill'?size.height*.48:style=='soft'?25.0:17.0;
+   return Path()..addRRect(RRect.fromRectAndRadius(Offset.zero&size,Radius.circular(math.min(r,size.height*.48))));
+  }
+  if(style=='notch'){
+   final r=math.min(24.0,size.height*.34),tail=math.min(17.0,size.height*.28);
+   final left=tailOnLeft?tail:0.0,right=tailOnLeft?size.width:size.width-tail;
+   return Path()..moveTo(left+r,0)..lineTo(right-r,0)..quadraticBezierTo(right,0,right,r)..lineTo(right,size.height-tail)..quadraticBezierTo(right,size.height,right-tail,size.height)..lineTo(left+r,size.height)..quadraticBezierTo(left,size.height,left,size.height-r)..lineTo(left,r)..quadraticBezierTo(left,0,left+r,0)..close();
+  }
+  // Classic continuous capsule with a soft curved tail.
   const tailWidth = 31.0;
   const tailHeight = 19.0;
   final bodyRight = size.width - tailWidth * .48;
@@ -198,7 +207,7 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  }
 
  @override
- bool shouldReclip(covariant _MessageBubbleClipper oldClipper) => oldClipper.tailOnLeft != tailOnLeft;
+ bool shouldReclip(covariant _MessageBubbleClipper oldClipper) => oldClipper.tailOnLeft != tailOnLeft || oldClipper.style != style;
 }
 
 class _OursUnifiedMessageSurface extends StatelessWidget {
@@ -302,6 +311,14 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath,timestampMessageId;double wallpaperOpacity=.22,wallpaperZoom=1,wallpaperRotation=0,wallpaperDim=.55,wallpaperOffsetX=0,wallpaperOffsetY=0;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
+ String bubbleStyle='classic';
+ static const _bubbleStyles=[
+  ('classic','كلاسيكية','Classic','رسالة بذيل ناعم'),
+  ('pill','كبسولة','Pill','حواف بيضاوية بالكامل'),
+  ('soft','ناعمة','Soft','زوايا واسعة وهادئة'),
+  ('rounded','مربعة ناعمة','Rounded','زوايا متوازنة'),
+  ('notch','ذيل جانبي','Side tail','ذيل صغير مدمج'),
+ ];
 
  @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();_startLiveStatus();}
  Future<void> _changeLocalNickname() async{
@@ -314,7 +331,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Future<void> _loadSkin() async{
   final p=await SharedPreferences.getInstance();final id=p.getString('ours_direct_skin_'+widget.conversationId)??'ours';
   final found=_skins.where((s)=>s.id==id);
-  final savedWallpaper=p.getString('ours_direct_wallpaper_'+widget.conversationId);
+  bubbleStyle=p.getString('ours_direct_bubble_style_'+widget.conversationId)??'classic';\n  final savedWallpaper=p.getString('ours_direct_wallpaper_'+widget.conversationId);
   final savedOpacity=p.getDouble('ours_direct_wallpaper_opacity_'+widget.conversationId)??.22;
   final savedZoom=p.getDouble('ours_direct_wallpaper_zoom_'+widget.conversationId)??1.0;
   final savedRotation=p.getDouble('ours_direct_wallpaper_rotation_'+widget.conversationId)??0.0;
@@ -414,6 +431,41 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(elapsed.inMinutes<60)return t('آخر ظهور منذ ${elapsed.inMinutes} دقيقة','Last seen ${elapsed.inMinutes}m ago');
   if(elapsed.inHours<24)return t('آخر ظهور منذ ${elapsed.inHours} ساعة','Last seen ${elapsed.inHours}h ago');
   return t('آخر ظهور ${_oursDate(seen,true,withYear:false)}','Last seen ${_oursDate(seen,false,withYear:false)}');
+ }
+ Future<void> _chooseBubbleStyle() async{
+  final selected=await showModalBottomSheet<String>(
+   context:context,backgroundColor:const Color(0xFF171326),showDragHandle:true,isScrollControlled:true,
+   builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(16,8,16,22),child:Column(
+    mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Text(t('شكل فقاعات الرسائل','Message bubble style'),style:TextStyle(color:skin.accent,fontSize:19,fontWeight:FontWeight.w900)),
+     const SizedBox(height:5),
+     Text(t('اختر الشكل الذي يظهر في رسائلكما. ستشاهد معاينة لكل تصميم.','Choose how messages appear in this conversation.'),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:11)),
+     const SizedBox(height:14),
+     ..._bubbleStyles.map((entry){
+      final id=entry.$1,active=bubbleStyle==id;
+      return InkWell(onTap:()=>Navigator.pop(ctx,id),borderRadius:BorderRadius.circular(16),child:Container(
+       margin:const EdgeInsets.only(bottom:9),padding:const EdgeInsets.symmetric(horizontal:13,vertical:12),
+       decoration:BoxDecoration(color:skin.partner.withValues(alpha:.72),borderRadius:BorderRadius.circular(16),border:Border.all(color:active?skin.accent:skin.accent.withValues(alpha:.13),width:active?1.6:.7)),
+       child:Row(children:[
+        SizedBox(width:92,height:48,child:Stack(children:[
+         PositionedDirectional(start:0,top:2,child:ClipPath(clipper:_MessageBubbleClipper(tailOnLeft:false,style:id),child:Container(width:65,height:27,color:skin.mine))),
+         PositionedDirectional(end:0,bottom:2,child:ClipPath(clipper:_MessageBubbleClipper(tailOnLeft:true,style:id),child:Container(width:65,height:27,color:skin.partner,foregroundDecoration:BoxDecoration(border:Border.all(color:skin.accent.withValues(alpha:.5)))))),
+        ])),
+        const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+         Text(ar?entry.$2:entry.$3,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:13)),
+         Text(ar?entry.$4:entry.$4,style:TextStyle(color:skin.accent.withValues(alpha:.72),fontSize:10))
+        ])),
+        if(active)Icon(Icons.check_circle_rounded,color:skin.accent,size:21)else Icon(Icons.circle_outlined,color:skin.accent.withValues(alpha:.35),size:20)
+       ])
+      ));
+     })
+    ]
+   )))
+  );
+  if(selected==null)return;
+  final prefs=await SharedPreferences.getInstance();
+  await prefs.setString('ours_direct_bubble_style_'+widget.conversationId,selected);
+  if(mounted)setState(()=>bubbleStyle=selected);
  }
  Future<void> _chooseWallpaper() async {
   final currentExists=wallpaperPath!=null&&await File(wallpaperPath!).exists();
@@ -1038,7 +1090,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        partnerId:widget.partnerId,partnerName:localPartnerName??widget.partnerName,skin:skin,
        profile:()=>OursProfilePage(userId:widget.partnerId),nickname:_changeLocalNickname,
        search:_searchMessages,media:()=>_showChatLibrary('media'),files:()=>_showChatLibrary('files'),
-       themes:_chooseSkin,wallpaper:_chooseWallpaper)));
+       themes:_chooseSkin,wallpaper:_chooseWallpaper,bubbles:_chooseBubbleStyle)));
       if(value=='profile')Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:widget.partnerId)));
      },
      itemBuilder:(_)=>[
@@ -1070,7 +1122,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity>220){setState(()=>timestampMessageId=timestampMessageId==m['id'].toString()?null:m['id'].toString());}else if(velocity< -220){setState(()=>replyTo=m);}},
-        child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
+        child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr,style:bubbleStyle),color:mine?skin.mine:skin.partner,elevation:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8),
          decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55): (mine?skin.mine:skin.partner),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14)),width:highlightedMessageId==m['id'].toString()?1.5:.55)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
@@ -1581,8 +1633,8 @@ class _MarkupPainter extends CustomPainter{
  @override bool shouldRepaint(covariant _MarkupPainter old)=>old.strokes!=strokes;
 }
 class _ChatDetailsPage extends StatelessWidget{
- final String partnerId,partnerName;final _ChatSkin skin;final Widget Function() profile;final VoidCallback nickname,search,media,files;final Future<void> Function() themes,wallpaper;
- const _ChatDetailsPage({required this.partnerId,required this.partnerName,required this.skin,required this.profile,required this.nickname,required this.search,required this.media,required this.files,required this.themes,required this.wallpaper});
+ final String partnerId,partnerName;final _ChatSkin skin;final Widget Function() profile;final VoidCallback nickname,search,media,files;final Future<void> Function() themes,wallpaper,bubbles;
+ const _ChatDetailsPage({required this.partnerId,required this.partnerName,required this.skin,required this.profile,required this.nickname,required this.search,required this.media,required this.files,required this.themes,required this.wallpaper,required this.bubbles});
  @override Widget build(BuildContext context){final ar=Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
  Widget section(String title)=>Padding(padding:const EdgeInsets.fromLTRB(5,20,5,9),child:Text(title,style:TextStyle(color:skin.accent,fontSize:12,fontWeight:FontWeight.w800,letterSpacing:.4)));
  Widget tile(IconData icon,String title,String subtitle,VoidCallback action)=>_ChatDetailTile(icon:icon,title:title,subtitle:subtitle,accent:skin.accent,onTap:action);
@@ -1597,7 +1649,7 @@ class _ChatDetailsPage extends StatelessWidget{
   section(t('إدارة المحادثة','Conversation')),
   tile(Icons.search_rounded,t('البحث في الرسائل','Search messages'),t('اعثر على رسالة بسرعة','Find a message quickly'),search),
   tile(Icons.person_pin_rounded,t('اسم خاص للطرف الآخر','Private nickname'),t('اسم يظهر في جهازك فقط','Only on your device'),nickname),
-  tile(Icons.palette_rounded,t('أجواء المحادثة','Chat atmosphere'),t('ثيمات حية وألوان مميزة','Vibrant themes and colors'),()=>themes()),
+  tile(Icons.palette_rounded,t('أجواء المحادثة','Chat atmosphere'),t('ثيمات حية وألوان مميزة','Vibrant themes and colors'),()=>themes()),\n  tile(Icons.chat_bubble_rounded,t('شكل فقاعات الرسائل','Message bubble style'),t('اختر من مجموعة تصاميم للفقاعات','Choose from a collection of bubble designs'),()=>bubbles()),
   tile(Icons.wallpaper_rounded,t('خلفية المحادثة','Chat wallpaper'),t('اختر صورة واضبط وضوحها بشكل مستقل عن الثيم','Choose a photo and adjust visibility independently'),()=>wallpaper()),
  ]));
  }
