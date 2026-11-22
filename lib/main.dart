@@ -32,6 +32,49 @@ String oursText(BuildContext context, String ar, String en) =>
 
 // Preview builds open the home screen without requiring an account.
 
+
+class _OursChatBubbleClipper extends CustomClipper<Path> {
+  final bool tailOnLeft;
+  const _OursChatBubbleClipper({required this.tailOnLeft});
+
+  @override
+  Path getClip(Size size) {
+    final radius = math.min(23.0, size.height * .42);
+    final tailWidth = math.min(15.0, size.width * .18);
+    const tailHeight = 10.0;
+    final bodyBottom = size.height - tailHeight;
+    final path = Path()
+      ..moveTo(radius, 0)
+      ..lineTo(size.width - radius, 0)
+      ..cubicTo(size.width - radius * .42, 0, size.width, radius * .42, size.width, radius)
+      ..lineTo(size.width, bodyBottom - radius)
+      ..cubicTo(size.width, bodyBottom - radius * .42, size.width - radius * .42, bodyBottom, size.width - radius, bodyBottom);
+
+    if (tailOnLeft) {
+      path
+        ..lineTo(radius + tailWidth, bodyBottom)
+        ..cubicTo(radius + tailWidth * .72, bodyBottom + 1, radius + tailWidth * .48, size.height - 1, radius + tailWidth * .18, size.height - 1)
+        ..cubicTo(radius - 1, size.height - 1, radius + 1, bodyBottom + 3, radius, bodyBottom);
+    } else {
+      path
+        ..lineTo(size.width - radius - tailWidth, bodyBottom)
+        ..cubicTo(size.width - radius - tailWidth * .72, bodyBottom + 1, size.width - radius - tailWidth * .48, size.height - 1, size.width - radius - tailWidth * .18, size.height - 1)
+        ..cubicTo(size.width - radius + 1, size.height - 1, size.width - radius - 1, bodyBottom + 3, size.width - radius, bodyBottom);
+    }
+
+    path
+      ..lineTo(radius, bodyBottom)
+      ..cubicTo(radius * .42, bodyBottom, 0, bodyBottom - radius * .42, 0, bodyBottom - radius)
+      ..lineTo(0, radius)
+      ..cubicTo(0, radius * .42, radius * .42, 0, radius, 0)
+      ..close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant _OursChatBubbleClipper oldClipper) => oldClipper.tailOnLeft != tailOnLeft;
+}
+
 class _OursChatTheme {
   final String id, titleAr, titleEn, detailAr, detailEn;
   final Color background, mine, partner, accent;
@@ -1567,6 +1610,12 @@ class _ChatPageState extends State<ChatPage> {
                                 : AlignmentDirectional.centerStart,
                             child: GestureDetector(
                               onLongPress: () => _showMessageActions(item, isMe),
+                              child: ClipPath(
+                              clipper: _OursChatBubbleClipper(
+                                tailOnLeft: isMe
+                                    ? Directionality.of(context) == ui.TextDirection.rtl
+                                    : Directionality.of(context) == ui.TextDirection.ltr,
+                              ),
                               child: Container(
                               constraints: BoxConstraints(
                                 maxWidth: MediaQuery.of(context).size.width * 0.80,
@@ -1690,10 +1739,13 @@ class _ChatPageState extends State<ChatPage> {
                                       },
                                     )
                                   else
-                                    SelectableText(
-                                      item['body']?.toString() ?? '',
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5),
+                                    Transform.translate(
+                                      offset: const Offset(0, -2),
+                                      child: SelectableText(
+                                        item['body']?.toString() ?? '',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.35),
+                                      ),
                                     ),
                                   if (item['deleted_at'] == null)
                                     Padding(
@@ -1720,7 +1772,7 @@ class _ChatPageState extends State<ChatPage> {
                                 ],
                               ),
                             ),
-                            ),
+                            )),
                             ),
                           ),
                             ],
