@@ -170,6 +170,26 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
+  if(style=='minimal'||style=='ticket'){
+   return Path()..addRRect(RRect.fromRectAndRadius(Offset.zero&size,Radius.circular(style=='ticket'?13:20)));
+  }
+  if(style=='bubble'||style=='compact'||style=='cloud'||style=='angular'){
+   final r=style=='bubble'?size.height*.5:style=='compact'?13.0:style=='cloud'?math.min(size.height*.42,30.0):8.0;
+   return Path()..addRRect(RRect.fromRectAndRadius(Offset.zero&size,Radius.circular(r)));
+  }
+  if(style=='leaf'||style=='wave'){
+   final r=math.min(size.height*.38,25.0),tail=math.min(15.0,size.height*.22);
+   final l=tailOnLeft?tail:0.0,rr=tailOnLeft?size.width:size.width-tail;
+   final p=Path()..moveTo(l+r,0)..lineTo(rr-r,0)..quadraticBezierTo(rr,0,rr,r)..lineTo(rr,size.height*.62);
+   if(style=='wave'){p..quadraticBezierTo(rr,size.height*.83,rr-r*.7,size.height*.82)..quadraticBezierTo(size.width*.5,size.height*1.05,l+r,size.height*.84);}
+   else{p..quadraticBezierTo(rr,size.height,rr-tail,size.height)..quadraticBezierTo(size.width*.5,size.height*.84,l+r,size.height);}
+   return p..lineTo(l+r,size.height)..quadraticBezierTo(l,size.height,l,size.height-r)..lineTo(l,r)..quadraticBezierTo(l,0,l+r,0)..close();
+  }
+  if(style=='soft_tail'||style=='rounded_tail'){
+   final r=math.min(size.height*.43,27.0),tail=math.min(22.0,size.height*.3);
+   final l=tailOnLeft?tail:0.0,rr=tailOnLeft?size.width:size.width-tail;
+   return Path()..moveTo(l+r,0)..lineTo(rr-r,0)..quadraticBezierTo(rr,0,rr,r)..lineTo(rr,size.height-tail)..cubicTo(rr,size.height,rr-tail*.2,size.height,tailOnLeft?0:size.width,size.height-tail*.15)..quadraticBezierTo(tailOnLeft?tail*.35:size.width-tail*.35,size.height*.9,l+r,size.height*.82)..lineTo(l+r,size.height*.82)..quadraticBezierTo(l,size.height*.82,l,size.height*.82-r)..lineTo(l,r)..quadraticBezierTo(l,0,l+r,0)..close();
+  }
   if(style=='pill'||style=='soft'||style=='rounded'){
    final r=style=='pill'?size.height*.48:style=='soft'?25.0:17.0;
    return Path()..addRRect(RRect.fromRectAndRadius(Offset.zero&size,Radius.circular(math.min(r,size.height*.48))));
@@ -211,12 +231,12 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 }
 
 class _OursUnifiedMessageSurface extends StatelessWidget {
- final _ChatSkin skin; final bool isMine,isVisual; final Widget child;
- const _OursUnifiedMessageSurface({required this.skin,required this.isMine,required this.child,this.isVisual=false});
+ final _ChatSkin skin; final bool isMine,isVisual; final Widget child; final String bubbleStyle;
+ const _OursUnifiedMessageSurface({required this.skin,required this.isMine,required this.child,this.isVisual=false,this.bubbleStyle='classic'});
  @override Widget build(BuildContext context){
   final tailOnLeft=isMine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr;
   return Padding(padding:const EdgeInsets.symmetric(vertical:7),child:PhysicalShape(
-   clipper:isVisual?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:tailOnLeft),
+   clipper:isVisual?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:tailOnLeft,style:bubbleStyle),
    color:isVisual?Colors.transparent:(isMine?skin.mine:skin.partner),elevation:isVisual?0:5,
    shadowColor:isVisual?Colors.transparent:skin.accent.withValues(alpha:.20),clipBehavior:Clip.antiAlias,
    child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),
@@ -313,11 +333,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
  String bubbleStyle='classic';
  static const _bubbleStyles=[
-  ('classic','كلاسيكية','Classic','رسالة بذيل ناعم'),
-  ('pill','كبسولة','Pill','حواف بيضاوية بالكامل'),
-  ('soft','ناعمة','Soft','زوايا واسعة وهادئة'),
-  ('rounded','مربعة ناعمة','Rounded','زوايا متوازنة'),
-  ('notch','ذيل جانبي','Side tail','ذيل صغير مدمج'),
+  ('classic','كلاسيكية','Classic','ذيل منحني متصل'),('pill','كبسولة','Pill','بيضاوية بالكامل'),('soft','ناعمة','Soft','استدارة واسعة'),('rounded','مربعة ناعمة','Rounded','زوايا متوازنة'),('notch','ذيل جانبي','Side tail','ذيل صغير مدمج'),('minimal','مينيمال','Minimal','بسيطة بلا ذيل'),('bubble','دائرية','Bubble','استدارة واضحة'),('compact','مدمجة','Compact','حواف مضغوطة'),('cloud','سحابية','Cloud','انحناءات لطيفة'),('angular','هندسية','Angular','زوايا عصرية'),('leaf','ورقة','Leaf','انحناء غير متماثل'),('wave','موجية','Wave','حافة منحنية'),('ticket','بطاقة','Ticket','بطاقة مستديرة'),('soft_tail','ذيل ناعم','Soft tail','ذيل مستدير'),('rounded_tail','ذيل قصير','Rounded tail','ذيل قصير لين'),
  ];
 
  @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();_startLiveStatus();}
@@ -1032,7 +1048,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    @override void dispose(){typingTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));if(liveChannel!=null){unawaited(liveChannel!.untrack().then<void>((_){}));db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
  @override Widget build(BuildContext context){
   final me=db.auth.currentUser!.id;
-  return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg, elevation:0, scrolledUnderElevation:0, toolbarHeight:68, centerTitle:true, shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),
+  return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg, elevation:0, scrolledUnderElevation:0, toolbarHeight:76, centerTitle:true, surfaceTintColor:Colors.transparent, shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.14),width:.8)),
    leadingWidth:48,
    leading:IconButton(
     tooltip:t('رجوع','Back'),
@@ -1189,7 +1205,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        if(timestampMessageId==m['id'].toString())Padding(padding:const EdgeInsetsDirectional.only(top:1,bottom:5),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.8),fontSize:10,fontWeight:FontWeight.w600))))
       ]);
      })),
-    SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(13,12,13,10),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.13),width:.7)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.10),blurRadius:20,offset:const Offset(0,-6))]),
+    SafeArea(top:false,child:Container(margin:const EdgeInsets.fromLTRB(10,5,10,8),padding:const EdgeInsets.fromLTRB(9,10,9,9),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.96),borderRadius:BorderRadius.circular(25),border:Border.all(color:skin.accent.withValues(alpha:.16)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.18),blurRadius:22,offset:const Offset(0,-5))]),
      child:recording?Row(children:[
       IconButton(onPressed:_cancelRecording,icon:const Icon(Icons.delete_outline,color:Colors.redAccent)),
       Expanded(child:Text(t('جارٍ تسجيل الرسالة الصوتية…','Recording voice message…'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))),
@@ -1200,7 +1216,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       if(replyTo!=null)Container(margin:const EdgeInsets.fromLTRB(12,0,12,6),padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(12)),child:Row(children:[Icon(Icons.reply,color:skin.accent,size:18),const SizedBox(width:8),Expanded(child:Text((replyTo!['body']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:12))),IconButton(onPressed:()=>setState(()=>replyTo=null),icon:const Icon(Icons.close,size:17))])),
       Row(children:[
       IconButton(onPressed:uploading||sending?null:_showAttachments,tooltip:t('إرفاق صورة أو ملف أو ملصق','Attach photo, file or sticker'),icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.add_circle_outline_rounded,color:skin.accent)),
-      Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onChanged:_handleTyping,onSubmitted:(_)=>_sendText(),decoration:InputDecoration(hintText:t('اكتب رسالة…','Write a message…'),filled:true,fillColor:skin.partner.withValues(alpha:.88),border:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(24),borderSide:BorderSide(color:skin.accent.withValues(alpha:.42),width:1)),contentPadding:const EdgeInsets.symmetric(horizontal:18,vertical:13)))),
+      Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onChanged:_handleTyping,onSubmitted:(_)=>_sendText(),decoration:InputDecoration(hintText:t('اكتب رسالة…','Write a message…'),filled:true,fillColor:skin.partner.withValues(alpha:.94),border:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.48),width:1.1)),contentPadding:const EdgeInsets.symmetric(horizontal:17,vertical:14)))),
       IconButton(onPressed:uploading||sending?null:_startRecording,icon:Icon(Icons.mic_none_rounded,color:skin.accent)),
       IconButton.filled(onPressed:sending||uploading?null:_sendText,style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
      ])])))
@@ -1569,7 +1585,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
       final showDate=date!=null&&(previous==null||DateUtils.dateOnly(date)!=DateUtils.dateOnly(previous));
       return Column(children:[
        if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_selfDate(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
-       Align(alignment:AlignmentDirectional.centerEnd,child:GestureDetector(onLongPress:()=>_noteActions(row),child:_OursUnifiedMessageSurface(skin:skin,isMine:true,isVisual:type=='image'||type=='sticker',child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+       Align(alignment:AlignmentDirectional.centerEnd,child:GestureDetector(onLongPress:()=>_noteActions(row),child:_OursUnifiedMessageSurface(skin:skin,isMine:true,isVisual:type=='image'||type=='sticker',bubbleStyle:bubbleStyle,child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
          if(row['reply_to']!=null&&rows.any((r)=>r['id'].toString()==row['reply_to'].toString()))
           Builder(builder:(ctx){final original=rows.firstWhere((r)=>r['id'].toString()==row['reply_to'].toString());return InkWell(onTap:()=>_jumpSelfMessage(original['id'].toString()),child:Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.4),borderRadius:BorderRadius.circular(8)),child:Text((original['body']??original['file_name']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))));}),
          if(type=='image'||type=='sticker')FutureBuilder<String>(future:_signedSelf(body),builder:(c,s)=>s.hasData?GestureDetector(onTap:()=>_openSelfImage(body),child:type=='sticker'?Image.network(s.data!,width:150,height:150,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:38)):ClipRRect(borderRadius:BorderRadius.circular(13),child:Image.network(s.data!,width:225,height:220,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:38)))):SizedBox(width:180,height:130,child:Center(child:CircularProgressIndicator(color:skin.accent))))
