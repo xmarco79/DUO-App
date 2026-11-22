@@ -11,6 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  google_fonts: ^6.2.1
   flutter_localizations:
     sdk: flutter
 
@@ -29,6 +30,7 @@ dependencies:
   record: ^7.2.0
   audioplayers: ^6.4.0
   path_provider: ^2.1.5
+  video_player: ^2.10.0
 
 dev_dependencies:
   flutter_test:

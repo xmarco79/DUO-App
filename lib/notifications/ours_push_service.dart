@@ -72,9 +72,16 @@ class OursPushService {
         await _registerCurrentToken();
       }
       _initialized = true;
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Push is an enhancement, not a prerequisite for opening OURS.
+      // Keep the rest of the app available when Firebase or notification
+      // permissions are temporarily unavailable; a later app start can retry.
       await _cancelSubscriptions();
-      rethrow;
+      _initialized = false;
+      // ignore: avoid_print
+      print('OURS push notifications unavailable: $error');
+      // ignore: avoid_print
+      print(stackTrace);
     } finally {
       _initializing = false;
     }

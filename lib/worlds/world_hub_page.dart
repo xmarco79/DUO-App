@@ -7,7 +7,6 @@ import 'package:record/record.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
-import '../games/ours_tic_tac_toe_page.dart';
 import '../memories/ours_albums_page.dart';
 
 const _navy = Color(0xFF10101C);
@@ -52,7 +51,6 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
   static const worlds = [
     ('Connect', 'تواصلا وشاركا تفاصيل يومكما', Icons.forum_rounded, 'connect'),
     ('Universe', 'ابنيا عالمكما الخاص وزيّناه', Icons.public_rounded, 'universe'),
-    ('Play', 'أسئلة وألعاب وتحديات خفيفة', Icons.sports_esports_rounded, 'play'),
     ('Memories', 'اجمعا اللحظات والرسائل التي لا تُنسى', Icons.auto_awesome_rounded, 'memories'),
     ('Together', 'خططا للأشياء التي تريدان فعلها معًا', Icons.favorite_rounded, 'together'),
   ];
@@ -71,14 +69,6 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
       ('Themes & Symbols', 'الثيمات والرموز', Icons.palette_outlined),
       ('Constellation', 'نجوم من ذكرياتكما', Icons.stars_rounded),
       ('Our Aquarium', 'حوضكما الافتراضي', Icons.water_outlined),
-    ],
-    [
-      ('Question of the Day', 'سؤال اليوم', Icons.help_outline_rounded),
-      ('This or That', 'هذا أم ذاك؟', Icons.compare_arrows_rounded),
-      ('Who Knows Who?', 'من يعرف الآخر أكثر؟', Icons.psychology_alt_outlined),
-      ('Spin Together', 'عجلة الاختيارات', Icons.casino_outlined),
-      ('Our Votes', 'تصويت مشترك', Icons.how_to_vote_outlined),
-      ('Mini Missions', 'مهام بسيطة وآمنة', Icons.task_alt_rounded),
     ],
     [
       ('Our Memories', 'خط زمني للحظاتكما', Icons.photo_library_outlined),
@@ -613,12 +603,11 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
     final worldFeatures = features[widget.worldIndex];
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
     final worldTitle = isArabic
-        ? ['تواصل', 'العالم', 'اللعب', 'الذكريات', 'معًا'][widget.worldIndex]
+        ? ['تواصل', 'العالم', 'الذكريات', 'معًا'][widget.worldIndex]
         : world.$1;
     final worldDescription = isArabic ? world.$2 : [
       'Chat and share your daily moments',
       'Build and decorate your own universe',
-      'Questions, games and light challenges',
       'Collect moments and messages to remember',
       'Plan the things you want to do together',
     ][widget.worldIndex];
@@ -662,13 +651,6 @@ class _OursWorldHubPageState extends State<OursWorldHubPage> {
                         label: Text(_worldText(context, 'دعوة شريكك إلى العالم', 'Invite your partner to this world')),
                       )),
                     if (canSync && widget.worldIndex == 2)
-                      SizedBox(width: double.infinity, child: FilledButton.icon(
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => OursTicTacToePage(spaceId: widget.spaceId!))),
-                        icon: const Icon(Icons.grid_3x3_rounded),
-                        label: Text(_worldText(context, 'العبا XO مباشرة', 'Play XO together')),
-                      )),
-                    if (canSync && widget.worldIndex == 3)
                       SizedBox(width: double.infinity, child: OutlinedButton.icon(
                         onPressed: () => Navigator.push(context, MaterialPageRoute(
                           builder: (_) => OursAlbumsPage(spaceId: widget.spaceId!))),
