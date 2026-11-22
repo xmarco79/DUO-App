@@ -170,9 +170,9 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  final radius=math.min(20.0,size.width*.32);
-  final tailWidth=math.min(14.0,size.width*.30);
-  const tailHeight=12.0;
+  const tailHeight=10.0;
+  final radius=math.min(25.0,(size.height-tailHeight)*.46);
+  final tailWidth=math.min(17.0,size.width*.24);
   final bodyBottom=size.height-tailHeight;
   final path=Path()
    ..moveTo(radius,0)
@@ -184,13 +184,13 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
   if(tailOnLeft){
    path
     ..lineTo(radius+tailWidth,bodyBottom)
-    ..cubicTo(radius+tailWidth*.78,bodyBottom+1,radius+tailWidth*.58,size.height-1,radius+tailWidth*.22,size.height-1)
-    ..cubicTo(radius+tailWidth*.04, size.height-2, radius+2.5, bodyBottom+4.5, radius, bodyBottom-radius*.04);
+    ..cubicTo(radius+tailWidth*.78,bodyBottom+1,radius+tailWidth*.48,size.height-1,radius+tailWidth*.16,size.height-1)
+    ..cubicTo(radius*.42,size.height-1,radius+1,bodyBottom+radius*.18,radius,bodyBottom);
   }else{
    path
     ..lineTo(size.width-radius-tailWidth,bodyBottom)
-    ..cubicTo(size.width-radius-tailWidth*.78,bodyBottom+1,size.width-radius-tailWidth*.58,size.height-1,size.width-radius-tailWidth*.22,size.height-1)
-    ..cubicTo(size.width-radius-tailWidth*.04,size.height-2,size.width-radius-2.5,bodyBottom+4.5,size.width-radius,bodyBottom-radius*.04);
+    ..cubicTo(size.width-radius-tailWidth*.78,bodyBottom+1,size.width-radius-tailWidth*.48,size.height-1,size.width-radius-tailWidth*.16,size.height-1)
+    ..cubicTo(size.width-radius*.42,size.height-1,size.width-radius-1,bodyBottom+radius*.18,size.width-radius,bodyBottom);
   }
 
   path
@@ -1061,9 +1061,9 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity>220){setState(()=>timestampMessageId=timestampMessageId==m['id'].toString()?null:m['id'].toString());}else if(velocity< -220){setState(()=>replyTo=m);}},
         child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:5,shadowColor:skin.accent.withValues(alpha:.20),clipBehavior:Clip.antiAlias,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(13,9,13,11),
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(16,12,16,22),
          decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55): (mine?skin.mine:skin.partner),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14)),width:highlightedMessageId==m['id'].toString()?1.5:.65)),
-         child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+         child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
             final original=messages.firstWhere((r)=>r['id'].toString()==m['reply_to'].toString());
@@ -1119,7 +1119,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
            ]))
           ]))
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
-          else SelectableText(path,style:const TextStyle(color:Colors.white,fontSize:16,height:1.45)),
+          else Center(child:SelectableText(path,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:16,height:1.35))),
           
          ]))
         ))))
