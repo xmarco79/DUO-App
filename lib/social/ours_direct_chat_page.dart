@@ -170,34 +170,37 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  const tailHeight=10.0;
-  final radius=math.min(25.0,(size.height-tailHeight)*.46);
-  final tailWidth=math.min(17.0,size.width*.24);
+  const tailHeight=11.0;
+  final tailWidth=math.min(13.0,size.width*.20);
+  final bodyLeft=tailOnLeft?tailWidth:0.0;
+  final bodyRight=tailOnLeft?size.width:size.width-tailWidth;
+  final bodyWidth=bodyRight-bodyLeft;
   final bodyBottom=size.height-tailHeight;
+  final radius=math.min(25.0,math.min(bodyWidth*.28,(bodyBottom)*.46));
   final path=Path()
-   ..moveTo(radius,0)
-   ..lineTo(size.width-radius,0)
-   ..cubicTo(size.width-radius*.42,0,size.width,radius*.42,size.width,radius)
-   ..lineTo(size.width,bodyBottom-radius)
-   ..cubicTo(size.width,bodyBottom-radius*.42,size.width-radius*.42,bodyBottom,size.width-radius,bodyBottom);
+   ..moveTo(bodyLeft+radius,0)
+   ..lineTo(bodyRight-radius,0)
+   ..cubicTo(bodyRight-radius*.42,0,bodyRight,radius*.42,bodyRight,radius)
+   ..lineTo(bodyRight,bodyBottom-radius)
+   ..cubicTo(bodyRight,bodyBottom-radius*.42,bodyRight-radius*.42,bodyBottom,bodyRight-radius,bodyBottom);
 
   if(tailOnLeft){
    path
-    ..lineTo(radius+tailWidth,bodyBottom)
-    ..cubicTo(radius+tailWidth*.78,bodyBottom+1,radius+tailWidth*.48,size.height-1,radius+tailWidth*.16,size.height-1)
-    ..cubicTo(radius*.42,size.height-1,radius+1,bodyBottom+radius*.18,radius,bodyBottom);
+    ..lineTo(bodyLeft+tailWidth*.92,bodyBottom)
+    ..cubicTo(bodyLeft+tailWidth*.70,bodyBottom+1,bodyLeft+tailWidth*.34,size.height-1,bodyLeft*.12,size.height-1)
+    ..cubicTo(bodyLeft*.02,size.height-1,bodyLeft*.02,bodyBottom+radius*.20,bodyLeft,bodyBottom-radius*.04);
   }else{
    path
-    ..lineTo(size.width-radius-tailWidth,bodyBottom)
-    ..cubicTo(size.width-radius-tailWidth*.78,bodyBottom+1,size.width-radius-tailWidth*.48,size.height-1,size.width-radius-tailWidth*.16,size.height-1)
-    ..cubicTo(size.width-radius*.42,size.height-1,size.width-radius-1,bodyBottom+radius*.18,size.width-radius,bodyBottom);
+    ..lineTo(bodyRight-tailWidth*.92,bodyBottom)
+    ..cubicTo(bodyRight-tailWidth*.70,bodyBottom+1,bodyRight-tailWidth*.34,size.height-1,size.width-bodyLeft*.12,size.height-1)
+    ..cubicTo(size.width-bodyLeft*.02,size.height-1,size.width-bodyLeft*.02,bodyBottom+radius*.20,bodyRight,bodyBottom-radius*.04);
   }
 
   path
-   ..lineTo(radius,bodyBottom)
-   ..cubicTo(radius*.42,bodyBottom,0,bodyBottom-radius*.42,0,bodyBottom-radius)
-   ..lineTo(0,radius)
-   ..cubicTo(0,radius*.42,radius*.42,0,radius,0)
+   ..lineTo(bodyLeft+radius,bodyBottom)
+   ..cubicTo(bodyLeft+radius*.42,bodyBottom,bodyLeft,bodyBottom-radius*.42,bodyLeft,bodyBottom-radius)
+   ..lineTo(bodyLeft,radius)
+   ..cubicTo(bodyLeft,radius*.42,bodyLeft+radius*.42,0,bodyLeft+radius,0)
    ..close();
   return path;
  }
@@ -1021,7 +1024,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    @override void dispose(){typingTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));if(liveChannel!=null){unawaited(liveChannel!.untrack().then<void>((_){}));db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
  @override Widget build(BuildContext context){
   final me=db.auth.currentUser!.id;
-  return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,centerTitle:true,
+  return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg, elevation:0, scrolledUnderElevation:0, toolbarHeight:76, centerTitle:true, shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.20),width:1)), flexibleSpace:DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[skin.partner.withValues(alpha:.96),skin.bg]))),
    title:InkWell(
     borderRadius:BorderRadius.circular(12),
     onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:widget.partnerId))),
@@ -1055,8 +1058,10 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       final createdAt=DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal();
       final previousAt=i>0?DateTime.tryParse(messages[i-1]['created_at']?.toString()??'')?.toLocal():null;
       final showDate=createdAt!=null&&(previousAt==null||DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt));
+      final showTimeGap=createdAt!=null&&previousAt!=null&&!showDate&&createdAt.difference(previousAt)>=const Duration(minutes:5);
       return Column(mainAxisSize:MainAxisSize.min,children:[
        if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:6),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.82),borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.18))),child:Text(_dateLabel(createdAt),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700))))),
+       if(showTimeGap)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.76),borderRadius:BorderRadius.circular(16),border:Border.all(color:skin.accent.withValues(alpha:.14))),child:Text(_time(createdAt),style:TextStyle(color:skin.accent.withValues(alpha:.92),fontSize:10,fontWeight:FontWeight.w700))))),
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity>220){setState(()=>timestampMessageId=timestampMessageId==m['id'].toString()?null:m['id'].toString());}else if(velocity< -220){setState(()=>replyTo=m);}},
@@ -1127,7 +1132,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        if(timestampMessageId==m['id'].toString())Padding(padding:const EdgeInsetsDirectional.only(top:1,bottom:5),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.8),fontSize:10,fontWeight:FontWeight.w600))))
       ]);
      })),
-    SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(7,8,7,10),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.2)))),
+    SafeArea(top:false,child:Container(margin:const EdgeInsets.fromLTRB(8,4,8,7),padding:const EdgeInsets.fromLTRB(7,9,7,10),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.97),borderRadius:const BorderRadius.vertical(top:Radius.circular(23),bottom:Radius.circular(20)),border:Border.all(color:skin.accent.withValues(alpha:.20)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.18),blurRadius:18,offset:const Offset(0,-4))]),
      child:recording?Row(children:[
       IconButton(onPressed:_cancelRecording,icon:const Icon(Icons.delete_outline,color:Colors.redAccent)),
       Expanded(child:Text(t('جارٍ تسجيل الرسالة الصوتية…','Recording voice message…'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))),
