@@ -122,24 +122,21 @@ const _oursChatThemes = [
 
 class OursAppSettings {
   static final ValueNotifier<Locale> locale = ValueNotifier(const Locale('ar'));
-  static final ValueNotifier<String> fontFamily = ValueNotifier('Noto Sans Arabic');
+  static final ValueNotifier<String> fontFamily = ValueNotifier('Roboto');
 
   static Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     locale.value = Locale(prefs.getString('ours_language') ?? 'ar');
     final savedFont = prefs.getString('ours_font_family');
-    final migratedFont = savedFont == null || savedFont == 'Amiri' ? 'Noto Sans Arabic' : savedFont;
-    fontFamily.value = supportedFonts.contains(migratedFont) ? migratedFont : 'Noto Sans Arabic';
-    if (savedFont == null || savedFont == 'Amiri') await prefs.setString('ours_font_family', 'Noto Sans Arabic');
+    final migratedFont = savedFont == null || !supportedFonts.contains(savedFont) ? 'Roboto' : savedFont;
+    fontFamily.value = supportedFonts.contains(migratedFont) ? migratedFont : 'Roboto';
+    if (savedFont == null || !supportedFonts.contains(savedFont)) await prefs.setString('ours_font_family', 'Roboto');
   }
 
   static const supportedFonts = <String>{
-    'Cairo','Tajawal','Almarai','Noto Sans Arabic','IBM Plex Sans Arabic',
-    'Changa','Mada','Readex Pro','El Messiri','Amiri','Lateef','Reem Kufi',
-    'Rubik','Alexandria','Noto Kufi Arabic','Baloo Bhaijaan 2','Lemonada',
-    'Scheherazade New','Aref Ruqaa','Harmattan','Markazi Text',
-    'Inter','Poppins','Montserrat','Nunito','Raleway','Playfair Display',
-    'Merriweather','Roboto','Outfit','Space Grotesk'
+    'Roboto',
+    'Noto Sans Arabic','Cairo','Tajawal','Almarai','IBM Plex Sans Arabic','Alexandria','Readex Pro',
+    'Inter','Nunito','Lato','Open Sans','Manrope','DM Sans'
   };
   static Future<void> setFontFamily(String value) async {
     final normalized = supportedFonts.contains(value) ? value : 'Noto Sans Arabic';
@@ -2363,37 +2360,20 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final fontOptions = const <Map<String, String>>[
-      {'name':'Amiri','group':'classic','sample':'أهلاً بك في عالمنا'},
-      {'name':'Scheherazade New','group':'classic','sample':'جمال الحروف العربية'},
-      {'name':'Markazi Text','group':'classic','sample':'لغة الضاد'},
-      {'name':'Aref Ruqaa','group':'classic','sample':'أهلاً وسهلاً'},
-      {'name':'Lateef','group':'classic','sample':'حروف تنبض بالجمال'},
-      {'name':'Cairo','group':'modern','sample':'أهلاً بك في عالمنا'},
-      {'name':'Tajawal','group':'modern','sample':'جمال الحروف العربية'},
-      {'name':'Almarai','group':'modern','sample':'لغة الضاد'},
-      {'name':'Noto Sans Arabic','group':'modern','sample':'أهلاً وسهلاً'},
-      {'name':'IBM Plex Sans Arabic','group':'modern','sample':'حروف تنبض بالجمال'},
-      {'name':'Mada','group':'modern','sample':'أهلاً بك في عالمنا'},
-      {'name':'Readex Pro','group':'modern','sample':'جمال الحروف العربية'},
-      {'name':'Alexandria','group':'modern','sample':'لغة الضاد'},
-      {'name':'Noto Kufi Arabic','group':'modern','sample':'أهلاً وسهلاً'},
-      {'name':'Rubik','group':'modern','sample':'OURS — YOUR WORLD'},
-      {'name':'Changa','group':'display','sample':'حروف تنبض بالجمال'},
-      {'name':'El Messiri','group':'display','sample':'أهلاً بك في عالمنا'},
-      {'name':'Reem Kufi','group':'display','sample':'جمال الحروف العربية'},
-      {'name':'Baloo Bhaijaan 2','group':'display','sample':'لغة الضاد'},
-      {'name':'Lemonada','group':'display','sample':'أهلاً وسهلاً'},
-      {'name':'Harmattan','group':'display','sample':'حروف تنبض بالجمال'},
-      {'name':'Inter','group':'latin','sample':'OURS — YOUR WORLD'},
-      {'name':'Poppins','group':'latin','sample':'Private Universe'},
-      {'name':'Montserrat','group':'latin','sample':'Made for two'},
-      {'name':'Nunito','group':'latin','sample':'OURS — YOUR WORLD'},
-      {'name':'Raleway','group':'latin','sample':'Private Universe'},
-      {'name':'Playfair Display','group':'latin','sample':'Made for two'},
-      {'name':'Merriweather','group':'latin','sample':'OURS — YOUR WORLD'},
-      {'name':'Roboto','group':'latin','sample':'Private Universe'},
-      {'name':'Outfit','group':'latin','sample':'Made for two'},
-      {'name':'Space Grotesk','group':'latin','sample':'OURS — YOUR WORLD'},
+      {'name':'Noto Sans Arabic','group':'arabic','sample':'أهلاً بك في عالمنا'},
+      {'name':'Cairo','group':'arabic','sample':'جمال الحروف العربية'},
+      {'name':'Tajawal','group':'arabic','sample':'لغة الضاد الجميلة'},
+      {'name':'Almarai','group':'arabic','sample':'قراءة مريحة وواضحة'},
+      {'name':'IBM Plex Sans Arabic','group':'arabic','sample':'حروف عربية متوازنة'},
+      {'name':'Alexandria','group':'arabic','sample':'تفاصيل أنيقة وواضحة'},
+      {'name':'Readex Pro','group':'arabic','sample':'تصميم حديث ومريح'},
+      {'name':'Roboto','group':'latin','sample':'OURS — YOUR WORLD'},
+      {'name':'Inter','group':'latin','sample':'Private Universe'},
+      {'name':'Nunito','group':'latin','sample':'Made for two'},
+      {'name':'Lato','group':'latin','sample':'A little closer'},
+      {'name':'Open Sans','group':'latin','sample':'Simple and readable'},
+      {'name':'Manrope','group':'latin','sample':'Designed with care'},
+      {'name':'DM Sans','group':'latin','sample':'Your private space'},
     ];
     final visibleFonts = fontOptions.where((font) => fontCategory == 'all' || font['group'] == fontCategory).toList();
     final displayName = displayNameController.text.trim();
@@ -2709,7 +2689,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                             icon: Icon(showAllFonts ? Icons.expand_less_rounded : Icons.grid_view_rounded, size: 19),
                             label: Text(showAllFonts
                               ? oursText(context, 'إخفاء مكتبة الخطوط', 'Hide font library')
-                              : oursText(context, 'استعراض جميع الخطوط (31)', 'Browse all fonts (31)')),
+                              : oursText(context, 'استعراض الخطوط الـ14', 'Browse all 14 fonts')),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: gold,
                               side: BorderSide(color: gold.withOpacity(.45)),
@@ -2728,10 +2708,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                           child: Row(
                             children: [
                               ['all', oursText(context, 'الكل', 'All')],
-                              ['classic', oursText(context, 'تقليدي', 'Classic')],
-                              ['modern', oursText(context, 'عصري', 'Modern')],
-                              ['display', oursText(context, 'مميز', 'Display')],
-                              ['latin', oursText(context, 'إنجليزي', 'Latin')],
+                              ['arabic', oursText(context, 'عربي', 'Arabic')],
+                              ['latin', oursText(context, 'إنجليزي', 'English')],
                             ].map((category) {
                               final selected = fontCategory == category[0];
                               return Padding(
@@ -2813,9 +2791,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                                           maxLines: 1,
                                           style: GoogleFonts.getFont(name, color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
                                       ),
-                                      Text(name == 'Amiri' || name == 'Scheherazade New' || name == 'Markazi Text' || name == 'Aref Ruqaa' || name == 'Lateef'
-                                          ? oursText(context, 'طابع عربي تقليدي', 'Traditional Arabic')
-                                          : font['group'] == 'latin' ? 'LATIN TYPEFACE' : oursText(context, 'خط عربي', 'Arabic typeface'),
+                                      Text(font['group'] == 'arabic'
+                                          ? oursText(context, 'خط عربي مريح', 'Arabic typeface')
+                                          : oursText(context, 'خط إنجليزي واضح', 'English typeface'),
                                         style: const TextStyle(color: lavender, fontSize: 9)),
                                     ],
                                   ),
@@ -2855,11 +2833,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                           child: TextButton.icon(
                             onPressed: () async {
                               setState(() {
-                                fontFamily = 'Noto Sans Arabic';
+                                fontFamily = 'Roboto';
                                 fontCategory = 'all';
                                 showAllFonts = false;
                               });
-                              await OursAppSettings.setFontFamily('Noto Sans Arabic');
+                              await OursAppSettings.setFontFamily('Roboto');
                             },
                             icon: const Icon(Icons.restart_alt_rounded, size: 17),
                             label: Text(oursText(context, 'استعادة الخط الافتراضي', 'Restore default font')),
