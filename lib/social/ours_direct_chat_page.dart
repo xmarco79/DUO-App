@@ -1501,6 +1501,8 @@ class _MessageBubbleShape extends ShapeBorder {
    path.quadraticBezierTo(body.right-5,body.bottom+2,body.right-8,body.bottom);
    path.lineTo(body.left+radius,body.bottom);
    path.quadraticBezierTo(body.left,body.bottom,body.left,body.bottom-radius);
+   path.lineTo(body.left,body.top+radius);
+   path.quadraticBezierTo(body.left,body.top,body.left+radius,body.top);
   }else{
    path.moveTo(body.left+radius,body.top);
    path.lineTo(body.right-radius,body.top);
