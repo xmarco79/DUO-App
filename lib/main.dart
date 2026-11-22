@@ -139,7 +139,7 @@ class OursAppSettings {
     'Inter','Nunito','Lato','Open Sans','Manrope','DM Sans'
   };
   static Future<void> setFontFamily(String value) async {
-    final normalized = supportedFonts.contains(value) ? value : 'Noto Sans Arabic';
+    final normalized = supportedFonts.contains(value) ? value : 'Roboto';
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('ours_font_family', normalized);
     fontFamily.value = normalized;
