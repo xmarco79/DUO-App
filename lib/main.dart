@@ -1581,13 +1581,13 @@ class _ChatPageState extends State<ChatPage> {
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(19),
                                   topRight: const Radius.circular(19),
-                                  bottomLeft: Radius.circular(isMe ? 19 : 5),
-                                  bottomRight: Radius.circular(isMe ? 5 : 19),
+                                  bottomLeft: Radius.circular(isMe ? 19 : 10),
+                                  bottomRight: Radius.circular(isMe ? 10 : 19),
                                 ),
                                 border: Border.all(color: chatTheme.accent.withValues(alpha: 0.18)),
                               ),
                               child: IntrinsicWidth(child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   if (!isMe && !groupedWithPrevious)
@@ -1692,6 +1692,7 @@ class _ChatPageState extends State<ChatPage> {
                                   else
                                     SelectableText(
                                       item['body']?.toString() ?? '',
+                                      textAlign: TextAlign.center,
                                       style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5),
                                     ),
                                   if (item['deleted_at'] == null)
