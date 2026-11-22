@@ -323,17 +323,6 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(count>=100)return 6;if(count>=60)return 5;if(count>=30)return 4;
   if(count>=14)return 3;if(count>=7)return 2;if(count>=3)return 1;return 0;
  }
- String _streakStageName(){
-  switch(_streakStage()){
-   case 6:return t('أسطورة OURS','OURS Legend');
-   case 5:return t('أفق مشترك','Shared Horizon');
-   case 4:return t('مدار ثابت','Steady Orbit');
-   case 3:return t('وهج متنامٍ','Growing Glow');
-   case 2:return t('نبض متواصل','Steady Pulse');
-   case 1:return t('بداية الحكاية','The Beginning');
-   default:return '';
-  }
- }
  @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();_startLiveStatus();}
  Future<void> _changeLocalNickname() async{
   final prefs=await SharedPreferences.getInstance();final key='ours_partner_alias_${uid}_${widget.partnerId}';
