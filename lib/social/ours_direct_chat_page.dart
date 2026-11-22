@@ -997,12 +997,18 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       builder:(context,snapshot){
        final profile=snapshot.data??<String,dynamic>{};
        final raw=(profile['avatar_url']??profile['photo_url']??profile['avatar']??profile['profile_image']??'').toString();
-       return CircleAvatar(
-        radius:22,
-        backgroundColor:skin.partner,
-        backgroundImage:raw.startsWith('http')?NetworkImage(raw):null,
-        child:raw.startsWith('http')?null:Icon(Icons.person_rounded,color:skin.accent,size:23),
-       );
+       return Stack(clipBehavior:Clip.none,children:[
+        CircleAvatar(
+         radius:22,
+         backgroundColor:skin.partner,
+         backgroundImage:raw.startsWith('http')?NetworkImage(raw):null,
+         child:raw.startsWith('http')?null:Icon(Icons.person_rounded,color:skin.accent,size:23),
+        ),
+        PositionedDirectional(end:-1,bottom:-1,child:Container(
+         width:11,height:11,
+         decoration:BoxDecoration(color:partnerOnline?const Color(0xFF55D98B):const Color(0xFF858594),shape:BoxShape.circle,border:Border.all(color:skin.bg,width:2)),
+        )),
+       ]);
       }),
      const SizedBox(width:11),
      Expanded(child:Column(
@@ -1012,13 +1018,8 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        Text(localPartnerName??widget.partnerName,maxLines:1,overflow:TextOverflow.ellipsis,
         style:TextStyle(color:skin.accent,fontSize:15,fontWeight:FontWeight.w800)),
        const SizedBox(height:3),
-       Row(children:[
-        Container(width:7,height:7,decoration:BoxDecoration(
-         color:partnerOnline?const Color(0xFF55D98B):const Color(0xFF858594),shape:BoxShape.circle)),
-        const SizedBox(width:6),
-        Flexible(child:Text(_presenceLabel(),maxLines:1,overflow:TextOverflow.ellipsis,
-         style:TextStyle(color:skin.accent.withValues(alpha:.72),fontSize:10.5,fontWeight:FontWeight.w500))),
-       ]),
+       Text(_presenceLabel(),maxLines:1,overflow:TextOverflow.ellipsis,
+        style:TextStyle(color:skin.accent.withValues(alpha:.72),fontSize:10.5,fontWeight:FontWeight.w500)),
       ],
      )),
     ]),
@@ -1045,7 +1046,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       PopupMenuItem(value:'details',child:Text(t('تفاصيل المحادثة','Chat details'))),
      ],
     ),
-   ],
+   ),
    body:Stack(children:[
     if(wallpaperPath==null)Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
     if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ClipRect(child:Transform.translate(offset:Offset(wallpaperOffsetX,wallpaperOffsetY),child:Transform.rotate(angle:wallpaperRotation,child:Transform.scale(scale:wallpaperZoom,child:Opacity(opacity:(.55+wallpaperOpacity).clamp(.55,1.0),child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>CustomPaint(painter:_ChatAtmospherePainter(skin)))))))))),
