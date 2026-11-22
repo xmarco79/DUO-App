@@ -298,31 +298,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath,timestampMessageId;double wallpaperOpacity=.22,wallpaperZoom=1,wallpaperRotation=0,wallpaperDim=.55,wallpaperOffsetX=0,wallpaperOffsetY=0;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
- int _streakCount(){
-  final participantsByDay=<DateTime,Set<String>>{};
-  for(final message in messages){
-   final body=(message['body']??'').toString().trim();
-   final type=(message['message_type']??'text').toString();
-   final sender=message['sender_id']?.toString()??'';
-   final date=DateTime.tryParse(message['created_at']?.toString()??'')?.toLocal();
-   if(date==null||sender.isEmpty||body.isEmpty||!const ['text','image','video','audio','file','sticker','view_once','view_twice'].contains(type))continue;
-   final day=DateTime(date.year,date.month,date.day);
-   participantsByDay.putIfAbsent(day,()=>{}).add(sender);
-  }
-  final activeDays=participantsByDay.entries.where((entry)=>entry.value.length>=2).map((entry)=>entry.key).toSet();
-  if(activeDays.isEmpty)return 0;
-  final today=DateTime.now(),current=DateTime(today.year,today.month,today.day);
-  final latest=activeDays.reduce((a,b)=>a.isAfter(b)?a:b);
-  if(latest.isBefore(current.subtract(const Duration(days:1))))return 0;
-  var count=0,day=latest;
-  while(activeDays.contains(day)){count++;day=day.subtract(const Duration(days:1));}
-  return count>=3?count:0;
- }
- int _streakStage(){
-  final count=_streakCount();
-  if(count>=100)return 6;if(count>=60)return 5;if(count>=30)return 4;
-  if(count>=14)return 3;if(count>=7)return 2;if(count>=3)return 1;return 0;
- }
+
  @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();_startLiveStatus();}
  Future<void> _changeLocalNickname() async{
   final prefs=await SharedPreferences.getInstance();final key='ours_partner_alias_${uid}_${widget.partnerId}';
