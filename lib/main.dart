@@ -1,6 +1,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'notifications/ours_push_service.dart';
 
@@ -1608,7 +1609,9 @@ class _ChatPageState extends State<ChatPage> {
                             alignment: isMe
                                 ? AlignmentDirectional.centerEnd
                                 : AlignmentDirectional.centerStart,
-                            child: GestureDetector(
+                            child: Padding(
+                              padding: EdgeInsets.only(bottom: groupedWithPrevious ? 4 : 12),
+                              child: GestureDetector(
                               onLongPress: () => _showMessageActions(item, isMe),
                               child: ClipPath(
                               clipper: _OursChatBubbleClipper(
@@ -1620,7 +1623,7 @@ class _ChatPageState extends State<ChatPage> {
                               constraints: BoxConstraints(
                                 maxWidth: MediaQuery.of(context).size.width * 0.80,
                               ),
-                              margin: EdgeInsets.only(bottom: groupedWithPrevious ? 4 : 12),
+                              margin: EdgeInsets.zero,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 12,
@@ -1773,6 +1776,7 @@ class _ChatPageState extends State<ChatPage> {
                               ),
                             ),
                             )),
+                            ),
                             ),
                           ),
                             ],
