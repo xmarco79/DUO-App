@@ -170,39 +170,36 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  const tailHeight = 7.0;
-  final tailWidth = math.min(11.0, size.width * .16);
-  final left = tailOnLeft ? tailWidth : 0.0;
-  final right = tailOnLeft ? size.width : size.width - tailWidth;
-  final bottom = size.height - tailHeight;
-  final width = right - left;
-  final radius = math.min(21.0, math.min(width * .24, bottom * .42));
-  final path = Path()
-   ..moveTo(left + radius, 0)
-   ..lineTo(right - radius, 0)
-   ..cubicTo(right - radius * .42, 0, right, radius * .42, right, radius)
-   ..lineTo(right, bottom - radius)
-   ..cubicTo(right, bottom - radius * .42, right - radius * .42, bottom, right - radius, bottom);
+  // The tail is part of the bubble silhouette, not a separate triangle.
+  const tailW = 27.0;
+  const tailH = 18.0;
+  final bodyL = tailOnLeft ? tailW * .42 : 0.0;
+  final bodyR = tailOnLeft ? size.width : size.width - tailW * .42;
+  final bodyBottom = size.height - tailH * .42;
+  final radius = math.min(34.0, math.min((bodyR-bodyL)*.22, bodyBottom*.46));
+  final p = Path()
+   ..moveTo(bodyL+radius, 0)
+   ..lineTo(bodyR-radius, 0)
+   ..cubicTo(bodyR-radius*.42,0,bodyR,radius*.42,bodyR,radius)
+   ..lineTo(bodyR,bodyBottom-radius*.72);
 
   if (tailOnLeft) {
-   path
-    ..lineTo(left + radius * .58, bottom)
-    ..cubicTo(left + radius * .34, bottom + .4, left + tailWidth * .70, size.height - .8, left * .12, size.height - .8)
-    ..cubicTo(left * .02, size.height - .8, left * .04, bottom + radius * .16, left, bottom - radius * .02);
+   p
+    ..cubicTo(bodyR,bodyBottom+tailH*.10,bodyR-tailW*.10,size.height-tailH*.05,bodyR-tailW*.78,size.height-tailH*.05)
+    ..cubicTo(bodyR-tailW*.42,size.height-tailH*.02,bodyL+tailW*.38,bodyBottom+tailH*.16,bodyL,bodyBottom);
   } else {
-   path
-    ..lineTo(right - radius * .58, bottom)
-    ..cubicTo(right - radius * .34, bottom + .4, right - tailWidth * .70, size.height - .8, size.width - left * .12, size.height - .8)
-    ..cubicTo(size.width - left * .02, size.height - .8, size.width - left * .04, bottom + radius * .16, right, bottom - radius * .02);
+   p
+    ..cubicTo(bodyR,bodyBottom+tailH*.10,bodyR+tailW*.10,size.height-tailH*.05,size.width,size.height-tailH*.05)
+    ..cubicTo(size.width-tailW*.40,size.height-tailH*.02,bodyR-tailW*.38,bodyBottom+tailH*.16,bodyR-tailW*.12,bodyBottom);
   }
 
-  path
-   ..lineTo(left + radius, bottom)
-   ..cubicTo(left + radius * .42, bottom, left, bottom - radius * .42, left, bottom - radius)
-   ..lineTo(left, radius)
-   ..cubicTo(left, radius * .42, left + radius * .42, 0, left + radius, 0)
+  p
+   ..lineTo(bodyL+radius,bodyBottom)
+   ..cubicTo(bodyL+radius*.42,bodyBottom,bodyL,bodyBottom-radius*.42,bodyL,bodyBottom-radius)
+   ..lineTo(bodyL,radius)
+   ..cubicTo(bodyL,radius*.42,bodyL+radius*.42,0,bodyL+radius,0)
    ..close();
-  return path;
+  return p;
  }
 
  @override
@@ -1026,15 +1023,28 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
   final me=db.auth.currentUser!.id;
   return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg, elevation:0, scrolledUnderElevation:0, toolbarHeight:68, centerTitle:true, shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),
    title:InkWell(
-    borderRadius:BorderRadius.circular(12),
+    borderRadius:BorderRadius.circular(14),
     onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>OursProfilePage(userId:widget.partnerId))),
-    child:Column(mainAxisSize:MainAxisSize.min,children:[
-     Text(localPartnerName??widget.partnerName,style:const TextStyle(fontSize:16)),
-     Row(mainAxisSize:MainAxisSize.min,children:[
-      Text(_presenceLabel(),style:TextStyle(color:partnerOnline?const Color(0xFF70D9A0):skin.accent,fontSize:10)),
-      const SizedBox(width:7),
-      Text(t('· الملف الشخصي','· Profile'),style:TextStyle(color:skin.accent,fontSize:10)),
-      if(_streakCount()>0)Padding(padding:const EdgeInsetsDirectional.only(start:6),child:Tooltip(message:_streakStageName()+t(' · يحتسب اليوم عند تفاعل كل منكما',' · counts when both of you interact'),child:AnimatedContainer(duration:const Duration(milliseconds:320),padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),decoration:BoxDecoration(gradient:LinearGradient(colors:switch(_streakStage()){1=>[const Color(0xFF467E88),const Color(0xFF6FAEAA)],2=>[const Color(0xFF3C9C8B),const Color(0xFF75C9A6)],3=>[const Color(0xFF5D75C8),const Color(0xFF9B7BDA)],4=>[const Color(0xFF9C62B6),const Color(0xFFD18BB4)],5=>[const Color(0xFFC27B46),const Color(0xFFE8BD77)],_=>[const Color(0xFFD7A84F),const Color(0xFFFFE3A2)]}),borderRadius:BorderRadius.circular(12),boxShadow:[BoxShadow(color:skin.accent.withValues(alpha:.16),blurRadius:9)]),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.auto_awesome_rounded,color:Colors.white,size:11),const SizedBox(width:4),Text('${_streakCount()} · ${_streakStageName()}',style:const TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w900))]))))
+    child:Row(mainAxisSize:MainAxisSize.min,children:[
+     FutureBuilder<Map<String,dynamic>?>(
+      future:db.from('duo_profiles').select('*').eq('user_id',widget.partnerId).maybeSingle(),
+      builder:(context,snapshot){
+       final profile=snapshot.data??<String,dynamic>{};
+       final raw=(profile['avatar_url']??profile['photo_url']??profile['avatar']??profile['profile_image']??'').toString();
+       final image=raw.startsWith('http')?Image.network(raw,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox()):null;
+       return Stack(clipBehavior:Clip.none,children:[
+        CircleAvatar(radius:21,backgroundColor:skin.partner,backgroundImage:image?.image,child:image==null?Icon(Icons.person_rounded,color:skin.accent,size:22):null),
+        PositionedDirectional(end:-1,bottom:-1,child:Container(width:12,height:12,decoration:BoxDecoration(color:partnerOnline?const Color(0xFF55D98B):const Color(0xFF858594),shape:BoxShape.circle,border:Border.all(color:skin.bg,width:2))))
+       ]);
+      }),
+     const SizedBox(width:10),
+     Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Text(localPartnerName??widget.partnerName,style:const TextStyle(fontSize:15,fontWeight:FontWeight.w800)),
+      Row(mainAxisSize:MainAxisSize.min,children:[
+       Container(width:7,height:7,decoration:BoxDecoration(color:partnerOnline?const Color(0xFF55D98B):const Color(0xFF858594),shape:BoxShape.circle)),
+       const SizedBox(width:5),
+       Text(_presenceLabel(),style:TextStyle(color:partnerOnline?const Color(0xFF70D9A0):skin.accent,fontSize:10))
+      ])
      ])
     ]),
    ),
@@ -1066,7 +1076,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity>220){setState(()=>timestampMessageId=timestampMessageId==m['id'].toString()?null:m['id'].toString());}else if(velocity< -220){setState(()=>replyTo=m);}},
         child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(15,11,15,13),
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8),
          decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55): (mine?skin.mine:skin.partner),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14)),width:highlightedMessageId==m['id'].toString()?1.5:.55)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
@@ -1132,7 +1142,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        if(timestampMessageId==m['id'].toString())Padding(padding:const EdgeInsetsDirectional.only(top:1,bottom:5),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.8),fontSize:10,fontWeight:FontWeight.w600))))
       ]);
      })),
-    SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(9,9,9,8),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.12),width:.8))),
+    SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(12,10,12,9),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.16),width:.8)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.12),blurRadius:18,offset:const Offset(0,-5))]),
      child:recording?Row(children:[
       IconButton(onPressed:_cancelRecording,icon:const Icon(Icons.delete_outline,color:Colors.redAccent)),
       Expanded(child:Text(t('جارٍ تسجيل الرسالة الصوتية…','Recording voice message…'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))),
