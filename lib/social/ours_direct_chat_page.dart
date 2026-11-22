@@ -1047,7 +1047,8 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
      ],
     ),
    ),
-   body:Stack(children:[
+  ),
+  body:Stack(children:[
     if(wallpaperPath==null)Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
     if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ClipRect(child:Transform.translate(offset:Offset(wallpaperOffsetX,wallpaperOffsetY),child:Transform.rotate(angle:wallpaperRotation,child:Transform.scale(scale:wallpaperZoom,child:Opacity(opacity:(.55+wallpaperOpacity).clamp(.55,1.0),child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>CustomPaint(painter:_ChatAtmospherePainter(skin)))))))))),
     if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:wallpaperDim)))),
