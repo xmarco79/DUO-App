@@ -874,8 +874,8 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){if((details.primaryVelocity??0).abs()>220)setState(()=>replyTo=m);},
         child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:(type=='image'||type=='video'||type=='view_once'||type=='view_twice')?EdgeInsets.zero:const EdgeInsets.symmetric(horizontal:11,vertical:8),
-         decoration:(type=='image'||type=='video'||type=='view_once'||type=='view_twice')?null:BoxDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),borderRadius:BorderRadiusDirectional.only(topStart:const Radius.circular(17),topEnd:const Radius.circular(17),bottomStart:Radius.circular(mine?17:5),bottomEnd:Radius.circular(mine?5:17)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1)),
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.82),margin:const EdgeInsets.symmetric(vertical:5),padding:(type=='image'||type=='video'||type=='view_once'||type=='view_twice')?EdgeInsets.zero:const EdgeInsets.fromLTRB(11,8,11,14),
+         decoration:(type=='image'||type=='video'||type=='view_once'||type=='view_twice')?null:ShapeDecoration(color:highlightedMessageId==m['id'].toString()?skin.accent.withValues(alpha:.24):(mine?skin.mine:skin.partner),shape:_MessageBubbleShape(mine:mine,side:BorderSide(color:highlightedMessageId==m['id'].toString()?skin.accent:skin.accent.withValues(alpha:.16),width:highlightedMessageId==m['id'].toString()?1.8:1))),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
@@ -908,7 +908,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
            ]))
           ]))
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
-          else SelectableText(path,style:const TextStyle(color:Colors.white,height:1.4)),
+          else Center(child:SelectableText(path,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,height:1.4))),
           if(mine)Padding(padding:const EdgeInsets.only(top:4),child:Align(alignment:AlignmentDirectional.centerEnd,child:Text(_readReceipt(m['read_at']),style:TextStyle(color:m['read_at']!=null?skin.accent:skin.accent.withValues(alpha:.62),fontSize:9,fontWeight:FontWeight.w600))))
          ]))
         ))
@@ -1481,6 +1481,54 @@ class _MarkupPainter extends CustomPainter{
  @override void paint(Canvas canvas,Size size){for(final stroke in strokes){if(stroke.points.length<2)continue;final path=Path()..moveTo(stroke.points.first.dx*size.width,stroke.points.first.dy*size.height);for(final p in stroke.points.skip(1))path.lineTo(p.dx*size.width,p.dy*size.height);canvas.drawPath(path,Paint()..color=stroke.color..strokeWidth=4..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke);}}
  @override bool shouldRepaint(covariant _MarkupPainter old)=>old.strokes!=strokes;
 }
+class _MessageBubbleShape extends ShapeBorder {
+ final bool mine;
+ final BorderSide side;
+ const _MessageBubbleShape({required this.mine,required this.side});
+ @override EdgeInsetsGeometry get dimensions=>const EdgeInsets.only(bottom:7);
+ @override Path getOuterPath(Rect rect,{TextDirection? textDirection}){
+  const radius=17.0;
+  final body=Rect.fromLTRB(rect.left,rect.top,rect.right,rect.bottom-7);
+  final path=Path();
+  if(mine){
+   path.moveTo(body.left+radius,body.top);
+   path.lineTo(body.right-radius,body.top);
+   path.quadraticBezierTo(body.right,body.top,body.right,body.top+radius);
+   path.lineTo(body.right,body.bottom-5);
+   path.quadraticBezierTo(body.right,body.bottom,body.right-5,body.bottom);
+   path.lineTo(body.right-19,body.bottom);
+   path.quadraticBezierTo(body.right-12,body.bottom+1,body.right-2,rect.bottom-1);
+   path.quadraticBezierTo(body.right-5,body.bottom+2,body.right-8,body.bottom);
+   path.lineTo(body.left+radius,body.bottom);
+   path.quadraticBezierTo(body.left,body.bottom,body.left,body.bottom-radius);
+  }else{
+   path.moveTo(body.left+radius,body.top);
+   path.lineTo(body.right-radius,body.top);
+   path.quadraticBezierTo(body.right,body.top,body.right,body.top+radius);
+   path.lineTo(body.right,body.bottom-radius);
+   path.quadraticBezierTo(body.right,body.bottom,body.right-radius,body.bottom);
+   path.lineTo(body.left+19,body.bottom);
+   path.quadraticBezierTo(body.left+12,body.bottom+1,body.left+2,rect.bottom-1);
+   path.quadraticBezierTo(body.left+5,body.bottom+2,body.left+8,body.bottom);
+   path.lineTo(body.left+5,body.bottom);
+   path.quadraticBezierTo(body.left,body.bottom,body.left,body.bottom-5);
+   path.lineTo(body.left,body.top+radius);
+   path.quadraticBezierTo(body.left,body.top,body.left+radius,body.top);
+  }
+  path.close();
+  return path;
+ }
+ @override Path getInnerPath(Rect rect,{TextDirection? textDirection})=>getOuterPath(rect.deflate(side.width),textDirection:textDirection);
+ @override void paint(Canvas canvas,Rect rect,{TextDirection? textDirection}){
+  final path=getOuterPath(rect,textDirection:textDirection);
+  if(side.style!=BorderStyle.none&&side.width>0){
+   final paint=Paint()..color=side.color..style=PaintingStyle.stroke..strokeWidth=side.width;
+   canvas.drawPath(path,paint);
+  }
+ }
+ @override ShapeBorder scale(double t)=>_MessageBubbleShape(mine:mine,side:side.scale(t));
+}
+
 class _ChatDetailsPage extends StatelessWidget{
  final String partnerId,partnerName;final _ChatSkin skin;final Widget Function() profile;final VoidCallback nickname,search,media,files;final Future<void> Function() themes,wallpaper;
  const _ChatDetailsPage({required this.partnerId,required this.partnerName,required this.skin,required this.profile,required this.nickname,required this.search,required this.media,required this.files,required this.themes,required this.wallpaper});
