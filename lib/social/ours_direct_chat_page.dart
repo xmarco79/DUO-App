@@ -170,9 +170,9 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  final radius=math.min(19.0,size.width*.30);
-  final tailWidth=math.min(16.0,size.width*.34);
-  const tailHeight=13.0;
+  final radius=math.min(20.0,size.width*.32);
+  final tailWidth=math.min(14.0,size.width*.30);
+  const tailHeight=12.0;
   final bodyBottom=size.height-tailHeight;
   final path=Path()
    ..moveTo(radius,0)
@@ -184,13 +184,13 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
   if(tailOnLeft){
    path
     ..lineTo(radius+tailWidth,bodyBottom)
-    ..cubicTo(radius+tailWidth*.72,bodyBottom+1,radius+tailWidth*.55,size.height-2,radius+tailWidth*.10,size.height)
-    ..cubicTo(radius+tailWidth*.03,size.height-1,radius+2,bodyBottom+5,radius,bodyBottom);
+    ..cubicTo(radius+tailWidth*.78,bodyBottom+1,radius+tailWidth*.58,size.height-1,radius+tailWidth*.22,size.height-1)
+    ..cubicTo(radius+tailWidth*.04, size.height-2, radius+2.5, bodyBottom+4.5, radius, bodyBottom-radius*.04);
   }else{
    path
     ..lineTo(size.width-radius-tailWidth,bodyBottom)
-    ..cubicTo(size.width-radius-tailWidth*.72,bodyBottom+1,size.width-radius-tailWidth*.55,size.height-2,size.width-radius-tailWidth*.10,size.height)
-    ..cubicTo(size.width-radius-tailWidth*.03,size.height-1,size.width-radius-2,bodyBottom+5,size.width-radius,bodyBottom);
+    ..cubicTo(size.width-radius-tailWidth*.78,bodyBottom+1,size.width-radius-tailWidth*.58,size.height-1,size.width-radius-tailWidth*.22,size.height-1)
+    ..cubicTo(size.width-radius-tailWidth*.04,size.height-2,size.width-radius-2.5,bodyBottom+4.5,size.width-radius,bodyBottom-radius*.04);
   }
 
   path
@@ -217,7 +217,7 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
    color:isVisual?Colors.transparent:(isMine?skin.mine:skin.partner),elevation:isVisual?0:5,
    shadowColor:isVisual?Colors.transparent:skin.accent.withValues(alpha:.20),clipBehavior:Clip.antiAlias,
    child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),
-    padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(16,12,16,17),
+    padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(16,12,16,15),
     decoration:isVisual?const BoxDecoration():BoxDecoration(
      gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:isMine
       ?[Color.lerp(skin.mine,Colors.white,.055)!,Color.lerp(skin.mine,skin.bg,.16)!]
@@ -1242,7 +1242,7 @@ class _OursAiPageState extends State<OursAiPage>{
      return Column(children:[
       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:9),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_dateLabel(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
       Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-       SelectableText(m['content']??'',style:const TextStyle(height:1.5,color:Colors.white)),
+       SelectableText(m['content']??'',textAlign:TextAlign.center,style:const TextStyle(height:1.5,color:Colors.white)),
        const SizedBox(height:5),Align(alignment:AlignmentDirectional.centerEnd,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)))
       ]))))
      ]);
@@ -1513,7 +1513,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
          if(type=='image'||type=='sticker')FutureBuilder<String>(future:_signedSelf(body),builder:(c,s)=>s.hasData?GestureDetector(onTap:()=>_openSelfImage(body),child:type=='sticker'?Image.network(s.data!,width:150,height:150,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:38)):ClipRRect(borderRadius:BorderRadius.circular(13),child:Image.network(s.data!,width:225,height:220,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:38)))):SizedBox(width:180,height:130,child:Center(child:CircularProgressIndicator(color:skin.accent))))
          else if(type=='file')InkWell(onTap:()=>_openSelfFile(body),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text((row['file_name']??body.split('/').last).toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white)),Text('${((row['file_size'] as num?)?.toInt()??0)/1024>1024?(((row['file_size'] as num?)?.toInt()??0)/1048576).toStringAsFixed(1)+' MB':(((row['file_size'] as num?)?.toInt()??0)/1024).toStringAsFixed(0)+' KB'} · ${(row['mime_type']??'').toString()}',style:TextStyle(color:skin.accent,fontSize:10))]))]))
          else if(type=='audio')_DirectAudioBubble(path:body,skin:skin,signed:_signedSelf,ar:ar)
-         else SelectableText(body,style:const TextStyle(color:Colors.white,height:1.5)),
+         else SelectableText(body,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,height:1.5)),
          const SizedBox(height:5),Row(mainAxisSize:MainAxisSize.min,children:[if(row['pinned']==true)Icon(Icons.push_pin_rounded,color:skin.accent,size:12),Text(_selfTime(row['created_at']),style:TextStyle(color:skin.accent,fontSize:10))])
         ]))
        )))
