@@ -347,7 +347,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Future<void> _loadSkin() async{
   final p=await SharedPreferences.getInstance();final id=p.getString('ours_direct_skin_'+widget.conversationId)??'ours';
   final found=_skins.where((s)=>s.id==id);
-  bubbleStyle=p.getString('ours_direct_bubble_style_'+widget.conversationId)??'classic';\n  final savedWallpaper=p.getString('ours_direct_wallpaper_'+widget.conversationId);
+  bubbleStyle=p.getString('ours_direct_bubble_style_'+widget.conversationId)??'classic';
+  final savedWallpaper=p.getString('ours_direct_wallpaper_'+widget.conversationId);
   final savedOpacity=p.getDouble('ours_direct_wallpaper_opacity_'+widget.conversationId)??.22;
   final savedZoom=p.getDouble('ours_direct_wallpaper_zoom_'+widget.conversationId)??1.0;
   final savedRotation=p.getDouble('ours_direct_wallpaper_rotation_'+widget.conversationId)??0.0;
@@ -1665,7 +1666,8 @@ class _ChatDetailsPage extends StatelessWidget{
   section(t('إدارة المحادثة','Conversation')),
   tile(Icons.search_rounded,t('البحث في الرسائل','Search messages'),t('اعثر على رسالة بسرعة','Find a message quickly'),search),
   tile(Icons.person_pin_rounded,t('اسم خاص للطرف الآخر','Private nickname'),t('اسم يظهر في جهازك فقط','Only on your device'),nickname),
-  tile(Icons.palette_rounded,t('أجواء المحادثة','Chat atmosphere'),t('ثيمات حية وألوان مميزة','Vibrant themes and colors'),()=>themes()),\n  tile(Icons.chat_bubble_rounded,t('شكل فقاعات الرسائل','Message bubble style'),t('اختر من مجموعة تصاميم للفقاعات','Choose from a collection of bubble designs'),()=>bubbles()),
+  tile(Icons.palette_rounded,t('أجواء المحادثة','Chat atmosphere'),t('ثيمات حية وألوان مميزة','Vibrant themes and colors'),()=>themes()),
+  tile(Icons.chat_bubble_rounded,t('شكل فقاعات الرسائل','Message bubble style'),t('اختر من مجموعة تصاميم للفقاعات','Choose from a collection of bubble designs'),()=>bubbles()),
   tile(Icons.wallpaper_rounded,t('خلفية المحادثة','Chat wallpaper'),t('اختر صورة واضبط وضوحها بشكل مستقل عن الثيم','Choose a photo and adjust visibility independently'),()=>wallpaper()),
  ]));
  }
