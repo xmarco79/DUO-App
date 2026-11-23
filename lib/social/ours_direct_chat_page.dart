@@ -298,7 +298,7 @@ class OursDirectChatPage extends StatefulWidget{
 class _OursDirectChatPageState extends State<OursDirectChatPage>{
  final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController(),picker=ImagePicker();
  final Map<String,Future<String>> urls={};final List<Map<String,dynamic>> messages=[];
- final Set<String> hiddenIds={};
+ final Set<String> hiddenIds={},pinnedMessageIds={};
  Uint8List? _editedPreviewBytes;
  Map<String,dynamic>? replyTo;
  RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
@@ -544,6 +544,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at',ascending:true);
    final ordered=List<Map<String,dynamic>>.from(rows).where((m)=>!hiddenIds.contains(m['id'].toString())).toList()..sort(_compareMessages);
    if(!mounted)return;setState((){messages..clear()..addAll(ordered);loading=false;});
+   try{final pins=await db.from('ours_direct_message_pins').select('message_id').eq('user_id',uid).eq('conversation_id',widget.conversationId);if(mounted)setState(()=>pinnedMessageIds..clear()..addAll(pins.map((r)=>r['message_id'].toString())));}catch(_){}
    await db.rpc('mark_ours_direct_messages_read',params:{'p_conversation_id':widget.conversationId});
    _bottom();
   }catch(e){if(mounted){setState(()=>loading=false);_show(t('تعذر تحميل المحادثة. تحقق من الاتصال وحاول مجددًا.','Could not load conversation. Check your connection and try again.'));}}
@@ -902,25 +903,34 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('حسنًا','OK')))]));
  }
  Future<void> _messageActions(Map<String,dynamic> message,bool mine,String type,String body) async{
-  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF211D30),showDragHandle:true,builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-   ListTile(leading:const Icon(Icons.reply,color:_gold),title:Text(t('رد','Reply')),onTap:()=>Navigator.pop(ctx,'reply')),
-   ListTile(leading:const Icon(Icons.copy,color:_gold),title:Text(t('نسخ','Copy')),onTap:()=>Navigator.pop(ctx,'copy')),
-   if(mine)ListTile(leading:const Icon(Icons.delete_forever_outlined,color:Colors.redAccent),title:Text(t('حذف لدى الجميع','Delete for everyone')),onTap:()=>Navigator.pop(ctx,'everyone')),
-   ListTile(leading:const Icon(Icons.delete_outline,color:Colors.orangeAccent),title:Text(t('حذف لديك','Delete for you')),onTap:()=>Navigator.pop(ctx,'local')),
-  ])));
-  if(choice==null)return;final id=message['id'].toString();
+  final id=message['id'].toString();final isPinned=pinnedMessageIds.contains(id);
+  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:skin.partner,showDragHandle:true,builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(14,4,14,18),child:Column(mainAxisSize:MainAxisSize.min,children:[
+   Container(width:34,height:4,margin:const EdgeInsets.only(bottom:14),decoration:BoxDecoration(color:skin.accent.withValues(alpha:.3),borderRadius:BorderRadius.circular(8))),
+   Row(children:[Expanded(child:Text(t('إجراءات الرسالة','Message actions'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900,fontSize:16))),if(isPinned)Icon(Icons.push_pin_rounded,color:skin.accent,size:18)]),
+   const SizedBox(height:10),
+   GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:3,mainAxisSpacing:8,crossAxisSpacing:8,childAspectRatio:1.12,children:[
+    _MessageActionButton(icon:Icons.reply_rounded,label:t('رد','Reply'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'reply')),
+    _MessageActionButton(icon:Icons.copy_rounded,label:t('نسخ','Copy'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'copy')),
+    if(mine&&type=='text')_MessageActionButton(icon:Icons.edit_rounded,label:t('تعديل','Edit'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'edit')),
+    _MessageActionButton(icon:Icons.push_pin_rounded,label:isPinned?t('إلغاء التثبيت','Unpin'):t('تثبيت','Pin'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'pin')),
+    if(mine)_MessageActionButton(icon:Icons.delete_forever_rounded,label:t('حذف للجميع','Delete for everyone'),accent:Colors.redAccent,onTap:()=>Navigator.pop(ctx,'everyone')),
+    _MessageActionButton(icon:Icons.delete_outline_rounded,label:t('حذف لدي','Delete for me'),accent:Colors.orangeAccent,onTap:()=>Navigator.pop(ctx,'local')),
+   ]),
+  ]))));
+  if(choice==null)return;
   if(choice=='copy'){await Clipboard.setData(ClipboardData(text:type=='text'?body:(message['file_name']??body.split('/').last).toString()));_show(t('تم النسخ','Copied'));return;}
   if(choice=='reply'){setState(()=>replyTo=message);return;}
-  try{
-   if(choice=='local'){
-    await db.from('ours_direct_message_hides').insert({'message_id':id,'user_id':uid});
-    hiddenIds.add(id);if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));
-   }else{
-    await db.from('duo_direct_messages').delete().eq('id',id).eq('sender_id',uid);
-    if(['image','view_once','view_twice','video','audio','file'].contains(type)){try{await db.storage.from(_bucket).remove([body]);}catch(_){}}
-    if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));
-   }
-  }catch(e){_show(t('تعذر حذف الرسالة: $e','Could not delete message: $e'));}
+  if(choice=='edit'){
+   final controller=TextEditingController(text:body);
+   final edited=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:skin.partner,title:Text(t('تعديل الرسالة','Edit message'),style:TextStyle(color:skin.accent)),content:TextField(controller:controller,autofocus:true,maxLines:5,minLines:1,decoration:InputDecoration(hintText:t('اكتب التعديل','Edit your message'))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:Text(t('حفظ','Save')))]));
+   controller.dispose();if(edited==null||edited.isEmpty||edited==body)return;
+   try{await db.from('duo_direct_messages').update({'body':edited}).eq('id',id).eq('sender_id',uid);if(mounted)setState(()=>messages[messages.indexWhere((m)=>m['id'].toString()==id)]['body']=edited);_show(t('تم تعديل الرسالة','Message edited'));}catch(e){_show(t('تعذر تعديل الرسالة: $e','Could not edit message: $e'));}
+   return;
+  }
+  if(choice=='pin'){
+   try{if(isPinned){await db.from('ours_direct_message_pins').delete().eq('message_id',id).eq('user_id',uid);if(mounted)setState(()=>pinnedMessageIds.remove(id));_show(t('تم إلغاء تثبيت الرسالة','Message unpinned'));}else{await db.from('ours_direct_message_pins').upsert({'message_id':id,'conversation_id':widget.conversationId,'user_id':uid},onConflict:'message_id,user_id');if(mounted)setState(()=>pinnedMessageIds.add(id));_show(t('تم تثبيت الرسالة','Message pinned'));}}catch(e){_show(t('تعذر تثبيت الرسالة. طبّق تحديث قاعدة البيانات أولًا.','Could not pin message. Apply the database migration first.'));}return;
+  }
+  try{if(choice=='local'){await db.from('ours_direct_message_hides').insert({'message_id':id,'user_id':uid});hiddenIds.add(id);if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));}else{await db.from('duo_direct_messages').delete().eq('id',id).eq('sender_id',uid);if(['image','view_once','view_twice','video','audio','file'].contains(type)){try{await db.storage.from(_bucket).remove([body]);}catch(_){}}if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));}}catch(e){_show(t('تعذر حذف الرسالة: $e','Could not delete message: $e'));}
  }
  void _jumpToMessage(String id){
   final index=messages.indexWhere((m)=>m['id'].toString()==id);
@@ -1095,6 +1105,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?const EdgeInsets.all(1): (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8)),
          decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?skin.accent.withValues(alpha:.38):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .45 : (isVisualMessage ? 0 : .55))),borderRadius:isVisualMessage?BorderRadius.circular(15):null),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
+          if(pinnedMessageIds.contains(m['id'].toString()))Padding(padding:const EdgeInsets.only(bottom:5),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.push_pin_rounded,size:11,color:skin.accent),const SizedBox(width:4),Text(t('مثبّتة','Pinned'),style:TextStyle(color:skin.accent,fontSize:9,fontWeight:FontWeight.w800))])),
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
             final original=messages.firstWhere((r)=>r['id'].toString()==m['reply_to'].toString());
