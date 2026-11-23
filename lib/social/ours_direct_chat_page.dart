@@ -170,35 +170,36 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  final w=size.width;
-  final h=size.height;
-  // Proportions traced from the supplied reference: a long capsule body
-  // with a compact, swept lower-right tail (not a triangular pointer).
-  final r=math.min(h*.5,w*.20);
-  final tailDepth=math.min(h*.16,w*.075);
-  final bodyRight=w-tailDepth;
-  final scoopX=bodyRight-h*.025;
-  final tailRootX=bodyRight-h*.55;
-  double x(double value)=>tailOnLeft?w-value:value;
+  final w=size.width,h=size.height;
+  // Trace of the supplied reference: a full-height capsule body and a
+  // short, low swept tail attached only to the lower outer corner.
+  final tail=math.min(h*.165,w*.10);
+  final bodyRight=w-tail;
+  final radius=math.min(h*.5,bodyRight*.5);
+  final shoulder=bodyRight-radius;
+  final notchX=bodyRight-h*.018;
+  final tailJoin=bodyRight-h*.205;
+  double px(double value)=>tailOnLeft?w-value:value;
 
   return Path()
-   ..moveTo(x(r),0)
-   ..lineTo(x(bodyRight-r),0)
-   // Rounded upper-right shoulder.
-   ..cubicTo(x(bodyRight-r*.42),0,x(bodyRight),r*.42,x(bodyRight),r)
-   ..lineTo(x(bodyRight),h*.49)
-   // Slight inward notch at the outer edge, as in the reference image.
-   ..cubicTo(x(bodyRight),h*.61,x(scoopX),h*.70,x(scoopX),h*.735)
-   // Tail sweeps down and outward, ending in a soft, narrow point.
-   ..cubicTo(x(scoopX),h*.84,x(bodyRight-h*.08),h*.985,x(w),h*.99)
-   // Its underside curves back into the lower edge of the capsule.
-   ..cubicTo(x(bodyRight-h*.30),h*.985,x(tailRootX+h*.05),h*.91,x(tailRootX),h*.86)
-   ..cubicTo(x(tailRootX-h*.08),h*.82,x(tailRootX-h*.16),h*.82,x(bodyRight-h*.48),h*.82)
-   ..lineTo(x(r),h)
-   // Fully rounded opposite end.
-   ..cubicTo(x(r*.42),h,x(0),h-r*.42,x(0),h-r)
-   ..lineTo(x(0),r)
-   ..cubicTo(x(0),r*.42,x(r*.42),0,x(r),0)
+   ..moveTo(px(radius),0)
+   ..lineTo(px(shoulder),0)
+   // Long, smooth upper-right capsule shoulder.
+   ..cubicTo(px(bodyRight-radius*.48),0,px(bodyRight),radius*.42,px(bodyRight),radius)
+   ..lineTo(px(bodyRight),h*.49)
+   // The tiny inward scoop on the outer edge.
+   ..cubicTo(px(bodyRight),h*.60,px(notchX),h*.675,px(notchX),h*.735)
+   // The tail flows down and outward to its fine rounded tip.
+   ..cubicTo(px(notchX),h*.855,px(bodyRight-h*.035),h*.985,px(w),h*.99)
+   // Its underside returns quickly to the lower-right corner of the body.
+   ..cubicTo(px(bodyRight-h*.115),h*.975,px(tailJoin+h*.025),h*.925,px(tailJoin),h*.865)
+   // A shallow concave transition blends the tail into the capsule base.
+   ..cubicTo(px(bodyRight-h*.145),h*.825,px(bodyRight-h*.105),h*.82,px(bodyRight-h*.075),h*.82)
+   ..lineTo(px(radius),h)
+   // Left end remains a clean semicircular capsule.
+   ..cubicTo(px(radius*.42),h,px(0),h-radius*.42,px(0),h-radius)
+   ..lineTo(px(0),radius)
+   ..cubicTo(px(0),radius*.42,px(radius*.42),0,px(radius),0)
    ..close();
  }
 
