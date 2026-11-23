@@ -1283,7 +1283,7 @@ class _OursAiPageState extends State<OursAiPage>{
      return Column(children:[
       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:9),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_dateLabel(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
       Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-       SelectableText(m['content']??'',textAlign:TextAlign.center,style:const TextStyle(height:1.5,color:Colors.white)),
+       Text(m['content']??'',textAlign:TextAlign.center,style:const TextStyle(height:1.5,color:Colors.white)),
        const SizedBox(height:5),Align(alignment:AlignmentDirectional.centerEnd,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)))
       ]))))
      ]);
@@ -1554,7 +1554,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
          if(type=='image'||type=='sticker')FutureBuilder<String>(future:_signedSelf(body),builder:(c,s)=>s.hasData?GestureDetector(onTap:()=>_openSelfImage(body),child:type=='sticker'?Image.network(s.data!,width:150,height:150,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:38)):ClipRRect(borderRadius:BorderRadius.circular(13),child:Image.network(s.data!,width:225,height:220,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:38)))):SizedBox(width:180,height:130,child:Center(child:CircularProgressIndicator(color:skin.accent))))
          else if(type=='file')InkWell(onTap:()=>_openSelfFile(body),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text((row['file_name']??body.split('/').last).toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white)),Text('${((row['file_size'] as num?)?.toInt()??0)/1024>1024?(((row['file_size'] as num?)?.toInt()??0)/1048576).toStringAsFixed(1)+' MB':(((row['file_size'] as num?)?.toInt()??0)/1024).toStringAsFixed(0)+' KB'} · ${(row['mime_type']??'').toString()}',style:TextStyle(color:skin.accent,fontSize:10))]))]))
          else if(type=='audio')_DirectAudioBubble(path:body,skin:skin,signed:_signedSelf,ar:ar)
-         else SelectableText(body,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,height:1.5)),
+         else Text(body,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,height:1.5)),
          const SizedBox(height:5),Row(mainAxisSize:MainAxisSize.min,children:[if(row['pinned']==true)Icon(Icons.push_pin_rounded,color:skin.accent,size:12),Text(_selfTime(row['created_at']),style:TextStyle(color:skin.accent,fontSize:10))])
         ]))
        )))
