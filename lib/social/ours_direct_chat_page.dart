@@ -913,22 +913,24 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
   final bottomRight=anchor.localToGlobal(anchor.size.bottomRight(Offset.zero),ancestor:overlay);
   final rect=Rect.fromPoints(topLeft,bottomRight);
   final screen=MediaQuery.of(context).size;
-  final menuWidth=math.min(184.0,screen.width*.52);
+  final menuWidth=math.min(158.0,screen.width*.44);
   final right=screen.width-rect.right;
-  final left=rect.left;
-  final placeRight=right>=menuWidth+12;
-  final menuLeft=placeRight?rect.right+7:math.max(8.0,left-menuWidth-7);
-  final menuTop=(rect.center.dy-116).clamp(12.0,screen.height-252);
+  final menuLeft=right>=menuWidth+10?rect.right+6:math.max(6.0,rect.left-menuWidth-6);
+  final itemCount=4+(mine&&type=='text'?1:0)+(mine?1:0);
+  final menuHeight=itemCount*37.0+8;
+  final menuTop=(rect.center.dy-menuHeight/2).clamp(8.0,screen.height-menuHeight-8);
   final position=RelativeRect.fromLTRB(menuLeft,menuTop,screen.width-menuLeft-menuWidth,screen.height-menuTop-1);
+  final isPinned=pinnedMessageIds.contains(id);
   final choice=await showMenu<String>(
    context:context,
    position:position,
-   elevation:14,
+   elevation:12,
    color:skin.partner,
-   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15),side:BorderSide(color:skin.accent.withValues(alpha:.22))),
+   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),side:BorderSide(color:skin.accent.withValues(alpha:.20),width:.7)),
    constraints:BoxConstraints.tightFor(width:menuWidth),
    items:[
     _messageMenuItem('copy',t('نسخ','Copy'),Icons.copy_rounded),
+    _messageMenuItem('pin',isPinned?t('إلغاء التثبيت','Unpin'):t('تثبيت','Pin'),isPinned?Icons.push_pin_outlined:Icons.push_pin_rounded),
     _messageMenuItem('reply',t('رد','Reply'),Icons.reply_rounded),
     if(mine&&type=='text')_messageMenuItem('edit',t('تعديل','Edit'),Icons.edit_rounded),
     _messageMenuItem('local',t('حذف لديك','Delete for me'),Icons.delete_outline_rounded,color:Colors.orangeAccent),
@@ -938,23 +940,30 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
   if(choice==null)return;
   if(choice=='copy'){await Clipboard.setData(ClipboardData(text:type=='text'?body:(message['file_name']??body.split('/').last).toString()));_show(t('تم النسخ','Copied'));return;}
   if(choice=='reply'){setState(()=>replyTo=message);return;}
+  if(choice=='pin'){
+   try{
+    if(isPinned){await db.from('ours_direct_message_pins').delete().eq('message_id',id).eq('user_id',uid);if(mounted)setState(()=>pinnedMessageIds.remove(id));_show(t('تم إلغاء تثبيت الرسالة','Message unpinned'));}
+    else{await db.from('ours_direct_message_pins').upsert({'message_id':id,'conversation_id':widget.conversationId,'user_id':uid});if(mounted)setState(()=>pinnedMessageIds.add(id));_show(t('تم تثبيت الرسالة','Message pinned'));}
+   }catch(e){_show(t('تعذر تثبيت الرسالة. تأكد من تطبيق تحديث قاعدة البيانات.','Could not pin message. Make sure the database migration is applied.'));}
+   return;
+  }
   if(choice=='edit'){
    final controller=TextEditingController(text:body);
    final edited=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(backgroundColor:skin.partner,title:Text(t('تعديل الرسالة','Edit message'),style:TextStyle(color:skin.accent)),content:TextField(controller:controller,autofocus:true,maxLines:5,minLines:1,decoration:InputDecoration(hintText:t('اكتب التعديل','Edit your message'))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:Text(t('حفظ','Save')))]));
    controller.dispose();if(edited==null||edited.isEmpty||edited==body)return;
-   try{await db.from('duo_direct_messages').update({'body':edited}).eq('id',id).eq('sender_id',uid);if(mounted)setState(()=>messages[messages.indexWhere((m)=>m['id'].toString()==id)]['body']=edited);_show(t('تم تعديل الرسالة','Message edited'));}catch(e){_show(t('تعذر تعديل الرسالة: $e','Could not edit message: $e'));}
+   try{await db.from('duo_direct_messages').update({'body':edited}).eq('id',id).eq('sender_id',uid);if(mounted){final index=messages.indexWhere((m)=>m['id'].toString()==id);if(index>=0)setState(()=>messages[index]['body']=edited);}_show(t('تم تعديل الرسالة','Message edited'));}catch(e){_show(t('تعذر تعديل الرسالة: $e','Could not edit message: $e'));}
    return;
   }
   try{if(choice=='local'){await db.from('ours_direct_message_hides').insert({'message_id':id,'user_id':uid});hiddenIds.add(id);if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));}else{await db.from('duo_direct_messages').delete().eq('id',id).eq('sender_id',uid);if(['image','view_once','view_twice','video','audio','file'].contains(type)){try{await db.storage.from(_bucket).remove([body]);}catch(_){}}if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));}}catch(e){_show(t('تعذر حذف الرسالة: $e','Could not delete message: $e'));}
  }
  PopupMenuItem<String> _messageMenuItem(String value,String label,IconData icon,{Color? color})=>PopupMenuItem<String>(
   value:value,
-  height:42,
-  padding:const EdgeInsets.symmetric(horizontal:12),
+  height:37,
+  padding:const EdgeInsets.symmetric(horizontal:10),
   child:Row(children:[
-   Icon(icon,size:17,color:color??skin.accent),
-   const SizedBox(width:11),
-   Expanded(child:Text(label,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:color??Colors.white,fontSize:13,fontWeight:FontWeight.w600))),
+   Icon(icon,size:15,color:color??skin.accent),
+   const SizedBox(width:9),
+   Expanded(child:Text(label,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:color??Colors.white,fontSize:12,fontWeight:FontWeight.w600))),
   ]),
  );
  void _jumpToMessage(String id){
