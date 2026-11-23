@@ -170,39 +170,41 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  // Rebuilt from the supplied reference silhouette: a true capsule body,
-  // a shallow inward sweep at the lower outer corner, and one long tapered tail.
   final w=size.width;
   final h=size.height;
-  final tailW=math.min(math.max(h*.34,14.0),w*.105);
-  final bodyRight=w-tailW;
-  final radius=math.min(h*.49,bodyRight*.48);
-  final tailStartY=h*.57;
-  double px(double x)=>tailOnLeft?w-x:x;
-  final path=Path()
-   // Upper edge and the broad, continuous capsule shoulder.
-   ..moveTo(px(radius),0)
-   ..lineTo(px(bodyRight-radius),0)
-   ..cubicTo(px(bodyRight-radius*.43),0,px(bodyRight),radius*.43,px(bodyRight),radius)
-   ..lineTo(px(bodyRight),tailStartY)
-   // Small inward scoop visible immediately before the tail begins.
-   ..cubicTo(px(bodyRight),h*.68,px(bodyRight-tailW*.06),h*.755,px(bodyRight-tailW*.12),h*.79)
-   // Outer edge of the tail sweeps down and outward to its fine rounded point.
-   ..cubicTo(px(bodyRight-tailW*.18),h*.88,px(bodyRight+tailW*.18),h*.985,px(w),h*.99)
-   // Lower edge returns in one smooth curve and merges into the capsule base.
-   ..cubicTo(px(bodyRight-tailW*.48),h*.995,px(bodyRight-tailW*.58),h*.91,px(bodyRight-tailW*.52),h*.84)
-   ..cubicTo(px(bodyRight-tailW*.47),h*.79,px(bodyRight-tailW*.36),h*.78,px(bodyRight-tailW*.30),h*.78)
-   ..lineTo(px(radius),h)
-   // Rounded left end, matching the capsule's half-height radius.
-   ..cubicTo(px(radius*.43),h,px(0),h-radius*.43,px(0),h-radius)
-   ..lineTo(px(0),radius)
-   ..cubicTo(px(0),radius*.43,px(radius*.43),0,px(radius),0)
+  // Proportions traced from the supplied reference: a long capsule body
+  // with a compact, swept lower-right tail (not a triangular pointer).
+  final r=math.min(h*.5,w*.20);
+  final tailDepth=math.min(h*.16,w*.075);
+  final bodyRight=w-tailDepth;
+  final scoopX=bodyRight-h*.025;
+  final tailRootX=bodyRight-h*.55;
+  double x(double value)=>tailOnLeft?w-value:value;
+
+  return Path()
+   ..moveTo(x(r),0)
+   ..lineTo(x(bodyRight-r),0)
+   // Rounded upper-right shoulder.
+   ..cubicTo(x(bodyRight-r*.42),0,x(bodyRight),r*.42,x(bodyRight),r)
+   ..lineTo(x(bodyRight),h*.49)
+   // Slight inward notch at the outer edge, as in the reference image.
+   ..cubicTo(x(bodyRight),h*.61,x(scoopX),h*.70,x(scoopX),h*.735)
+   // Tail sweeps down and outward, ending in a soft, narrow point.
+   ..cubicTo(x(scoopX),h*.84,x(bodyRight-h*.08),h*.985,x(w),h*.99)
+   // Its underside curves back into the lower edge of the capsule.
+   ..cubicTo(x(bodyRight-h*.30),h*.985,x(tailRootX+h*.05),h*.91,x(tailRootX),h*.86)
+   ..cubicTo(x(tailRootX-h*.08),h*.82,x(tailRootX-h*.16),h*.82,x(bodyRight-h*.48),h*.82)
+   ..lineTo(x(r),h)
+   // Fully rounded opposite end.
+   ..cubicTo(x(r*.42),h,x(0),h-r*.42,x(0),h-r)
+   ..lineTo(x(0),r)
+   ..cubicTo(x(0),r*.42,x(r*.42),0,x(r),0)
    ..close();
-  return path;
  }
 
  @override
- bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
+ bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>
+  oldClipper.tailOnLeft!=tailOnLeft;
 }
 
 class _OursUnifiedMessageSurface extends StatelessWidget {
