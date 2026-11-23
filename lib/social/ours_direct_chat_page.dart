@@ -1633,6 +1633,21 @@ class _ChatDetailsPage extends StatelessWidget{
  ]));
  }
 }
+class _MessageActionButton extends StatelessWidget{
+ final IconData icon;final String label;final Color accent;final VoidCallback onTap;
+ const _MessageActionButton({required this.icon,required this.label,required this.accent,required this.onTap});
+ @override Widget build(BuildContext context)=>Material(
+  color:accent.withValues(alpha:.09),borderRadius:BorderRadius.circular(16),
+  child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(16),child:Padding(
+   padding:const EdgeInsets.symmetric(horizontal:5,vertical:10),
+   child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+    Container(width:36,height:36,decoration:BoxDecoration(color:accent.withValues(alpha:.15),shape:BoxShape.circle,border:Border.all(color:accent.withValues(alpha:.22))),child:Icon(icon,color:accent,size:18)),
+    const SizedBox(height:7),
+    Text(label,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:accent,fontSize:10,fontWeight:FontWeight.w700)),
+   ]),
+  )),
+ );
+}
 class _ChatDetailTile extends StatelessWidget{
  final IconData icon;final String title,subtitle;final Color accent;final VoidCallback onTap;
  const _ChatDetailTile({required this.icon,required this.title,required this.subtitle,required this.accent,required this.onTap});
