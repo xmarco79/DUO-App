@@ -1068,7 +1068,28 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       final showTimeGap=createdAt!=null&&previousAt!=null&&!showDate&&createdAt.difference(previousAt)>=const Duration(minutes:5);
       return Column(mainAxisSize:MainAxisSize.min,children:[
        if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:6),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.82),borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.18))),child:Text(_dateLabel(createdAt),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700))))),
-       if(showTimeGap)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.76),borderRadius:BorderRadius.circular(16),border:Border.all(color:skin.accent.withValues(alpha:.14))),child:Text(_time(createdAt),style:TextStyle(color:skin.accent.withValues(alpha:.92),fontSize:10,fontWeight:FontWeight.w700))))),
+       if (showTimeGap)
+        Padding(
+         padding: const EdgeInsets.symmetric(vertical: 10),
+         child: Center(
+          child: Container(
+           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+           decoration: BoxDecoration(
+            color: skin.partner.withValues(alpha: .76),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: skin.accent.withValues(alpha: .14)),
+           ),
+           child: Text(
+            _time(createdAt),
+            style: TextStyle(
+             color: skin.accent.withValues(alpha: .92),
+             fontSize: 10,
+             fontWeight: FontWeight.w700,
+            ),
+           ),
+          ),
+         ),
+        ),
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
         onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity>220){setState(()=>timestampMessageId=timestampMessageId==m['id'].toString()?null:m['id'].toString());}else if(velocity< -220){setState(()=>replyTo=m);}},
