@@ -303,7 +303,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Map<String,dynamic>? replyTo;
  RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
  Timer? typingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId;
- bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath,timestampMessageId;double wallpaperOpacity=.22,wallpaperZoom=1,wallpaperRotation=0,wallpaperDim=.55,wallpaperOffsetX=0,wallpaperOffsetY=0;_ChatSkin skin=_skins.first;
+ bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22,wallpaperZoom=1,wallpaperRotation=0,wallpaperDim=.55,wallpaperOffsetX=0,wallpaperOffsetY=0;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
  
@@ -1029,25 +1029,23 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
     ]),
    ),
    actions:[
-    IconButton(tooltip:t('اتصال صوتي','Voice call'),onPressed:()=>_callInfo(false),
-     icon:Icon(Icons.call_outlined,color:skin.accent,size:21)),
-    IconButton(tooltip:t('اتصال مرئي','Video call'),onPressed:()=>_callInfo(true),
-     icon:Icon(Icons.videocam_outlined,color:skin.accent,size:22)),
-    PopupMenuButton<String>(
-     tooltip:t('المزيد','More'),
-     icon:Icon(Icons.more_vert_rounded,color:skin.accent),
-     color:skin.partner,
-     onSelected:(value){
-      if(value=='details')Navigator.push(context,MaterialPageRoute(builder:(_)=>_ChatDetailsPage(
-       partnerId:widget.partnerId,partnerName:localPartnerName??widget.partnerName,skin:skin,
-       profile:()=>OursProfilePage(userId:widget.partnerId),nickname:_changeLocalNickname,
-       search:_searchMessages,media:()=>_showChatLibrary('media'),files:()=>_showChatLibrary('files'),
-       themes:_chooseSkin,wallpaper:_chooseWallpaper)));
-     },
-     itemBuilder:(_)=>[
-      PopupMenuItem(value:'details',child:Text(t('تفاصيل المحادثة','Chat details'))),
-     ],
-    ),
+    IconButton(
+    tooltip:t('اتصال صوتي','Voice call'),onPressed:()=>_callInfo(false),
+    style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),
+    icon:Icon(Icons.call_outlined,color:skin.accent,size:19)),
+   IconButton(
+    tooltip:t('اتصال مرئي','Video call'),onPressed:()=>_callInfo(true),
+    style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),
+    icon:Icon(Icons.videocam_outlined,color:skin.accent,size:20)),
+   IconButton(
+    tooltip:t('تفاصيل المحادثة','Chat details'),
+    style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),
+    onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>StatefulBuilder(builder:(detailsContext,refreshDetails)=>_ChatDetailsPage(
+     partnerId:widget.partnerId,partnerName:localPartnerName??widget.partnerName,skin:skin,
+     profile:()=>OursProfilePage(userId:widget.partnerId),nickname:_changeLocalNickname,
+     search:_searchMessages,media:()=>_showChatLibrary('media'),files:()=>_showChatLibrary('files'),
+     themes:()async{await _chooseSkin();refreshDetails((){});},wallpaper:_chooseWallpaper)))),
+    icon:Icon(Icons.more_vert_rounded,color:skin.accent,size:20)),
    ],
   ),
   body:Stack(children:[
@@ -1092,10 +1090,10 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         ),
        GestureDetector(
         onLongPress:()=>_messageActions(m,mine,type,path),
-        onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity>220){setState(()=>timestampMessageId=timestampMessageId==m['id'].toString()?null:m['id'].toString());}else if(velocity< -220){setState(()=>replyTo=m);}},
+        onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity< -220){setState(()=>replyTo=m);}},
         child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?const EdgeInsets.all(1): (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8)),
-         decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?skin.accent.withValues(alpha:.38):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia?.45:(isVisualMessage?0:.55))),borderRadius:isVisualMessage?BorderRadius.circular(15):null),
+         decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?skin.accent.withValues(alpha:.38):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .45 : (isVisualMessage ? 0 : .55))),borderRadius:isVisualMessage?BorderRadius.circular(15):null),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
@@ -1152,12 +1150,11 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
            ]))
           ]))
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
-          else Center(child:SelectableText(path,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:16,height:1.35))),
+          else Center(child:Text(path,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:16,height:1.35))),
           
          ]))
         ))))
        ),
-       if(timestampMessageId==m['id'].toString())Padding(padding:const EdgeInsetsDirectional.only(top:1,bottom:5),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.8),fontSize:10,fontWeight:FontWeight.w600))))
       ]);
      })),
     SafeArea(top:false,child:Container(margin:const EdgeInsets.fromLTRB(10,5,10,8),padding:const EdgeInsets.fromLTRB(9,10,9,9),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.96),borderRadius:BorderRadius.circular(25),border:Border.all(color:skin.accent.withValues(alpha:.16)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.18),blurRadius:22,offset:const Offset(0,-5))]),
