@@ -170,29 +170,35 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  // Silhouette traced from the user's reference: pill body and swept lower-corner tail.
-  final w=size.width,h=size.height;
-  final tailW=math.min(w*.13,h*.34);
-  final tailDrop=h*.20;
-  final bodyRight=w-tailW*.62;
-  final bodyBottom=h-tailDrop*.20;
-  final radius=math.min(h*.50,bodyRight*.48);
-  double mx(double px)=>tailOnLeft?w-px:px;
-  final p=Path()
-   ..moveTo(mx(radius),0)
-   ..lineTo(mx(bodyRight-radius),0)
-   ..cubicTo(mx(bodyRight-radius*.45),0,mx(bodyRight),radius*.42,mx(bodyRight),radius)
-   ..lineTo(mx(bodyRight),bodyBottom-tailDrop*.68)
-   // Outer tail edge drops smoothly and ends in a tapered, swept point.
-   ..cubicTo(mx(bodyRight),bodyBottom+tailDrop*.35,mx(bodyRight+tailW*.16),h-tailDrop*.02,mx(w),h-tailDrop*.04)
-   // Return curve blends the point back into the underside of the capsule.
-   ..cubicTo(mx(w-tailW*.76),h-tailDrop*.04,mx(bodyRight-tailW*.44),bodyBottom+tailDrop*.42,mx(bodyRight-tailW*.26),bodyBottom)
-   ..lineTo(mx(radius),bodyBottom)
-   ..cubicTo(mx(radius*.42),bodyBottom,mx(0),bodyBottom-radius*.42,mx(0),bodyBottom-radius)
-   ..lineTo(mx(0),radius)
-   ..cubicTo(mx(0),radius*.42,mx(radius*.42),0,mx(radius),0)
+  // Rebuilt from the supplied reference silhouette: a true capsule body,
+  // a shallow inward sweep at the lower outer corner, and one long tapered tail.
+  final w=size.width;
+  final h=size.height;
+  final tailW=math.min(math.max(h*.34,14.0),w*.105);
+  final bodyRight=w-tailW;
+  final radius=math.min(h*.49,bodyRight*.48);
+  final tailStartY=h*.57;
+  double px(double x)=>tailOnLeft?w-x:x;
+  final path=Path()
+   // Upper edge and the broad, continuous capsule shoulder.
+   ..moveTo(px(radius),0)
+   ..lineTo(px(bodyRight-radius),0)
+   ..cubicTo(px(bodyRight-radius*.43),0,px(bodyRight),radius*.43,px(bodyRight),radius)
+   ..lineTo(px(bodyRight),tailStartY)
+   // Small inward scoop visible immediately before the tail begins.
+   ..cubicTo(px(bodyRight),h*.68,px(bodyRight-tailW*.06),h*.755,px(bodyRight-tailW*.12),h*.79)
+   // Outer edge of the tail sweeps down and outward to its fine rounded point.
+   ..cubicTo(px(bodyRight-tailW*.18),h*.88,px(bodyRight+tailW*.18),h*.985,px(w),h*.99)
+   // Lower edge returns in one smooth curve and merges into the capsule base.
+   ..cubicTo(px(bodyRight-tailW*.48),h*.995,px(bodyRight-tailW*.58),h*.91,px(bodyRight-tailW*.52),h*.84)
+   ..cubicTo(px(bodyRight-tailW*.47),h*.79,px(bodyRight-tailW*.36),h*.78,px(bodyRight-tailW*.30),h*.78)
+   ..lineTo(px(radius),h)
+   // Rounded left end, matching the capsule's half-height radius.
+   ..cubicTo(px(radius*.43),h,px(0),h-radius*.43,px(0),h-radius)
+   ..lineTo(px(0),radius)
+   ..cubicTo(px(0),radius*.43,px(radius*.43),0,px(radius),0)
    ..close();
-  return p;
+  return path;
  }
 
  @override
