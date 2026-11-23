@@ -1,6 +1,6 @@
 create table if not exists public.ours_direct_message_pins (
   message_id uuid not null references public.duo_direct_messages(id) on delete cascade,
-  conversation_id uuid not null references public.duo_conversations(id) on delete cascade,
+  conversation_id uuid not null,
   user_id uuid not null references auth.users(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (message_id, user_id)
