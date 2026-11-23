@@ -904,21 +904,37 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    content:Text(t('تشغيل المكالمات يحتاج ربط خدمة اتصال آمنة وإعداد مفاتيحها على الخادم. لن نعرض اتصالًا وهميًا.','Real calls require a secure calling provider and server-side credentials. We will not simulate a fake call.')),
    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('حسنًا','OK')))]));
  }
- Future<void> _messageActions(Map<String,dynamic> message,bool mine,String type,String body) async{
-  final id=message['id'].toString();final isPinned=pinnedMessageIds.contains(id);
-  final choice=await showModalBottomSheet<String>(context:context,backgroundColor:skin.partner,showDragHandle:true,builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(14,4,14,18),child:Column(mainAxisSize:MainAxisSize.min,children:[
-   Container(width:34,height:4,margin:const EdgeInsets.only(bottom:14),decoration:BoxDecoration(color:skin.accent.withValues(alpha:.3),borderRadius:BorderRadius.circular(8))),
-   Row(children:[Expanded(child:Text(t('إجراءات الرسالة','Message actions'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900,fontSize:16))),if(isPinned)Icon(Icons.push_pin_rounded,color:skin.accent,size:18)]),
-   const SizedBox(height:10),
-   GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:3,mainAxisSpacing:8,crossAxisSpacing:8,childAspectRatio:1.12,children:[
-    _MessageActionButton(icon:Icons.reply_rounded,label:t('رد','Reply'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'reply')),
-    _MessageActionButton(icon:Icons.copy_rounded,label:t('نسخ','Copy'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'copy')),
-    if(mine&&type=='text')_MessageActionButton(icon:Icons.edit_rounded,label:t('تعديل','Edit'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'edit')),
-    _MessageActionButton(icon:Icons.push_pin_rounded,label:isPinned?t('إلغاء التثبيت','Unpin'):t('تثبيت','Pin'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'pin')),
-    if(mine)_MessageActionButton(icon:Icons.delete_forever_rounded,label:t('حذف للجميع','Delete for everyone'),accent:Colors.redAccent,onTap:()=>Navigator.pop(ctx,'everyone')),
-    _MessageActionButton(icon:Icons.delete_outline_rounded,label:t('حذف لدي','Delete for me'),accent:Colors.orangeAccent,onTap:()=>Navigator.pop(ctx,'local')),
-   ]),
-  ]))));
+ Future<void> _messageActions(BuildContext anchorContext,Map<String,dynamic> message,bool mine,String type,String body) async{
+  final id=message['id'].toString();
+  final anchor=anchorContext.findRenderObject() as RenderBox?;
+  final overlay=Overlay.of(context).context.findRenderObject() as RenderBox?;
+  if(anchor==null||overlay==null)return;
+  final topLeft=anchor.localToGlobal(Offset.zero,ancestor:overlay);
+  final bottomRight=anchor.localToGlobal(anchor.size.bottomRight(Offset.zero),ancestor:overlay);
+  final rect=Rect.fromPoints(topLeft,bottomRight);
+  final screen=MediaQuery.of(context).size;
+  final menuWidth=math.min(184.0,screen.width*.52);
+  final right=screen.width-rect.right;
+  final left=rect.left;
+  final placeRight=right>=menuWidth+12;
+  final menuLeft=placeRight?rect.right+7:math.max(8.0,left-menuWidth-7);
+  final menuTop=(rect.center.dy-116).clamp(12.0,screen.height-252);
+  final position=RelativeRect.fromLTRB(menuLeft,menuTop,screen.width-menuLeft-menuWidth,screen.height-menuTop-1);
+  final choice=await showMenu<String>(
+   context:context,
+   position:position,
+   elevation:14,
+   color:skin.partner,
+   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15),side:BorderSide(color:skin.accent.withValues(alpha:.22))),
+   constraints:BoxConstraints.tightFor(width:menuWidth),
+   items:[
+    _messageMenuItem('copy',t('نسخ','Copy'),Icons.copy_rounded),
+    _messageMenuItem('reply',t('رد','Reply'),Icons.reply_rounded),
+    if(mine&&type=='text')_messageMenuItem('edit',t('تعديل','Edit'),Icons.edit_rounded),
+    _messageMenuItem('local',t('حذف لديك','Delete for me'),Icons.delete_outline_rounded,color:Colors.orangeAccent),
+    if(mine)_messageMenuItem('everyone',t('حذف لدى الجميع','Delete for everyone'),Icons.delete_forever_rounded,color:Colors.redAccent),
+   ],
+  );
   if(choice==null)return;
   if(choice=='copy'){await Clipboard.setData(ClipboardData(text:type=='text'?body:(message['file_name']??body.split('/').last).toString()));_show(t('تم النسخ','Copied'));return;}
   if(choice=='reply'){setState(()=>replyTo=message);return;}
@@ -929,11 +945,18 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    try{await db.from('duo_direct_messages').update({'body':edited}).eq('id',id).eq('sender_id',uid);if(mounted)setState(()=>messages[messages.indexWhere((m)=>m['id'].toString()==id)]['body']=edited);_show(t('تم تعديل الرسالة','Message edited'));}catch(e){_show(t('تعذر تعديل الرسالة: $e','Could not edit message: $e'));}
    return;
   }
-  if(choice=='pin'){
-   try{if(isPinned){await db.from('ours_direct_message_pins').delete().eq('message_id',id).eq('user_id',uid);if(mounted)setState(()=>pinnedMessageIds.remove(id));_show(t('تم إلغاء تثبيت الرسالة','Message unpinned'));}else{await db.from('ours_direct_message_pins').upsert({'message_id':id,'conversation_id':widget.conversationId,'user_id':uid},onConflict:'message_id,user_id');if(mounted)setState(()=>pinnedMessageIds.add(id));_show(t('تم تثبيت الرسالة','Message pinned'));}}catch(e){_show(t('تعذر تثبيت الرسالة. طبّق تحديث قاعدة البيانات أولًا.','Could not pin message. Apply the database migration first.'));}return;
-  }
   try{if(choice=='local'){await db.from('ours_direct_message_hides').insert({'message_id':id,'user_id':uid});hiddenIds.add(id);if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));}else{await db.from('duo_direct_messages').delete().eq('id',id).eq('sender_id',uid);if(['image','view_once','view_twice','video','audio','file'].contains(type)){try{await db.storage.from(_bucket).remove([body]);}catch(_){}}if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));}}catch(e){_show(t('تعذر حذف الرسالة: $e','Could not delete message: $e'));}
  }
+ PopupMenuItem<String> _messageMenuItem(String value,String label,IconData icon,{Color? color})=>PopupMenuItem<String>(
+  value:value,
+  height:42,
+  padding:const EdgeInsets.symmetric(horizontal:12),
+  child:Row(children:[
+   Icon(icon,size:17,color:color??skin.accent),
+   const SizedBox(width:11),
+   Expanded(child:Text(label,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:color??Colors.white,fontSize:13,fontWeight:FontWeight.w600))),
+  ]),
+ );
  void _jumpToMessage(String id){
   final index=messages.indexWhere((m)=>m['id'].toString()==id);
   if(index<0||!scroll.hasClients)return;
@@ -1101,7 +1124,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
          ),
         ),
        GestureDetector(
-        onLongPress:()=>_messageActions(m,mine,type,path),
+        onLongPress:()=>_messageActions(context,m,mine,type,path),
         onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity< -220){setState(()=>replyTo=m);}},
         child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?const EdgeInsets.all(1): (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8)),
