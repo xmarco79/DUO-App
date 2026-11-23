@@ -170,28 +170,29 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  // One continuous capsule silhouette with a softly swept, integrated tail.
-  final h=size.height,w=size.width;
-  final tailW=math.min(25.0,math.max(15.0,h*.30));
-  final tailH=math.min(15.0,math.max(9.0,h*.19));
-  final bodyRight=w-tailW*.58;
-  final bodyBottom=h-tailH*.42;
-  final radius=math.min(h*.48,math.min(bodyRight*.48,bodyBottom*.52));
-  double x(double value)=>tailOnLeft?w-value:value;
-  final path=Path()
-   ..moveTo(x(radius),0)
-   ..lineTo(x(bodyRight-radius),0)
-   ..cubicTo(x(bodyRight-radius*.42),0,x(bodyRight),radius*.42,x(bodyRight),radius)
-   ..lineTo(x(bodyRight),bodyBottom-tailH*.78)
-   // The tail grows out of the lower corner; both curves remain tangent.
-   ..cubicTo(x(bodyRight),bodyBottom+tailH*.10,x(bodyRight+tailW*.02),h-tailH*.02,x(w),h-tailH*.02)
-   ..cubicTo(x(w-tailW*.20),h-tailH*.02,x(bodyRight-tailW*.48),bodyBottom+tailH*.48,x(bodyRight-tailW*.28),bodyBottom)
-   ..lineTo(x(radius),bodyBottom)
-   ..cubicTo(x(radius*.42),bodyBottom,x(0),bodyBottom-radius*.42,x(0),bodyBottom-radius)
-   ..lineTo(x(0),radius)
-   ..cubicTo(x(0),radius*.42,x(radius*.42),0,x(radius),0)
+  // Silhouette traced from the user's reference: pill body and swept lower-corner tail.
+  final w=size.width,h=size.height;
+  final tailW=math.min(w*.13,h*.34);
+  final tailDrop=h*.20;
+  final bodyRight=w-tailW*.62;
+  final bodyBottom=h-tailDrop*.20;
+  final radius=math.min(h*.50,bodyRight*.48);
+  double mx(double px)=>tailOnLeft?w-px:px;
+  final p=Path()
+   ..moveTo(mx(radius),0)
+   ..lineTo(mx(bodyRight-radius),0)
+   ..cubicTo(mx(bodyRight-radius*.45),0,mx(bodyRight),radius*.42,mx(bodyRight),radius)
+   ..lineTo(mx(bodyRight),bodyBottom-tailDrop*.68)
+   // Outer tail edge drops smoothly and ends in a tapered, swept point.
+   ..cubicTo(mx(bodyRight),bodyBottom+tailDrop*.35,mx(bodyRight+tailW*.16),h-tailDrop*.02,mx(w),h-tailDrop*.04)
+   // Return curve blends the point back into the underside of the capsule.
+   ..cubicTo(mx(w-tailW*.76),h-tailDrop*.04,mx(bodyRight-tailW*.44),bodyBottom+tailDrop*.42,mx(bodyRight-tailW*.26),bodyBottom)
+   ..lineTo(mx(radius),bodyBottom)
+   ..cubicTo(mx(radius*.42),bodyBottom,mx(0),bodyBottom-radius*.42,mx(0),bodyBottom-radius)
+   ..lineTo(mx(0),radius)
+   ..cubicTo(mx(0),radius*.42,mx(radius*.42),0,mx(radius),0)
    ..close();
-  return path;
+  return p;
  }
 
  @override
