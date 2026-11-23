@@ -1055,7 +1055,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       const SizedBox(height:7),Text(t('رسائل وصور وملفات وتسجيلات صوتية في مكان واحد.','Messages, photos, files and voice notes in one place.'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))
      ])))
      :ListView.builder(controller:scroll,padding:const EdgeInsets.all(12),itemCount:messages.length,itemBuilder:(ctx,i){
-      final m=messages[i];final mine=m['sender_id']==me;final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';final isVisualMessage=type=='image'||type=='sticker';
+      final m=messages[i];final mine=m['sender_id']==me;final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';final isVisualMessage=type=='image'||type=='video'||type=='sticker';
       final createdAt=DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal();
       final previousAt=i>0?DateTime.tryParse(messages[i-1]['created_at']?.toString()??'')?.toLocal():null;
       final showDate=createdAt!=null&&(previousAt==null||DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt));
@@ -1068,7 +1068,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity>220){setState(()=>timestampMessageId=timestampMessageId==m['id'].toString()?null:m['id'].toString());}else if(velocity< -220){setState(()=>replyTo=m);}},
         child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8),
-         decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55): (mine?skin.mine:skin.partner),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14)),width:highlightedMessageId==m['id'].toString()?1.5:.55)),
+         decoration:BoxDecoration(color:highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55): (mine?skin.mine:skin.partner),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isVisualMessage?skin.accent.withValues(alpha:.42):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isVisualMessage?.65:.55)),borderRadius:isVisualMessage?BorderRadius.circular(15):null),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
