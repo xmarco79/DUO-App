@@ -175,29 +175,47 @@ class _MediaMessageClipper extends CustomClipper<Path> {
 class _MessageBubbleClipper extends CustomClipper<Path> {
  final bool tailOnLeft;
  const _MessageBubbleClipper({required this.tailOnLeft});
- @override Path getClip(Size size) {
+
+ @override
+ Path getClip(Size size) {
   final w=size.width,h=size.height;
-  final tailW=math.min(w*.10,h*.16), bodyW=w-tailW;
-  final r=math.min(h*.48,bodyW*.48);
-  double x(double v)=>tailOnLeft?w-v:v;
-  // The bottom edge is a straight segment that flows into a semicircular tail.
-  final tailCenter=bodyW-tailW*.30;
-  final tailRadius=tailW*.52;
+  // Trace of the supplied reference: a full-height capsule body and a
+  // short, low swept tail attached only to the lower outer corner.
+  final tail=math.min(h*.165,w*.10);
+  final bodyRight=w-tail;
+  final radius=math.min(h*.5,bodyRight*.5);
+  final shoulder=bodyRight-radius;
+  final notchX=bodyRight-h*.018;
+  final tailJoin=bodyRight-h*.205;
+  double px(double value)=>tailOnLeft?w-value:value;
+
   return Path()
-   ..moveTo(x(r),0)..lineTo(x(bodyW-r),0)
-   ..cubicTo(x(bodyW-r*.42),0,x(bodyW),r*.42,x(bodyW),r)
-   ..lineTo(x(bodyW),h-r*.60)
-   ..cubicTo(x(bodyW),h-r*.20,x(bodyW-r*.16),h*.82,x(bodyW-r*.08),h*.84)
-   ..lineTo(x(bodyW),h)
-   ..lineTo(x(tailCenter+tailRadius),h)
-   ..arcTo(Rect.fromCenter(center:Offset(x(tailCenter),h),width:tailRadius*2,height:tailRadius*2),tailOnLeft?0:math.pi,tailOnLeft?math.pi:-math.pi,false)
-   ..lineTo(x(r),h)
-   ..cubicTo(x(r*.42),h,x(0),h-r*.42,x(0),h-r)
-   ..lineTo(x(0),r)
-   ..cubicTo(x(0),r*.42,x(r*.42),0,x(r),0)..close();
+   ..moveTo(px(radius),0)
+   ..lineTo(px(shoulder),0)
+   // Long, smooth upper-right capsule shoulder.
+   ..cubicTo(px(bodyRight-radius*.48),0,px(bodyRight),radius*.42,px(bodyRight),radius)
+   ..lineTo(px(bodyRight),h*.49)
+   // The tiny inward scoop on the outer edge.
+   ..cubicTo(px(bodyRight),h*.60,px(notchX),h*.675,px(notchX),h*.735)
+   // The tail flows down and outward to its fine rounded tip.
+   ..cubicTo(px(notchX),h*.855,px(bodyRight-h*.035),h*.985,px(w),h*.99)
+   // Its underside returns quickly to the lower-right corner of the body.
+   ..cubicTo(px(bodyRight-h*.115),h*.975,px(tailJoin+h*.025),h*.925,px(tailJoin),h*.865)
+   // Smooth transition: the lower body keeps the same capsule curvature
+   // as the opposite end; only a compact swept tail is attached outside.
+   ..cubicTo(px(bodyRight-h*.14),h*.82,px(bodyRight-h*.10),h*.84,px(bodyRight-h*.07),h*.84)
+   ..lineTo(px(radius),h)
+   ..cubicTo(px(radius*.42),h,px(0),h-radius*.42,px(0),h-radius)
+   ..lineTo(px(0),radius)
+   ..cubicTo(px(0),radius*.42,px(radius*.42),0,px(radius),0)
+   ..close();
  }
- @override bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
+
+ @override
+ bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>
+  oldClipper.tailOnLeft!=tailOnLeft;
 }
+
 class _OursUnifiedMessageSurface extends StatelessWidget {
  final _ChatSkin skin; final bool isMine,isVisual; final Widget child;
  const _OursUnifiedMessageSurface({required this.skin,required this.isMine,required this.child,this.isVisual=false});
@@ -799,6 +817,11 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    if(originalPath.isEmpty||originalPath=='[viewed]'){_show(t('انتهت مرات مشاهدة هذه الوسائط','No views left for this media'));await _load();return;}
    final url=await _signed(originalPath);
    if(isVideo){videoController=VideoPlayerController.networkUrl(Uri.parse(url));await videoController.initialize();}
+   else {
+    // Confirm image is decodable before consuming its view.
+    final probe=Image.network(url);
+    await precacheImage(probe.image,context);
+   }
    final path=await db.rpc('consume_ours_temporary_media',params:{'p_message_id':messageId}) as String?;
    if(path==null||path.isEmpty){await videoController?.dispose();videoController=null;_show(t('انتهت مرات مشاهدة هذه الوسائط','No views left for this media'));await _load();return;}
     final temporaryVideo = videoController;
@@ -1153,8 +1176,8 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
             ?Text(t('انتهت المشاهدات','No views left'),style:TextStyle(color:skin.accent,fontSize:12))
             :FutureBuilder<String>(future:_signed(path),builder:(c,s)=>s.hasData
              ?InkWell(onTap:()=>_consumeTemporaryMedia(m['id'].toString()),borderRadius:BorderRadius.circular(16),child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Container(width:220,height:145,color:skin.partner,child:Stack(fit:StackFit.expand,children:[
-              if(m['mime_type']?.toString().startsWith('video/')==true)ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:24,sigmaY:24),child:Container(color:skin.partner)) else ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:24,sigmaY:24),child:Image.network(s.data!,fit:BoxFit.cover)),
-              Container(color:Colors.black.withValues(alpha:.30)),
+              if(m['mime_type']?.toString().startsWith('video/')==true)ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:30,sigmaY:30),child:Container(decoration:BoxDecoration(gradient:LinearGradient(colors:[skin.accent.withValues(alpha:.30),skin.partner.withValues(alpha:.88),skin.mine.withValues(alpha:.55)])))) else ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:30,sigmaY:30),child:Image.network(s.data!,fit:BoxFit.cover,color:skin.accent.withValues(alpha:.16),colorBlendMode:BlendMode.overlay)),
+              Container(decoration:BoxDecoration(gradient:LinearGradient(colors:[skin.bg.withValues(alpha:.28),skin.accent.withValues(alpha:.14),skin.partner.withValues(alpha:.40)]))),
               Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(m['mime_type']?.toString().startsWith('video/')==true?Icons.play_circle_fill_rounded:Icons.visibility_rounded,color:Colors.white,size:34),const SizedBox(height:8),Text(m['mime_type']?.toString().startsWith('video/')==true?t('اضغط لمشاهدة الفيديو','Tap to view video'):((m['max_views']==2)?t('اضغط لفتح · مرتين','Tap to open · twice'):t('اضغط لفتح الصورة','Tap to open image')),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800),textAlign:TextAlign.center)])
              ]))))
              :SizedBox(width:160,height:110,child:Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:2))))
