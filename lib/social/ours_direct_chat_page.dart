@@ -157,6 +157,14 @@ class _ChatAtmospherePainter extends CustomPainter {
 }
 
 
+class _RoundedMediaMessageClipper extends CustomClipper<Path> {
+ const _RoundedMediaMessageClipper();
+ @override
+ Path getClip(Size size)=>Path()..addRRect(RRect.fromRectAndRadius(Offset.zero&size,const Radius.circular(18)));
+ @override
+ bool shouldReclip(covariant _RoundedMediaMessageClipper oldClipper)=>false;
+}
+
 class _MediaMessageClipper extends CustomClipper<Path> {
  @override
  Path getClip(Size size) => Path()..addRect(Offset.zero & size);
@@ -1136,9 +1144,9 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        GestureDetector(
         onLongPress:()=>_messageActions(context,m,mine,type,path),
         onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity< -220){setState(()=>replyTo=m);}},
-        child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr),color:mine?skin.mine:skin.partner,elevation:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
+        child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?const EdgeInsets.all(1): (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8)),
-         decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?skin.accent.withValues(alpha:.38):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .45 : (isVisualMessage ? 0 : .55))),borderRadius:isVisualMessage?BorderRadius.circular(15):null),
+         decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?const Color(0xFFB9B4C6).withValues(alpha:.58):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .8 : (isVisualMessage ? 0 : .55))),borderRadius:isOutlinedMedia?BorderRadius.circular(18):(isVisualMessage?BorderRadius.circular(15):null)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
           if(pinnedMessageIds.contains(m['id'].toString()))Padding(padding:const EdgeInsets.only(bottom:5),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.push_pin_rounded,size:11,color:skin.accent),const SizedBox(width:4),Text(t('مثبّتة','Pinned'),style:TextStyle(color:skin.accent,fontSize:9,fontWeight:FontWeight.w800))])),
            if(m['edited_at']!=null)Padding(padding:const EdgeInsets.only(bottom:4),child:Align(alignment:AlignmentDirectional.centerEnd,child:Text(t('تم التعديل','Edited'),style:TextStyle(color:skin.accent.withValues(alpha:.78),fontSize:9,fontStyle:FontStyle.italic,fontWeight:FontWeight.w600)))),
