@@ -1174,11 +1174,16 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
            if(!s.hasData)return SizedBox(width:190,height:125,child:Center(child:CircularProgressIndicator(color:skin.accent)));
            return GestureDetector(
             onTap:()=>_openImageActions(s.data!),
-            child:ClipRRect(borderRadius:BorderRadius.circular(18),child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:280,maxHeight:360),child:Image.network(s.data!,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Padding(padding:const EdgeInsets.all(18),child:Text(t('تعذر عرض الصورة','Image unavailable'),style:TextStyle(color:skin.accent))))),
-                 ),
-                ),
-               ),
-             ]),
+            child:ClipRRect(
+             borderRadius:BorderRadius.circular(18),
+             child:ConstrainedBox(
+              constraints:const BoxConstraints(maxWidth:280,maxHeight:360),
+              child:Image.network(
+               s.data!,
+               fit:BoxFit.contain,
+               errorBuilder:(_,__,___)=>Padding(padding:const EdgeInsets.all(18),child:Text(t('تعذر عرض الصورة','Image unavailable'),style:TextStyle(color:skin.accent))),
+              ),
+             ),
             ),
            );
           })
