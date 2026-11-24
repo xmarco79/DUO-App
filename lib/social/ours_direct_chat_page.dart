@@ -175,47 +175,29 @@ class _MediaMessageClipper extends CustomClipper<Path> {
 class _MessageBubbleClipper extends CustomClipper<Path> {
  final bool tailOnLeft;
  const _MessageBubbleClipper({required this.tailOnLeft});
-
- @override
- Path getClip(Size size) {
+ @override Path getClip(Size size) {
   final w=size.width,h=size.height;
-  // Trace of the supplied reference: a full-height capsule body and a
-  // short, low swept tail attached only to the lower outer corner.
-  final tail=math.min(h*.165,w*.10);
-  final bodyRight=w-tail;
-  final radius=math.min(h*.5,bodyRight*.5);
-  final shoulder=bodyRight-radius;
-  final notchX=bodyRight-h*.018;
-  final tailJoin=bodyRight-h*.205;
-  double px(double value)=>tailOnLeft?w-value:value;
-
+  final tailW=math.min(w*.10,h*.16), bodyW=w-tailW;
+  final r=math.min(h*.48,bodyW*.48);
+  double x(double v)=>tailOnLeft?w-v:v;
+  // The bottom edge is a straight segment that flows into a semicircular tail.
+  final tailCenter=bodyW-tailW*.30;
+  final tailRadius=tailW*.52;
   return Path()
-   ..moveTo(px(radius),0)
-   ..lineTo(px(shoulder),0)
-   // Long, smooth upper-right capsule shoulder.
-   ..cubicTo(px(bodyRight-radius*.48),0,px(bodyRight),radius*.42,px(bodyRight),radius)
-   ..lineTo(px(bodyRight),h*.49)
-   // The tiny inward scoop on the outer edge.
-   ..cubicTo(px(bodyRight),h*.60,px(notchX),h*.675,px(notchX),h*.735)
-   // The tail flows down and outward to its fine rounded tip.
-   ..cubicTo(px(notchX),h*.855,px(bodyRight-h*.035),h*.985,px(w),h*.99)
-   // Its underside returns quickly to the lower-right corner of the body.
-   ..cubicTo(px(bodyRight-h*.115),h*.975,px(tailJoin+h*.025),h*.925,px(tailJoin),h*.865)
-   // Smooth transition: the lower body keeps the same capsule curvature
-   // as the opposite end; only a compact swept tail is attached outside.
-   ..cubicTo(px(bodyRight-h*.14),h*.82,px(bodyRight-h*.10),h*.84,px(bodyRight-h*.07),h*.84)
-   ..lineTo(px(radius),h)
-   ..cubicTo(px(radius*.42),h,px(0),h-radius*.42,px(0),h-radius)
-   ..lineTo(px(0),radius)
-   ..cubicTo(px(0),radius*.42,px(radius*.42),0,px(radius),0)
-   ..close();
+   ..moveTo(x(r),0)..lineTo(x(bodyW-r),0)
+   ..cubicTo(x(bodyW-r*.42),0,x(bodyW),r*.42,x(bodyW),r)
+   ..lineTo(x(bodyW),h-r*.60)
+   ..cubicTo(x(bodyW),h-r*.20,x(bodyW-r*.16),h*.82,x(bodyW-r*.08),h*.84)
+   ..lineTo(x(bodyW),h)
+   ..lineTo(x(tailCenter+tailRadius),h)
+   ..arcTo(Rect.fromCenter(center:Offset(x(tailCenter),h),width:tailRadius*2,height:tailRadius*2),tailOnLeft?0:math.pi,tailOnLeft?math.pi:-math.pi,false)
+   ..lineTo(x(r),h)
+   ..cubicTo(x(r*.42),h,x(0),h-r*.42,x(0),h-r)
+   ..lineTo(x(0),r)
+   ..cubicTo(x(0),r*.42,x(r*.42),0,x(r),0)..close();
  }
-
- @override
- bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>
-  oldClipper.tailOnLeft!=tailOnLeft;
+ @override bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
 }
-
 class _OursUnifiedMessageSurface extends StatelessWidget {
  final _ChatSkin skin; final bool isMine,isVisual; final Widget child;
  const _OursUnifiedMessageSurface({required this.skin,required this.isMine,required this.child,this.isVisual=false});
@@ -1113,7 +1095,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       const SizedBox(height:7),Text(t('رسائل وصور وملفات وتسجيلات صوتية في مكان واحد.','Messages, photos, files and voice notes in one place.'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))
      ])))
      :ListView.builder(controller:scroll,padding:const EdgeInsets.all(12),itemCount:messages.length,itemBuilder:(ctx,i){
-      final m=messages[i];final mine=m['sender_id']==me;final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';final isVisualMessage=type=='image'||type=='video'||type=='sticker';final isOutlinedMedia=type=='image'||type=='video'||type=='view_once'||type=='view_twice';
+      final m=messages[i];final mine=m['sender_id']==me;final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';final isVisualMessage=type=='image'||type=='video'||type=='sticker'||type=='view_once'||type=='view_twice';final isOutlinedMedia=type=='image'||type=='video'||type=='view_once'||type=='view_twice';
       final createdAt=DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal();
       final previousAt=i>0?DateTime.tryParse(messages[i-1]['created_at']?.toString()??'')?.toLocal():null;
       final showDate=createdAt!=null&&(previousAt==null||DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt));
@@ -1164,10 +1146,14 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
           if(type=='sticker')FutureBuilder<String>(future:_signedSticker(path),builder:(c,s)=>s.hasData?Center(child:Image.network(s.data!,width:150,height:150,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:42))):SizedBox(width:110,height:90,child:Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:2))))
           else if(type=='view_once'||type=='view_twice')
            ((m['view_count'] as num?)?.toInt()??0)>=((m['max_views'] as num?)?.toInt()??1)||m['viewed_at']!=null
-            ?Text(t('انتهت مشاهدات الصورة','No views left'),style:TextStyle(color:skin.accent,fontSize:12))
+            ?Text(t('انتهت المشاهدات','No views left'),style:TextStyle(color:skin.accent,fontSize:12))
             :FutureBuilder<String>(future:_signed(path),builder:(c,s)=>s.hasData
-             ?Column(mainAxisSize:MainAxisSize.min,children:[ClipRRect(borderRadius:BorderRadius.circular(11),child:Container(width:210,height:130,color:skin.partner,child:Stack(fit:StackFit.expand,children:[if(m['mime_type']?.toString().startsWith('video/')==true)Center(child:Icon(Icons.play_circle_fill_rounded,color:skin.accent,size:52))else ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:13,sigmaY:13),child:Image.network(s.data!,fit:BoxFit.cover)),if(m['mime_type']?.toString().startsWith('video/')!=true)Center(child:Icon(Icons.visibility_rounded,color:Colors.white70,size:30))]))),const SizedBox(height:7),TextButton.icon(onPressed:()=>_consumeTemporaryMedia(m['id'].toString()),icon:Icon(m['mime_type']?.toString().startsWith('video/')==true?Icons.play_circle_outline:Icons.visibility_outlined,color:skin.accent),label:Text(m['mime_type']?.toString().startsWith('video/')==true?t('فتح الفيديو المؤقت','Open temporary video'):((m['max_views']==2)?t('فتح الصورة · مشاهدتان','Open photo · two views'):t('فتح الصورة · مرة واحدة','Open photo · once'))))])
-             :Text(t('صورة مؤقتة','Temporary photo'),style:TextStyle(color:skin.accent,fontSize:12)))
+             ?InkWell(onTap:()=>_consumeTemporaryMedia(m['id'].toString()),borderRadius:BorderRadius.circular(16),child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Container(width:220,height:145,color:skin.partner,child:Stack(fit:StackFit.expand,children:[
+              if(m['mime_type']?.toString().startsWith('video/')==true)ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:24,sigmaY:24),child:Container(color:skin.partner)) else ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:24,sigmaY:24),child:Image.network(s.data!,fit:BoxFit.cover)),
+              Container(color:Colors.black.withValues(alpha:.30)),
+              Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(m['mime_type']?.toString().startsWith('video/')==true?Icons.play_circle_fill_rounded:Icons.visibility_rounded,color:Colors.white,size:34),const SizedBox(height:8),Text(m['mime_type']?.toString().startsWith('video/')==true?t('اضغط لمشاهدة الفيديو','Tap to view video'):((m['max_views']==2)?t('اضغط لفتح · مرتين','Tap to open · twice'):t('اضغط لفتح الصورة','Tap to open image')),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800),textAlign:TextAlign.center)])
+             ]))))
+             :SizedBox(width:160,height:110,child:Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:2))))
           else if(type=='video')InkWell(onTap:()=>_playVideo(path),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.play_circle_fill,color:skin.accent,size:36),const SizedBox(width:8),Text(t('مقطع فيديو · تشغيل','Video · Play'))]))
           else if(type=='image')FutureBuilder<String>(future:_signed(path),builder:(c,s){
            if(s.hasError)return Text(t('تعذر تحميل الصورة','Could not load image'),style:TextStyle(color:skin.accent));
@@ -1239,9 +1225,11 @@ class _OursAiPageState extends State<OursAiPage>{
   if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=p.getString('ours_ai_wallpaper');wallpaperOpacity=p.getDouble('ours_ai_wallpaper_opacity')??.22;wallpaperZoom=p.getDouble('ours_ai_wallpaper_zoom')??1;wallpaperRotation=p.getDouble('ours_ai_wallpaper_rotation')??0;wallpaperDim=p.getDouble('ours_ai_wallpaper_dim')??.55;wallpaperOffsetX=p.getDouble('ours_ai_wallpaper_offset_x')??0;wallpaperOffsetY=p.getDouble('ours_ai_wallpaper_offset_y')??0;});
  }
  Future<void> _chooseTheme()async{
-  final selected=await showModalBottomSheet<String>(context:context,backgroundColor:skin.bg,showDragHandle:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.62,child:ListView(padding:const EdgeInsets.all(14),children:[
-   Padding(padding:const EdgeInsets.all(8),child:Text(t('ثيم OURS AI','OURS AI theme'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900,fontSize:18))),
-   ..._skins.map((x)=>ListTile(leading:CircleAvatar(backgroundColor:x.accent,child:Icon(Icons.palette_rounded,color:x.bg)),title:Text(ar?x.ar:x.en,style:const TextStyle(color:Colors.white)),subtitle:Text(ar?x.id:x.id,style:const TextStyle(color:_lavender,fontSize:11)),onTap:()=>Navigator.pop(ctx,x.id)))
+  final selected=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF100D1B),showDragHandle:true,isScrollControlled:true,builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,18),child:Column(mainAxisSize:MainAxisSize.min,children:[
+   Row(children:[Icon(Icons.palette_rounded,color:skin.accent,size:24),const SizedBox(width:9),Expanded(child:Text(t('أجواء OURS','OURS atmospheres'),style:TextStyle(color:skin.accent,fontSize:19,fontWeight:FontWeight.w900))),Text(t('اختر مزاجك','Choose your mood'),style:const TextStyle(color:_lavender,fontSize:10))]),
+   const SizedBox(height:12),Container(width:double.infinity,padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:skin.bg,borderRadius:BorderRadius.circular(20),border:Border.all(color:skin.accent.withValues(alpha:.28))),child:Row(children:[Container(width:42,height:42,decoration:BoxDecoration(gradient:LinearGradient(colors:[skin.mine,skin.partner,skin.accent.withValues(alpha:.5)]),borderRadius:BorderRadius.circular(14)),child:Icon(Icons.chat_bubble_rounded,color:skin.accent)),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('معاينة الثيم الحالي','Current theme preview'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w800)),Text(ar?skin.ar:skin.en,style:const TextStyle(color:Colors.white,fontSize:12))]))])),
+   const SizedBox(height:10),Flexible(child:GridView.builder(shrinkWrap:true,physics:const BouncingScrollPhysics(),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,mainAxisSpacing:10,crossAxisSpacing:10,childAspectRatio:1.55),itemCount:_skins.length,itemBuilder:(ctx,i){final x=_skins[i];final active=x.id==skin.id;return InkWell(onTap:()=>Navigator.pop(ctx,x.id),borderRadius:BorderRadius.circular(18),child:Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[x.bg,x.partner]),borderRadius:BorderRadius.circular(18),border:Border.all(color:active?x.accent:Colors.white.withValues(alpha:.12),width:active?2:1)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(width:9,height:9,decoration:BoxDecoration(color:x.accent,shape:BoxShape.circle)),const Spacer(),if(active)Icon(Icons.check_circle_rounded,color:x.accent,size:17)]),const Spacer(),Row(children:[Container(width:23,height:12,decoration:BoxDecoration(color:x.mine,borderRadius:BorderRadius.circular(8))),const SizedBox(width:4),Container(width:20,height:12,decoration:BoxDecoration(color:x.partner,borderRadius:BorderRadius.circular(8))),const Spacer(),Icon(Icons.auto_awesome_rounded,color:x.accent,size:15)]),const SizedBox(height:5),Text(ar?x.ar:x.en,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:11))])));})),
+   const SizedBox(height:6),Text(t('ألوان وخلفيات مصممة لكل مزاج','A distinct palette and atmosphere for every mood'),style:const TextStyle(color:_lavender,fontSize:10))
   ]))));
   if(selected==null)return;final p=await SharedPreferences.getInstance();await p.setString('ours_ai_skin',selected);
   if(mounted)setState(()=>skin=_skins.firstWhere((x)=>x.id==selected,orElse:()=>_skins.first));
