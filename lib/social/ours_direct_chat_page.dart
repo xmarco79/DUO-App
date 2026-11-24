@@ -793,10 +793,14 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   try{
    final media=messages.firstWhere((m)=>m['id'].toString()==messageId,orElse:()=>{});
    final isVideo=media['mime_type']?.toString().startsWith('video/')==true||media['message_type']=='video';
-   final path=await db.rpc('consume_ours_temporary_media',params:{'p_message_id':messageId}) as String?;
-   if(path==null||path.isEmpty){_show(t('انتهت مرات مشاهدة هذه الوسائط','No views left for this media'));await _load();return;}
-   final url=await _signed(path);
+   // Validate the storage link before consuming a view so network/storage failures
+   // don't burn the user's limited view count.
+   final originalPath=(media['body']??'').toString();
+   if(originalPath.isEmpty||originalPath=='[viewed]'){_show(t('انتهت مرات مشاهدة هذه الوسائط','No views left for this media'));await _load();return;}
+   final url=await _signed(originalPath);
    if(isVideo){videoController=VideoPlayerController.networkUrl(Uri.parse(url));await videoController.initialize();}
+   final path=await db.rpc('consume_ours_temporary_media',params:{'p_message_id':messageId}) as String?;
+   if(path==null||path.isEmpty){await videoController?.dispose();videoController=null;_show(t('انتهت مرات مشاهدة هذه الوسائط','No views left for this media'));await _load();return;}
     final temporaryVideo = videoController;
    if(!mounted)return;
    await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>Dialog(backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,child:SizedBox.expand(child:SafeArea(child:Column(children:[
