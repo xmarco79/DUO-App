@@ -201,10 +201,10 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
    ..cubicTo(px(notchX),h*.855,px(bodyRight-h*.035),h*.985,px(w),h*.99)
    // Its underside returns quickly to the lower-right corner of the body.
    ..cubicTo(px(bodyRight-h*.115),h*.975,px(tailJoin+h*.025),h*.925,px(tailJoin),h*.865)
-   // A shallow concave transition blends the tail into the capsule base.
-   ..cubicTo(px(bodyRight-h*.145),h*.825,px(bodyRight-h*.105),h*.82,px(bodyRight-h*.075),h*.82)
+   // Smooth transition: the lower body keeps the same capsule curvature
+   // as the opposite end; only a compact swept tail is attached outside.
+   ..cubicTo(px(bodyRight-h*.14),h*.82,px(bodyRight-h*.10),h*.84,px(bodyRight-h*.07),h*.84)
    ..lineTo(px(radius),h)
-   // Left end remains a clean semicircular capsule.
    ..cubicTo(px(radius*.42),h,px(0),h-radius*.42,px(0),h-radius)
    ..lineTo(px(0),radius)
    ..cubicTo(px(0),radius*.42,px(radius*.42),0,px(radius),0)
@@ -938,9 +938,9 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),side:BorderSide(color:skin.accent.withValues(alpha:.20),width:.7)),
    constraints:BoxConstraints.tightFor(width:menuWidth),
    items:[
+    _messageMenuItem('reply',t('رد','Reply'),Icons.reply_rounded),
     _messageMenuItem('copy',t('نسخ','Copy'),Icons.copy_rounded),
     _messageMenuItem('pin',isPinned?t('إلغاء التثبيت','Unpin'):t('تثبيت','Pin'),isPinned?Icons.push_pin_outlined:Icons.push_pin_rounded),
-    _messageMenuItem('reply',t('رد','Reply'),Icons.reply_rounded),
     if(mine&&type=='text')_messageMenuItem('edit',t('تعديل','Edit'),Icons.edit_rounded),
     _messageMenuItem('local',t('حذف لديك','Delete for me'),Icons.delete_outline_rounded,color:Colors.orangeAccent),
     if(mine)_messageMenuItem('everyone',t('حذف لدى الجميع','Delete for everyone'),Icons.delete_forever_rounded,color:Colors.redAccent),
@@ -1145,11 +1145,11 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onLongPress:()=>_messageActions(context,m,mine,type,path),
         onHorizontalDragEnd:(details){final velocity=details.primaryVelocity??0;if(velocity< -220){setState(()=>replyTo=m);}},
         child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?const EdgeInsets.all(1): (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8)),
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8)),
          decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?const Color(0xFFB9B4C6).withValues(alpha:.58):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .8 : (isVisualMessage ? 0 : .55))),borderRadius:isOutlinedMedia?BorderRadius.circular(18):(isVisualMessage?BorderRadius.circular(15):null)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
-          if(pinnedMessageIds.contains(m['id'].toString()))Padding(padding:const EdgeInsets.only(bottom:5),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.push_pin_rounded,size:11,color:skin.accent),const SizedBox(width:4),Text(t('مثبّتة','Pinned'),style:TextStyle(color:skin.accent,fontSize:9,fontWeight:FontWeight.w800))])),
-           if(m['edited_at']!=null)Padding(padding:const EdgeInsets.only(bottom:4),child:Align(alignment:AlignmentDirectional.centerEnd,child:Text(t('تم التعديل','Edited'),style:TextStyle(color:skin.accent.withValues(alpha:.78),fontSize:9,fontStyle:FontStyle.italic,fontWeight:FontWeight.w600)))),
+
+
           if(m['reply_to']!=null && messages.any((r)=>r['id'].toString()==m['reply_to'].toString()))
            Builder(builder:(context){
             final original=messages.firstWhere((r)=>r['id'].toString()==m['reply_to'].toString());
@@ -1172,23 +1172,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
            if(!s.hasData)return SizedBox(width:190,height:125,child:Center(child:CircularProgressIndicator(color:skin.accent)));
            return GestureDetector(
             onTap:()=>_openImageActions(s.data!),
-            child:ClipRRect(
-             borderRadius:BorderRadius.circular(16),
-             child:Stack(alignment:Alignment.bottomRight,children:[
-              ConstrainedBox(constraints:const BoxConstraints(maxWidth:280,maxHeight:360),child:Image.network(s.data!,width:280,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Padding(padding:const EdgeInsets.all(18),child:Text(t('تعذر عرض الصورة','Image unavailable'),style:TextStyle(color:skin.accent))))),
-               PositionedDirectional(
-                end:8,bottom:8,
-                child:ClipRRect(
-                 borderRadius:BorderRadius.circular(22),
-                 child:BackdropFilter(
-                  filter:ImageFilter.blur(sigmaX:12,sigmaY:12),
-                  child:Container(
-                   padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
-                   decoration:BoxDecoration(color:Colors.black.withValues(alpha:.28),border:Border.all(color:Colors.white.withValues(alpha:.15)),borderRadius:BorderRadius.circular(22)),
-                   child:Row(mainAxisSize:MainAxisSize.min,children:[
-
-                   ]),
-                  ),
+            child:ClipRRect(borderRadius:BorderRadius.circular(18),child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:280,maxHeight:360),child:Image.network(s.data!,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Padding(padding:const EdgeInsets.all(18),child:Text(t('تعذر عرض الصورة','Image unavailable'),style:TextStyle(color:skin.accent))))),
                  ),
                 ),
                ),
