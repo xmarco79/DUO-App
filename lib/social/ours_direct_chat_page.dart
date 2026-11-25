@@ -179,34 +179,61 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  @override
  Path getClip(Size size) {
   final w=size.width,h=size.height;
-  // Trace of the supplied reference: a full-height capsule body and a
-  // short, low swept tail attached only to the lower outer corner.
-  final tail=math.min(h*.165,w*.10);
-  final bodyRight=w-tail;
+  // Keep a true capsule at both ends. The tail replaces only the lower
+  // quarter of the outer end; the opposite end remains perfectly symmetric.
+  final tailWidth=math.min(h*.22,w*.12);
+  final bodyRight=w-tailWidth;
   final radius=math.min(h*.5,bodyRight*.5);
-  final shoulder=bodyRight-radius;
-  final notchX=bodyRight-h*.018;
-  double px(double value)=>tailOnLeft?w-value:value;
+  final leftRadius=radius;
+  final topRightX=bodyRight-radius;
+  final bottomRightX=bodyRight-radius;
+  final tailRootY=h*.62;
+  final scoopX=bodyRight-h*.055;
+  final tailTip=Offset(w,h*.965);
+  final circleJoin=Offset(bodyRight-radius*.10,h-radius*.14);
 
-  return Path()
-   ..moveTo(px(radius),0)
-   ..lineTo(px(shoulder),0)
-   // Rounded upper shoulder of the capsule body.
-   ..cubicTo(px(bodyRight-radius*.48),0,px(bodyRight),radius*.42,px(bodyRight),radius)
-   ..lineTo(px(bodyRight),h*.49)
-   // Small inward scoop above the tail, as in the supplied silhouette.
-   ..cubicTo(px(bodyRight),h*.60,px(notchX),h*.675,px(notchX),h*.735)
-   // Outer contour of the tail, ending at its fine tip.
-   ..cubicTo(px(notchX),h*.855,px(bodyRight-h*.035),h*.985,px(w),h*.99)
-   // Tail underside curves back to the body's lower-right baseline endpoint.
-   ..cubicTo(px(bodyRight-h*.045),h*.985,px(bodyRight-h*.035),h*.975,px(bodyRight-h*.025),h*.965)
-   ..cubicTo(px(bodyRight-h*.012),h*.985,px(bodyRight-h*.006),h,px(bodyRight),h)
-   // Body bottom: a perfectly straight horizontal line from the tail junction to the left round end.
-   ..lineTo(px(radius),h)
-   ..cubicTo(px(radius*.42),h,px(0),h-radius*.42,px(0),h-radius)
-   ..lineTo(px(0),radius)
-   ..cubicTo(px(0),radius*.42,px(radius*.42),0,px(radius),0)
+  double x(double value)=>tailOnLeft?w-value:value;
+  Offset p(double dx,double dy)=>Offset(x(dx),dy);
+
+  final path=Path()
+   // Top edge and upper-right quarter-circle.
+   ..moveTo(x(leftRadius),0)
+   ..lineTo(x(topRightX),0)
+   ..cubicTo(x(topRightX+radius*.5523),0,
+             x(bodyRight),radius*.4477,
+             x(bodyRight),radius)
+   // The right side keeps its capsule curvature until the tail begins.
+   ..lineTo(x(bodyRight),tailRootY)
+   // A shallow inward transition makes the tail grow out of the lower
+   // right quarter rather than from a square corner.
+   ..cubicTo(x(bodyRight),h*.70,
+             x(scoopX),h*.70,
+             x(scoopX),h*.765)
+   // Smooth outer sweep to a restrained, softly pointed tail.
+   ..cubicTo(x(scoopX),h*.855,
+             x(bodyRight-h*.025),h*.945,
+             x(tailTip.dx),tailTip.dy)
+   // Return from the tip and blend tangentially into the unfinished
+   // lower-right circular quadrant.
+   ..cubicTo(x(bodyRight-h*.075),h*.955,
+             x(bodyRight-h*.035),h*.925,
+             x(circleJoin.dx),circleJoin.dy)
+   // The visible lower-right arc completes the same radius as the left end.
+   ..cubicTo(x(bodyRight-radius*.035),h-radius*.055,
+             x(bodyRight-radius*.20),h,
+             x(bottomRightX),h)
+   // Long, exact horizontal baseline.
+   ..lineTo(x(leftRadius),h)
+   // Matching semicircular left end.
+   ..cubicTo(x(leftRadius*.4477),h,
+             x(0),h-radius*.4477,
+             x(0),h-radius)
+   ..lineTo(x(0),radius)
+   ..cubicTo(x(0),radius*.4477,
+             x(leftRadius*.4477),0,
+             x(leftRadius),0)
    ..close();
+  return path;
  }
 
  @override
