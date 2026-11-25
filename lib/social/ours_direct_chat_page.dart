@@ -1285,7 +1285,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        if(m['edited_at']!=null||pinnedMessageIds.contains(m['id'].toString()))Padding(padding:const EdgeInsets.only(bottom:3),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Row(mainAxisSize:MainAxisSize.min,children:[if(pinnedMessageIds.contains(m['id'].toString()))Icon(Icons.push_pin_rounded,size:10,color:skin.accent),if(pinnedMessageIds.contains(m['id'].toString()))const SizedBox(width:3),if(pinnedMessageIds.contains(m['id'].toString()))Text(t('مثبّتة','Pinned'),style:TextStyle(color:skin.accent,fontSize:9,fontWeight:FontWeight.w800)),if(pinnedMessageIds.contains(m['id'].toString())&&m['edited_at']!=null)const SizedBox(width:5),if(m['edited_at']!=null)Text(t('تم التعديل','Edited'),style:TextStyle(color:skin.accent.withValues(alpha:.8),fontSize:9,fontWeight:FontWeight.w600))]))),
        GestureDetector(
         onLongPress:()=>_messageActions(context,m,mine,type,path),
-        onHorizontalDragStart:(_){setState(()=>{_draggingReplyMessageId=m['id'].toString();_replyDragOffset=0;});},
+        onHorizontalDragStart:(_){setState((){_draggingReplyMessageId=m['id'].toString();_replyDragOffset=0;});},
         onHorizontalDragUpdate:(details){
          // Positive horizontal delta always means a physical swipe to the right.
          final delta=details.primaryDelta??0;
@@ -1296,7 +1296,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onHorizontalDragEnd:(details){
          final velocity=details.primaryVelocity??0;
          final shouldReply=_draggingReplyMessageId==m['id'].toString()&&(_replyDragOffset>=58||(_replyDragOffset>=22&&velocity>520));
-         setState(()=>{_draggingReplyMessageId=null;_replyDragOffset=0;if(shouldReply)replyTo=m;});
+         setState((){_draggingReplyMessageId=null;_replyDragOffset=0;if(shouldReply)replyTo=m;});
         },
         onHorizontalDragCancel:(){if(_draggingReplyMessageId==m['id'].toString())setState((){_draggingReplyMessageId=null;_replyDragOffset=0;});},
         child:Stack(alignment:AlignmentDirectional.centerStart,children:[
