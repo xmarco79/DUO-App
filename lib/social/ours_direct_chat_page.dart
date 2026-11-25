@@ -754,8 +754,15 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    <double>[.9,0,0,0,18,0,.9,0,0,12,0,0,.9,0,6,0,0,0,1,0],
    <double>[1.12,0,0,0,0,0,1.02,0,0,0,0,0,.92,0,0,0,0,0,1,0],
    <double>[.95,.05,0,0,0,.02,1.04,.02,0,0,0,.03,1.1,0,0,0,0,0,1,0],
+   <double>[1.08,.02,0,0,8,0,1.02,.01,0,4,0,0,.88,0,8,0,0,0,1,0],
+   <double>[.72,.18,.08,0,12,.12,.82,.08,0,8,.04,.08,.72,0,18,0,0,0,1,0],
+   <double>[.92,.08,0,0,4,.04,.94,.02,0,2,0,.03,1.08,0,8,0,0,0,1,0],
+   <double>[.82,.12,.04,0,0,.08,.9,.06,0,4,.02,.06,1.08,0,10,0,0,0,1,0],
+   <double>[.88,.04,.02,0,0,.02,.92,.04,0,8,.02,.04,1.12,0,14,0,0,0,1,0],
+   <double>[.72,.12,.08,0,0,.08,.82,.1,0,6,.04,.1,1.02,0,12,0,0,0,1,0],
+   <double>[.9,.08,.02,0,10,.02,.88,.04,0,2,.02,.06,.82,0,0,0,0,0,1,0],
   ];
-  canvas.drawImageRect(source,src,dst,Paint()..filterQuality=FilterQuality.high..colorFilter=ColorFilter.matrix(matrices[filter.clamp(0,3).toInt()]));
+  canvas.drawImageRect(source,src,dst,Paint()..filterQuality=FilterQuality.high..colorFilter=ColorFilter.matrix(matrices[filter.clamp(0,14).toInt()]));
   for(final stroke in strokes){if(stroke.length<2)continue;final path=Path()..moveTo(stroke.first.dx*w,stroke.first.dy*h);for(final point in stroke.skip(1)){path.lineTo(point.dx*w,point.dy*h);}canvas.drawPath(path,Paint()..color=const Color(0xFFFFD66B)..strokeWidth=(w/260).clamp(4,16).toDouble()..strokeCap=StrokeCap.round..style=PaintingStyle.stroke);}
   final picture=recorder.endRecording();final image=await picture.toImage(source.width,source.height);final data=await image.toByteData(format:ui.ImageByteFormat.png);
   source.dispose();image.dispose();picture.dispose();codec.dispose();if(data==null)throw Exception('Image export failed');return data.buffer.asUint8List();
@@ -771,7 +778,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      onPanUpdate:drawing?(d)=>setEditor(()=>activeStroke.add(Offset((d.localPosition.dx/constraints.maxWidth).clamp(0,1),(d.localPosition.dy/constraints.maxHeight).clamp(0,1)))):null,
      onPanEnd:drawing?(_)=>setEditor((){if(activeStroke.isNotEmpty)strokes.add(List<Offset>.from(activeStroke));activeStroke=[];}):null,
      child:Stack(fit:StackFit.expand,children:[
-      Center(child:Transform.scale(scale:crop,child:ColorFiltered(colorFilter:const [ColorFilter.mode(Colors.transparent,BlendMode.dst),ColorFilter.matrix(<double>[.393,.769,.189,0,0,.349,.686,.168,0,0,.272,.534,.131,0,0,0,0,0,1,0]),ColorFilter.matrix(<double>[.85,0,0,0,18,0,.94,0,0,8,0,0,1.12,0,18,0,0,0,1,0]),ColorFilter.matrix(<double>[1.15,0,0,0,8,0,1.15,0,0,8,0,0,1.15,0,8,0,0,0,1,0]),ColorFilter.matrix(<double>[1.08,0,0,0,0,0,.92,0,0,4,0,0,.82,0,12,0,0,0,1,0]),ColorFilter.matrix(<double>[.9,0,0,0,18,0,.9,0,0,12,0,0,.9,0,6,0,0,0,1,0]),ColorFilter.matrix(<double>[1.12,0,0,0,0,0,1.02,0,0,0,0,0,.92,0,0,0,0,0,1,0]),ColorFilter.matrix(<double>[.95,.05,0,0,0,.02,1.04,.02,0,0,0,.03,1.1,0,0,0,0,0,1,0])][filter],child:Image.memory(bytes,fit:BoxFit.contain,width:constraints.maxWidth,height:constraints.maxHeight)))),
+      Center(child:Transform.scale(scale:crop,child:ColorFiltered(colorFilter:const [ColorFilter.mode(Colors.transparent,BlendMode.dst),ColorFilter.matrix(<double>[.393,.769,.189,0,0,.349,.686,.168,0,0,.272,.534,.131,0,0,0,0,0,1,0]),ColorFilter.matrix(<double>[.85,0,0,0,18,0,.94,0,0,8,0,0,1.12,0,18,0,0,0,1,0]),ColorFilter.matrix(<double>[1.15,0,0,0,8,0,1.15,0,0,8,0,0,1.15,0,8,0,0,0,1,0]),ColorFilter.matrix(<double>[1.08,0,0,0,0,0,.92,0,0,4,0,0,.82,0,12,0,0,0,1,0]),ColorFilter.matrix(<double>[.9,0,0,0,18,0,.9,0,0,12,0,0,.9,0,6,0,0,0,1,0]),ColorFilter.matrix(<double>[1.12,0,0,0,0,0,1.02,0,0,0,0,0,.92,0,0,0,0,0,1,0]),ColorFilter.matrix(<double>[.95,.05,0,0,0,.02,1.04,.02,0,0,0,.03,1.1,0,0,0,0,0,1,0]),ColorFilter.matrix(<double>[1.08,.02,0,0,8,0,1.02,.01,0,4,0,0,.88,0,8,0,0,0,1,0]),ColorFilter.matrix(<double>[.72,.18,.08,0,12,.12,.82,.08,0,8,.04,.08,.72,0,18,0,0,0,1,0]),ColorFilter.matrix(<double>[.92,.08,0,0,4,.04,.94,.02,0,2,0,.03,1.08,0,8,0,0,0,1,0]),ColorFilter.matrix(<double>[.82,.12,.04,0,0,.08,.9,.06,0,4,.02,.06,1.08,0,10,0,0,0,1,0]),ColorFilter.matrix(<double>[.88,.04,.02,0,0,.02,.92,.04,0,8,.02,.04,1.12,0,14,0,0,0,1,0]),ColorFilter.matrix(<double>[.72,.12,.08,0,0,.08,.82,.1,0,6,.04,.1,1.02,0,12,0,0,0,1,0]),ColorFilter.matrix(<double>[.9,.08,.02,0,10,.02,.88,.04,0,2,.02,.06,.82,0,0,0,0,0,1,0])][filter],child:Image.memory(bytes,fit:BoxFit.contain,width:constraints.maxWidth,height:constraints.maxHeight)))),
       CustomPaint(painter:_PreviewStrokePainter([...strokes,if(activeStroke.isNotEmpty)activeStroke])),
      ])
     )))),
@@ -779,10 +786,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      Row(children:[
       _previewTool(t('قص','Crop'),Icons.crop_rounded,crop>1.01,()=>setEditor(()=>crop=crop>=1.8?1.0:crop+.2)),
       _previewTool(t('رسم','Draw'),Icons.draw_rounded,drawing,()=>setEditor(()=>drawing=!drawing)),
-      _previewTool(t('الفلاتر','Filters'),Icons.filter_vintage_rounded,filter!=0,()=>setEditor(()=>filter=(filter+1)%8)),
+      _previewTool(t('الفلاتر','Filters'),Icons.filter_vintage_rounded,filter!=0,()=>setEditor(()=>filter=(filter+1)%15)),
       _previewTool('HD',Icons.hd_rounded,hd,()=>setEditor(()=>hd=!hd))
      ]),
-     const SizedBox(height:8),Row(children:[Expanded(child:Text(hd?t('الجودة الأصلية · دون ضغط إضافي','Original quality · no extra compression'):t('جودة متوازنة · حجم أقل','Balanced quality · smaller size'),style:TextStyle(color:skin.accent,fontSize:11))),Text(t('فلتر '+(filter+1).toString()+' / 8','Filter '+(filter+1).toString()+' / 4'),style:TextStyle(color:skin.accent,fontSize:10)),IconButton(onPressed:()=>setEditor((){filter=0;crop=1;drawing=false;strokes.clear();activeStroke.clear();}),icon:Icon(Icons.restart_alt_rounded,color:skin.accent))]),
+     const SizedBox(height:8),Row(children:[Expanded(child:Text(hd?t('الجودة الأصلية · دون ضغط إضافي','Original quality · no extra compression'):t('جودة متوازنة · حجم أقل','Balanced quality · smaller size'),style:TextStyle(color:skin.accent,fontSize:11))),Text(t('فلتر '+(filter+1).toString()+' / 15','Filter '+(filter+1).toString()+' / 15'),style:TextStyle(color:skin.accent,fontSize:10)),IconButton(onPressed:()=>setEditor((){filter=0;crop=1;drawing=false;strokes.clear();activeStroke.clear();}),icon:Icon(Icons.restart_alt_rounded,color:skin.accent))]),
      Wrap(spacing:7,children:[
       ChoiceChip(label:Text(t('عادية','Normal')),selected:mode=='normal',onSelected:(_)=>setEditor(()=>mode='normal')),
       ChoiceChip(label:Text(t('مرة واحدة','Once')),selected:mode=='once',onSelected:(_)=>setEditor(()=>mode='once')),
@@ -934,7 +941,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    final player=controller;
    if(!mounted){await player.dispose();return;}
    await player.setLooping(false);
-   await showDialog<void>(context:context,barrierDismissible:false,barrierColor:Colors.black,builder:(ctx){
+   void refreshPlayer(){if(mounted&&player.value.isInitialized){/* listener drives live progress and clock */}}
+   player.addListener(refreshPlayer);
+   try{await showDialog<void>(context:context,barrierDismissible:false,barrierColor:Colors.black,builder:(ctx){
     return StatefulBuilder(builder:(ctx,setModal){
      void toggle(){setModal((){player.value.isPlaying?player.pause():player.play();});}
      String clock(Duration d){final sec=d.inSeconds;return '${(sec~/60).toString().padLeft(2,'0')}:${(sec%60).toString().padLeft(2,'0')}';}
@@ -958,13 +967,13 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
        Padding(padding:const EdgeInsets.fromLTRB(18,18,18,22),child:Container(padding:const EdgeInsets.fromLTRB(14,14,14,12),decoration:BoxDecoration(color:const Color(0xFF171421),borderRadius:BorderRadius.circular(22),border:Border.all(color:_gold.withValues(alpha:.18)),boxShadow:[BoxShadow(color:_gold.withValues(alpha:.06),blurRadius:18)]),child:Column(mainAxisSize:MainAxisSize.min,children:[
         Row(children:[Text(clock(current),style:const TextStyle(color:Colors.white)),Expanded(child:Slider(value:progress,min:0,max:max,onChanged:(v)=>setModal(()=>player.seekTo(Duration(milliseconds:v.round()))),activeColor:_gold,inactiveColor:Colors.white12)),Text(clock(duration),style:TextStyle(color:Colors.white.withValues(alpha:.65)))]),
         Row(children:[
-         IconButton(onPressed:()=>setModal(()=>player.seekTo(Duration(seconds:(current.inSeconds-10).clamp(0,duration.inSeconds)))),icon:const Icon(Icons.replay_10_rounded,color:Colors.white,size:26)),
+         IconButton(onPressed:()=>setModal(()=>player.seekTo(Duration(seconds:(current.inSeconds-10).clamp(0,duration.inSeconds).toInt()))),icon:const Icon(Icons.replay_10_rounded,color:Colors.white,size:26)),
          const Spacer(),
          IconButton(onPressed:()=>setModal(()=>player.seekTo(Duration.zero)),icon:const Icon(Icons.restart_alt_rounded,color:Colors.white70,size:24)),
          const SizedBox(width:10),
          InkWell(onTap:toggle,borderRadius:BorderRadius.circular(40),child:Container(width:58,height:58,decoration:BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[_gold,Color.lerp(_gold,skin.accent,.5)!]),boxShadow:[BoxShadow(color:_gold.withValues(alpha:.24),blurRadius:18)]),child:Icon(player.value.isPlaying?Icons.pause_rounded:Icons.play_arrow_rounded,color:const Color(0xFF18121F),size:34))),
          const SizedBox(width:10),
-         IconButton(onPressed:()=>setModal(()=>player.seekTo(Duration(seconds:(current.inSeconds+10).clamp(0,duration.inSeconds)))),icon:const Icon(Icons.forward_10_rounded,color:Colors.white,size:26)),
+         IconButton(onPressed:()=>setModal(()=>player.seekTo(Duration(seconds:(current.inSeconds+10).clamp(0,duration.inSeconds).toInt()))),icon:const Icon(Icons.forward_10_rounded,color:Colors.white,size:26)),
          const Spacer(),
          PopupMenuButton<double>(initialValue:1.0,color:const Color(0xFF282333),onSelected:(v)=>setModal(()=>player.setPlaybackSpeed(v)),itemBuilder:(_)=>[.5,.75,1,1.25,1.5,2].map((v)=>PopupMenuItem(value:v,child:Text('${v}x',style:const TextStyle(color:Colors.white)))).toList(),child:Padding(padding:const EdgeInsets.all(8),child:Text('${player.value.playbackSpeed}x',style:TextStyle(color:_gold,fontWeight:FontWeight.w800))))
         ]),
@@ -973,7 +982,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       ])
      ])));
     });
-   });
+   });}finally{player.removeListener(refreshPlayer);}
   }catch(e){_show(t('تعذر تشغيل الفيديو. تحقق من الاتصال.','Could not play video. Check your connection.'));}
   finally{await controller?.dispose();}
  }
