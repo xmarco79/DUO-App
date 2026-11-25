@@ -242,14 +242,37 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
  required double currentOpacity,currentZoom,currentRotation,currentDim,currentOffsetX,currentOffsetY,
 }) async {
  final exists=currentPath!=null&&await File(currentPath).exists();
- final action=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF171326),showDragHandle:true,
-  builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-   Padding(padding:const EdgeInsets.fromLTRB(18,12,18,8),child:Row(children:[Icon(Icons.wallpaper_rounded,color:skin.accent,size:24),const SizedBox(width:10),Expanded(child:Text(t('استوديو خلفية المحادثة','Chat wallpaper studio'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900)))])),
-   ListTile(leading:Icon(Icons.add_photo_alternate_outlined,color:skin.accent),title:Text(t('اختيار خلفية جديدة','Choose a new wallpaper')),subtitle:Text(t('اختر صورة ثم خصّص موضعها ووضوحها','Choose a photo, then customize its position and clarity')),onTap:()=>Navigator.pop(ctx,'new')),
-   if(exists)ListTile(leading:Icon(Icons.tune_rounded,color:skin.accent),title:Text(t('تعديل الخلفية الحالية','Edit current wallpaper')),subtitle:Text(t('استكمل التعديل دون اختيار صورة من جديد','Continue editing your current image')),onTap:()=>Navigator.pop(ctx,'edit')),
-   if(exists)ListTile(leading:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent),title:Text(t('إزالة الخلفية','Remove wallpaper')),onTap:()=>Navigator.pop(ctx,'remove')),
-   const SizedBox(height:8),
-  ])));
+ final action=await showModalBottomSheet<String>(context:context,backgroundColor:Colors.transparent,isScrollControlled:true,
+  builder:(ctx)=>SafeArea(child:Container(
+   margin:const EdgeInsets.fromLTRB(10,0,10,10),padding:const EdgeInsets.fromLTRB(18,12,18,18),
+   decoration:BoxDecoration(color:const Color(0xFF171326),borderRadius:BorderRadius.circular(28),border:Border.all(color:skin.accent.withValues(alpha:.28)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.30),blurRadius:28,offset:const Offset(0,-5))]),
+   child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Center(child:Container(width:38,height:4,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.42),borderRadius:BorderRadius.circular(8)))),
+    const SizedBox(height:18),
+    Row(children:[Container(width:44,height:44,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.13),borderRadius:BorderRadius.circular(15)),child:Icon(Icons.wallpaper_rounded,color:skin.accent,size:23)),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Text(t('استوديو خلفية المحادثة','Chat wallpaper studio'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900)),
+     Text(t('اصنع أجواء محادثتك الخاصة','Create your own conversation atmosphere'),style:TextStyle(color:Colors.white.withValues(alpha:.58),fontSize:11))
+    ]))]),
+    const SizedBox(height:16),
+    Container(height:132,decoration:BoxDecoration(color:const Color(0xFF292338),borderRadius:BorderRadius.circular(20),border:Border.all(color:skin.accent.withValues(alpha:.18))),clipBehavior:Clip.antiAlias,child:Stack(fit:StackFit.expand,children:[
+     if(exists)Image.file(File(currentPath),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())
+     else DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[skin.bg,skin.partner,skin.bg]))),
+     DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.black.withValues(alpha:.04),Colors.black.withValues(alpha:.72)]))),
+     PositionedDirectional(start:12,bottom:12,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.circle,size:7,color:exists?skin.accent:Colors.white54),const SizedBox(width:6),Text(exists?t('الخلفية الحالية','Current wallpaper'):t('لا توجد خلفية مخصصة','No custom wallpaper'),style:const TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w800))]),
+      const SizedBox(height:3),Text(exists?t('معاينة مباشرة لمظهر المحادثة','Preview of your chat background'):t('اختر صورة لتخصيص المساحة','Choose an image to personalize your space'),style:TextStyle(color:Colors.white.withValues(alpha:.72),fontSize:10))
+     ]))
+    ])),
+    const SizedBox(height:14),
+    _wallpaperStudioAction(ctx,icon:Icons.add_photo_alternate_rounded,title:t('اختيار خلفية جديدة','Choose a new wallpaper'),subtitle:t('اختر صورة من جهازك وابدأ التخصيص','Pick an image and start customizing'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'new')),
+    if(exists) ...[
+     const SizedBox(height:9),
+     _wallpaperStudioAction(ctx,icon:Icons.tune_rounded,title:t('تعديل الخلفية الحالية','Edit current wallpaper'),subtitle:t('تابع ضبط الموضع والسطوع والتكبير','Adjust position, brightness and zoom'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'edit')),
+     const SizedBox(height:9),
+     _wallpaperStudioAction(ctx,icon:Icons.delete_outline_rounded,title:t('إزالة الخلفية','Remove wallpaper'),subtitle:t('العودة إلى خلفية الثيم الأصلية','Restore the theme background'),accent:Colors.redAccent,onTap:()=>Navigator.pop(ctx,'remove'),danger:true),
+    ],
+   ])
+  )));
  if(action==null)return null;
  final prefs=await SharedPreferences.getInstance();
  if(action=='remove'){
@@ -1058,6 +1081,13 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
  Future<void> _saveImageLocally(String url)async{
   try{final bytes=await _downloadImage(url);final result=await FilePicker.platform.saveFile(fileName:'OURS_image_${DateTime.now().millisecondsSinceEpoch}.jpg',type:FileType.image,bytes:bytes);if(result!=null)_show(t('تم حفظ الصورة في المكان الذي اخترته','Image saved to your selected location'));}
   catch(_){_show(t('تعذر حفظ الصورة، تحقق من الاتصال أو مساحة التخزين','Could not save image. Check connection or storage'));}
+ }
+ Widget _wallpaperStudioAction(BuildContext ctx,{required IconData icon,required String title,required String subtitle,required Color accent,required VoidCallback onTap,bool danger=false}) {
+  return Material(color:Colors.transparent,child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(17),child:Container(
+   padding:const EdgeInsets.symmetric(horizontal:13,vertical:12),
+   decoration:BoxDecoration(color:accent.withValues(alpha:.075),borderRadius:BorderRadius.circular(17),border:Border.all(color:accent.withValues(alpha:.18))),
+   child:Row(children:[Container(width:38,height:38,decoration:BoxDecoration(color:accent.withValues(alpha:.13),borderRadius:BorderRadius.circular(12)),child:Icon(icon,color:accent,size:20)),const SizedBox(width:11),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:TextStyle(color:danger?accent:Colors.white,fontWeight:FontWeight.w800,fontSize:12)),const SizedBox(height:3),Text(subtitle,style:TextStyle(color:Colors.white.withValues(alpha:.55),fontSize:10))])),Icon(Icons.chevron_right_rounded,color:accent.withValues(alpha:.7))])
+  )));
  }
  Future<void> _openLibraryItem(Map<String,dynamic> message) async{
   final type=message['message_type']?.toString()??'';
