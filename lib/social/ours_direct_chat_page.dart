@@ -1189,7 +1189,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        if(m['edited_at']!=null||pinnedMessageIds.contains(m['id'].toString()))Padding(padding:const EdgeInsets.only(bottom:3),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Row(mainAxisSize:MainAxisSize.min,children:[if(pinnedMessageIds.contains(m['id'].toString()))Icon(Icons.push_pin_rounded,size:10,color:skin.accent),if(pinnedMessageIds.contains(m['id'].toString()))const SizedBox(width:3),if(pinnedMessageIds.contains(m['id'].toString()))Text(t('مثبّتة','Pinned'),style:TextStyle(color:skin.accent,fontSize:9,fontWeight:FontWeight.w800)),if(pinnedMessageIds.contains(m['id'].toString())&&m['edited_at']!=null)const SizedBox(width:5),if(m['edited_at']!=null)Text(t('تم التعديل','Edited'),style:TextStyle(color:skin.accent.withValues(alpha:.8),fontSize:9,fontWeight:FontWeight.w600))]))),
        GestureDetector(
         onLongPress:()=>_messageActions(context,m,mine,type,path),
-        onHorizontalDragStart:(_){setState(()=>{_draggingReplyMessageId=m['id'].toString();_replyDragOffset=0;});},
+        onHorizontalDragStart:(_){setState((){_draggingReplyMessageId=m['id'].toString();_replyDragOffset=0;});},
         onHorizontalDragUpdate:(details){
          final logicalDelta=(details.primaryDelta??0)*(ar?-1:1);
          if(_draggingReplyMessageId==m['id'].toString()){
@@ -1199,9 +1199,9 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onHorizontalDragEnd:(details){
          final logicalVelocity=(details.primaryVelocity??0)*(ar?-1:1);
          final shouldReply=_draggingReplyMessageId==m['id'].toString()&&(_replyDragOffset>=58||(_replyDragOffset>=22&&logicalVelocity>520));
-         setState(()=>{_draggingReplyMessageId=null;_replyDragOffset=0;if(shouldReply)replyTo=m;});
+         setState((){_draggingReplyMessageId=null;_replyDragOffset=0;if(shouldReply)replyTo=m;});
         },
-        onHorizontalDragCancel:(){if(_draggingReplyMessageId==m['id'].toString())setState(()=>{_draggingReplyMessageId=null;_replyDragOffset=0;});},
+        onHorizontalDragCancel:(){if(_draggingReplyMessageId==m['id'].toString())setState((){_draggingReplyMessageId=null;_replyDragOffset=0;});},
         child:Stack(alignment:AlignmentDirectional.centerStart,children:[
          if(_draggingReplyMessageId==m['id'].toString())
           PositionedDirectional(start:5,child:Opacity(opacity:(_replyDragOffset/58).clamp(0.0,1.0),child:Transform.scale(scale:(.72+(_replyDragOffset/58).clamp(0.0,1.0)*.28),child:Icon(Icons.reply_rounded,color:skin.accent,size:22)))),
