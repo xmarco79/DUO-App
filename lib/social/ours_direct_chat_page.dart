@@ -715,7 +715,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final id='${hex.substring(0,8)}-${hex.substring(8,12)}-${hex.substring(12,16)}-${hex.substring(16,20)}-${hex.substring(20)}';
   final created=DateTime.now().toUtc().toIso8601String();
   final row=<String,dynamic>{'id':id,'conversation_id':widget.conversationId,'sender_id':uid,'body':body,'message_type':'text','reply_to':replyId,'created_at':created,'local_pending':true};
-  final queue=await _readOutbox();queue.add(row);await _writeOutbox(queue);
+  final queue=await _readOutbox();if(!queue.any((item)=>item['id'].toString()==id))queue.add(row);await _writeOutbox(queue);
   if(!mounted)return;
   setState(()=>messages.add(row));messages.sort(_compareMessages);await _persistChatCache();_bottom();
  }
@@ -725,7 +725,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   try{
    final queue=await _readOutbox();if(queue.isEmpty)return;
    final remaining=<Map<String,dynamic>>[];
-   for(final item in queue){
+   for(var i=0;i<queue.length;i++){
+    final item=queue[i];
     try{
      final payload=Map<String,dynamic>.from(item)..remove('local_pending');
      await db.from('duo_direct_messages').upsert(payload,onConflict:'id',ignoreDuplicates:true);
@@ -733,7 +734,11 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       final index=messages.indexWhere((m)=>m['id'].toString()==item['id'].toString());
       if(index>=0){final saved=Map<String,dynamic>.from(item)..remove('local_pending');setState(()=>messages[index]=saved);}
      }
-    }catch(_){remaining.add(item);}
+    }catch(_){
+     // Keep this message and every later message queued to preserve send order.
+     remaining.addAll(queue.skip(i));
+     break;
+    }
    }
    await _writeOutbox(remaining);await _persistChatCache();
   }finally{_syncingOutbox=false;}
