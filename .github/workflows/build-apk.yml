@@ -7,6 +7,7 @@ on:
       - feature/ours-two-person-expansion
       - feature/ours-polish-stickers-themes
       - feature/ours-bubble-polish-build979
+      - feature/ours-preserve-latest-chat-polish-20261125
   pull_request:
     branches:
       - feature/full-ours-worlds
