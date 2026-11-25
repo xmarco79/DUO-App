@@ -977,7 +977,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
          const SizedBox(width:10),
          IconButton(onPressed:()=>setModal(()=>player.seekTo(Duration(seconds:(current.inSeconds+10).clamp(0,duration.inSeconds).toInt()))),icon:const Icon(Icons.forward_10_rounded,color:Colors.white,size:26)),
          const Spacer(),
-         PopupMenuButton<double>(initialValue:1.0,color:const Color(0xFF282333),onSelected:(v)=>setModal(()=>player.setPlaybackSpeed(v)),itemBuilder:(_)=>[.5,.75,1,1.25,1.5,2].map((v)=>PopupMenuItem(value:v,child:Text('${v}x',style:const TextStyle(color:Colors.white)))).toList(),child:Padding(padding:const EdgeInsets.all(8),child:Text('${player.value.playbackSpeed}x',style:TextStyle(color:_gold,fontWeight:FontWeight.w800))))
+         PopupMenuButton<double>(initialValue:1.0,color:const Color(0xFF282333),onSelected:(v)=>setModal(()=>player.setPlaybackSpeed(v)),itemBuilder:(_)=><PopupMenuEntry<double>>[.5,.75,1.0,1.25,1.5,2.0].map<double>((v)=>PopupMenuItem<double>(value:v,child:Text('${v}x',style:const TextStyle(color:Colors.white)))).toList(),child:Padding(padding:const EdgeInsets.all(8),child:Text('${player.value.playbackSpeed}x',style:TextStyle(color:_gold,fontWeight:FontWeight.w800))))
         ]),
         if(messageId!=null)Padding(padding:const EdgeInsets.only(top:4),child:TextButton.icon(onPressed:(){Navigator.pop(ctx);_jumpToMessage(messageId);},icon:Icon(Icons.chat_bubble_outline_rounded,color:skin.accent,size:17),label:Text(t('العودة إلى الرسالة','Back to message'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w700))))
        ])))
@@ -1528,7 +1528,7 @@ class _OursAiPageState extends State<OursAiPage>{
   if(mounted)setState(()=>skin=_skins.firstWhere((x)=>x.id==selected,orElse:()=>_skins.first));
  }
  Future<void> _chooseWallpaper()async{
-  final result=await _openOursWallpaperStudio(context:context,skin:skin,t:t,currentPath:wallpaperPath,preferenceKey:'ours_ai_wallpaper',filePrefix:'ours_ai',currentOpacity:wallpaperOpacity,currentZoom:wallpaperZoom,currentRotation:wallpaperRotation,currentDim:wallpaperDim,currentOffsetX:wallpaperOffsetX,currentOffsetY:wallpaperOffsetY,previewMessages:messages,currentUserId:me,partnerName:localPartnerName??widget.partnerName);
+  final result=await _openOursWallpaperStudio(context:context,skin:skin,t:t,currentPath:wallpaperPath,preferenceKey:'ours_ai_wallpaper',filePrefix:'ours_ai',currentOpacity:wallpaperOpacity,currentZoom:wallpaperZoom,currentRotation:wallpaperRotation,currentDim:wallpaperDim,currentOffsetX:wallpaperOffsetX,currentOffsetY:wallpaperOffsetY,);
   if(result==null)return;
   if(mounted)setState((){
    wallpaperPath=result['path'] as String?;
