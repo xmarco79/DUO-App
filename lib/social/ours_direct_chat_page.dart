@@ -186,24 +186,23 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
   final radius=math.min(h*.5,bodyRight*.5);
   final shoulder=bodyRight-radius;
   final notchX=bodyRight-h*.018;
-  final lowerJoinX=bodyRight-h*.08;
-  final bottomStartX=bodyRight-h*.25;
+  final bottomStartX=bodyRight-h*.22;
   double px(double value)=>tailOnLeft?w-value:value;
 
   return Path()
    ..moveTo(px(radius),0)
    ..lineTo(px(shoulder),0)
-   // Long, smooth upper-right capsule shoulder.
+   // Rounded upper shoulder of the capsule body.
    ..cubicTo(px(bodyRight-radius*.48),0,px(bodyRight),radius*.42,px(bodyRight),radius)
    ..lineTo(px(bodyRight),h*.49)
-   // The tiny inward scoop on the outer edge.
+   // Small inward scoop above the tail, as in the supplied silhouette.
    ..cubicTo(px(bodyRight),h*.60,px(notchX),h*.675,px(notchX),h*.735)
-   // The tail flows down and outward to its fine rounded tip.
+   // Outer contour of the tail, ending at its fine tip.
    ..cubicTo(px(notchX),h*.855,px(bodyRight-h*.035),h*.985,px(w),h*.99)
-   // A single clean underside sweep returns to the body's lower-right edge.
-   ..cubicTo(px(bodyRight-h*.03),h*.985,px(bodyRight-h*.035),h*.84,px(lowerJoinX),h*.84)
-   // The transition settles into a truly horizontal lower edge.
-   ..cubicTo(px(bodyRight-h*.14),h*.84,px(bodyRight-h*.19),h,px(bottomStartX),h)
+   // Underside of the tail sweeps back upward before joining the baseline.
+   ..cubicTo(px(bodyRight-h*.045),h*.985,px(bodyRight-h*.105),h*.925,px(bodyRight-h*.145),h*.895)
+   ..cubicTo(px(bodyRight-h*.18),h*.92,px(bodyRight-h*.19),h*.97,px(bottomStartX),h)
+   // The lower edge is a single perfectly straight horizontal segment.
    ..lineTo(px(radius),h)
    ..cubicTo(px(radius*.42),h,px(0),h-radius*.42,px(0),h-radius)
    ..lineTo(px(0),radius)
