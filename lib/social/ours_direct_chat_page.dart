@@ -1321,7 +1321,19 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
           if(type=='sticker')FutureBuilder<String>(future:_signedSticker(path),builder:(c,s)=>s.hasData?Center(child:Image.network(s.data!,width:150,height:150,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:42))):SizedBox(width:110,height:90,child:Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:2))))
           else if(type=='view_once'||type=='view_twice')
            ((m['view_count'] as num?)?.toInt()??0)>=((m['max_views'] as num?)?.toInt()??1)||m['viewed_at']!=null
-            ?Text(t('انتهت المشاهدات','No views left'),style:TextStyle(color:skin.accent,fontSize:12))
+            ?Container(
+             padding:const EdgeInsets.symmetric(horizontal:13,vertical:9),
+             decoration:BoxDecoration(
+              color:skin.accent.withValues(alpha:.10),
+              borderRadius:BorderRadius.circular(15),
+              border:Border.all(color:skin.accent.withValues(alpha:.34),width:1),
+             ),
+             child:Row(mainAxisSize:MainAxisSize.min,children:[
+              Icon(Icons.visibility_off_outlined,color:skin.accent,size:16),
+              const SizedBox(width:7),
+              Text(t('تمت المشاهدة','Viewed'),style:TextStyle(color:skin.accent,fontSize:12,fontWeight:FontWeight.w800)),
+             ]),
+            )
             :FutureBuilder<String>(future:_signed(path),builder:(c,s)=>s.hasData
              ?InkWell(onTap:()=>_consumeTemporaryMedia(m['id'].toString()),borderRadius:BorderRadius.circular(16),child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Container(width:220,height:145,color:skin.partner,child:Stack(fit:StackFit.expand,children:[
               if(m['mime_type']?.toString().startsWith('video/')==true)ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:30,sigmaY:30),child:Container(decoration:BoxDecoration(gradient:LinearGradient(colors:[skin.accent.withValues(alpha:.30),skin.partner.withValues(alpha:.88),skin.mine.withValues(alpha:.55)])))) else ImageFiltered(imageFilter:ImageFilter.blur(sigmaX:30,sigmaY:30),child:Image.network(s.data!,fit:BoxFit.cover,color:skin.accent.withValues(alpha:.16),colorBlendMode:BlendMode.overlay)),
