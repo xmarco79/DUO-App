@@ -1134,6 +1134,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        onTap:(){Navigator.pop(ctx);_openLibraryItem(m);},
        child:Stack(fit:StackFit.expand,children:[
         if(type=='image'&&!temporary&&path.isNotEmpty)FutureBuilder<String>(future:_signed(path),builder:(context,snapshot)=>snapshot.hasData?Image.network(snapshot.data!,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Container(color:skin.partner,child:Icon(Icons.broken_image_outlined,color:skin.accent))):Container(color:skin.partner,child:Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:1.8))))
+        else if(video&&!temporary&&path.isNotEmpty)FutureBuilder<String>(future:_signed(path),builder:(context,snapshot)=>snapshot.hasData?_LibraryVideoPreview(url:snapshot.data!,accent:skin.accent):Container(color:skin.partner,child:Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:1.8))))
         else DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[skin.partner,skin.bg,skin.accent.withValues(alpha:.22)])),child:Center(child:Icon(temporary?Icons.timer_outlined:(video?Icons.play_circle_fill_rounded:Icons.insert_drive_file_rounded),color:Colors.white.withValues(alpha:.9),size:35))),
         DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.transparent,Colors.black.withValues(alpha:.68)]))),
         PositionedDirectional(start:7,end:7,bottom:7,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -1827,4 +1828,30 @@ class _PreviewStrokePainter extends CustomPainter{
   for(final stroke in strokes){if(stroke.length<2)continue;final path=Path()..moveTo(stroke.first.dx*size.width,stroke.first.dy*size.height);for(final point in stroke.skip(1)){path.lineTo(point.dx*size.width,point.dy*size.height);}canvas.drawPath(path,Paint()..color=const Color(0xFFFFD66B)..strokeWidth=4..strokeCap=StrokeCap.round..style=PaintingStyle.stroke);}
  }
  @override bool shouldRepaint(covariant _PreviewStrokePainter old)=>old.strokes!=strokes;
+}
+
+
+class _LibraryVideoPreview extends StatefulWidget {
+ final String url;final Color accent;
+ const _LibraryVideoPreview({required this.url,required this.accent});
+ @override State<_LibraryVideoPreview> createState()=>_LibraryVideoPreviewState();
+}
+class _LibraryVideoPreviewState extends State<_LibraryVideoPreview> {
+ VideoPlayerController? controller;
+ @override void initState(){super.initState();_initialize();}
+ Future<void> _initialize()async{
+  final player=VideoPlayerController.networkUrl(Uri.parse(widget.url));
+  controller=player;
+  try{await player.initialize();await player.pause();if(mounted)setState((){});}
+  catch(_){await player.dispose();if(identical(controller,player))controller=null;if(mounted)setState((){});}
+ }
+ @override void dispose(){controller?.dispose();super.dispose();}
+ @override Widget build(BuildContext context){
+  final player=controller;
+  if(player==null||!player.value.isInitialized)return Container(color:const Color(0xFF302A40),child:Center(child:Icon(Icons.movie_outlined,color:widget.accent,size:30)));
+  return Stack(fit:StackFit.expand,children:[
+   ClipRect(child:FittedBox(fit:BoxFit.cover,child:SizedBox(width:player.value.size.width,height:player.value.size.height,child:VideoPlayer(player)))),
+   Center(child:Container(width:36,height:36,decoration:BoxDecoration(color:Colors.black.withValues(alpha:.48),shape:BoxShape.circle,border:Border.all(color:Colors.white.withValues(alpha:.7))),child:const Icon(Icons.play_arrow_rounded,color:Colors.white,size:25)))
+  ]);
+ }
 }
