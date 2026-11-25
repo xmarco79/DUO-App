@@ -1193,7 +1193,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onHorizontalDragUpdate:(details){
          final logicalDelta=(details.primaryDelta??0)*(ar?-1:1);
          if(_draggingReplyMessageId==m['id'].toString()){
-          setState(()=>_replyDragOffset=(_replyDragOffset+logicalDelta).clamp(0.0,76.0));
+          setState(()=>_replyDragOffset=(_replyDragOffset+logicalDelta).clamp(0.0,76.0).toDouble());
          }
         },
         onHorizontalDragEnd:(details){
@@ -1204,7 +1204,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         onHorizontalDragCancel:(){if(_draggingReplyMessageId==m['id'].toString())setState((){_draggingReplyMessageId=null;_replyDragOffset=0;});},
         child:Stack(alignment:AlignmentDirectional.centerStart,children:[
          if(_draggingReplyMessageId==m['id'].toString())
-          PositionedDirectional(start:5,child:Opacity(opacity:(_replyDragOffset/58).clamp(0.0,1.0),child:Transform.scale(scale:(.72+(_replyDragOffset/58).clamp(0.0,1.0)*.28),child:Icon(Icons.reply_rounded,color:skin.accent,size:22)))),
+          PositionedDirectional(start:5,child:Opacity(opacity:(_replyDragOffset/58).clamp(0.0,1.0).toDouble(),child:Transform.scale(scale:(.72+(_replyDragOffset/58).clamp(0.0,1.0).toDouble()*.28),child:Icon(Icons.reply_rounded,color:skin.accent,size:22)))),
          Transform.translate(offset:Offset((ar?-1:1)*(_draggingReplyMessageId==m['id'].toString()?_replyDragOffset:0),0),child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8)),
          decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?const Color(0xFFB9B4C6).withValues(alpha:.58):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .8 : (isVisualMessage ? 0 : .55))),borderRadius:isOutlinedMedia?BorderRadius.circular(18):(isVisualMessage?BorderRadius.circular(15):null)),
