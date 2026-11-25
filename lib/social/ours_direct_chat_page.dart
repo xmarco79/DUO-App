@@ -845,7 +845,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    try{final result=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['png','jpg','jpeg','webp','gif'],withData:true);if(result==null||result.files.isEmpty)return;final file=result.files.single,bytes=file.bytes??(file.path==null?null:await File(file.path!).readAsBytes());if(bytes==null)return;await _upload(bytes,'sticker_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+file.name.split('.').last.toLowerCase(),'sticker');}
    catch(e){_show(t('تعذر إضافة الملصق: $e','Could not add sticker: $e'));}
   }
- Future<void> _playVideo(String path) async {
+ Future<void> _playVideo(String path,{String? messageId}) async {
   VideoPlayerController? controller;
   try {
    final url = await _signed(path);
@@ -859,7 +859,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      IconButton(onPressed: () => setModal(() { player.value.isPlaying ? player.pause() : player.play(); }), icon: Icon(player.value.isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white)),
      IconButton(onPressed: () => setModal(() { player.seekTo(Duration.zero); }), icon: const Icon(Icons.replay, color: Colors.white))
     ]),
-    TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t('إغلاق','Close'), style: const TextStyle(color: Colors.white)))
+    Wrap(alignment:WrapAlignment.center,spacing:8,children:[
+     TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t('إغلاق','Close'), style: const TextStyle(color: Colors.white))),
+     if(messageId!=null)TextButton.icon(onPressed:(){Navigator.pop(ctx);_jumpToMessage(messageId);},icon:const Icon(Icons.my_location_rounded,color:Colors.white),label:Text(t('إظهار في المحادثة','Show in chat'),style:const TextStyle(color:Colors.white)))
+    ])
    ]))));
   } catch (e) { _show(t('تعذر تشغيل الفيديو. تحقق من الاتصال.','Could not play video. Check your connection.')); }
   finally { await controller?.dispose(); }
@@ -1061,7 +1064,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد نتائج','No results'))):ListView(children:found.map((m)=>ListTile(title:Text(m['body'].toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])),onTap:(){Navigator.pop(ctx);_jumpToMessage(m['id'].toString());})).toList()))
   ]))));
  }
- Future<void> _openImageActions(String url) async{
+ Future<void> _openImageActions(String url,{String? messageId}) async{
   if(!mounted)return;
   await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>Dialog(
    backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,
@@ -1069,6 +1072,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
     Expanded(child:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Center(child:Text(t('تعذر تحميل الصورة','Image failed to load'),style:const TextStyle(color:Colors.white))))))),
     Container(padding:const EdgeInsets.fromLTRB(10,8,10,12),decoration:BoxDecoration(color:skin.partner,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.18)))),child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
      TextButton.icon(onPressed:()=>Navigator.pop(ctx),icon:Icon(Icons.close,color:skin.accent),label:Text(t('إغلاق','Close'))),
+     if(messageId!=null)TextButton.icon(onPressed:(){Navigator.pop(ctx);_jumpToMessage(messageId);},icon:Icon(Icons.my_location_rounded,color:skin.accent),label:Text(t('إظهار في المحادثة','Show in chat'))),
      TextButton.icon(onPressed:()async{Navigator.pop(ctx);await _saveImageLocally(url);},icon:Icon(Icons.download_rounded,color:skin.accent),label:Text(t('حفظ','Save'))),
      TextButton.icon(onPressed:()async{Navigator.pop(ctx);try{final bytes=await _downloadImage(url);if(!mounted)return;await showDialog<void>(context:context,builder:(_)=>_ImageMarkupDialog(bytes:bytes,skin:skin,ar:ar));}catch(_){_show(t('تعذر فتح أدوات الرسم','Could not open drawing tools'));}},icon:Icon(Icons.draw_rounded,color:skin.accent),label:Text(t('الرسم','Draw')))
     ]))
@@ -1094,19 +1098,65 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
   final path=message['body']?.toString()??'';
   if(type=='view_once'||type=='view_twice'){await _consumeTemporaryMedia(message['id'].toString());return;}
   if(type=='image'){
-   try{final url=await _signed(path);if(!mounted)return;await _openImageActions(url);}
+   try{final url=await _signed(path);if(!mounted)return;await _openImageActions(url,messageId:message['id'].toString());}
    catch(_){_show(t('تعذر فتح الصورة. تحقق من الاتصال.','Could not open image. Check your connection.'));}
    return;
   }
+  if(type=='video'){await _playVideo(path,messageId:message['id'].toString());return;}
   await _openFile(path);
  }
  Future<void> _showChatLibrary(String kind) async{
   final types=kind=='media'?['image','view_once','view_twice','video']:['file','audio'];
-  final found=messages.where((m)=>types.contains(m['message_type'])).toList();
-  await showModalBottomSheet<void>(context:context,isScrollControlled:true,backgroundColor:const Color(0xFF211D30),builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.65,child:Column(children:[
-   Padding(padding:const EdgeInsets.all(16),child:Text(kind=='media'?t('الوسائط المرسلة','Shared media'):t('الملفات','Files'),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold))),
-   Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد عناصر بعد','Nothing shared yet'))):ListView(children:found.map((m)=>ListTile(leading:Icon(kind=='media'?Icons.image_outlined:Icons.insert_drive_file_outlined,color:skin.accent),title:Text((m['file_name']??(m['body']??'').toString().split('/').last).toString(),maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])),onTap:(){Navigator.pop(ctx);_openLibraryItem(m);})).toList()))
-  ]))));
+  final found=messages.where((m)=>types.contains(m['message_type'])).toList().reversed.toList();
+  await showModalBottomSheet<void>(context:context,isScrollControlled:true,backgroundColor:Colors.transparent,builder:(ctx)=>SafeArea(child:Container(
+   height:MediaQuery.of(ctx).size.height*.80,margin:const EdgeInsets.fromLTRB(8,0,8,8),
+   decoration:BoxDecoration(color:const Color(0xFF211D30),borderRadius:BorderRadius.circular(26),border:Border.all(color:skin.accent.withValues(alpha:.22))),
+   child:Column(children:[
+    Padding(padding:const EdgeInsets.fromLTRB(18,13,14,12),child:Row(children:[
+     Container(width:40,height:40,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.12),borderRadius:BorderRadius.circular(13)),child:Icon(kind=='media'?Icons.photo_library_rounded:Icons.folder_rounded,color:skin.accent)),
+     const SizedBox(width:11),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Text(kind=='media'?t('الوسائط المرسلة','Shared media'):t('الملفات','Files'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900,fontSize:16)),
+      Text('${found.length} ${t('عنصر','items')}',style:TextStyle(color:Colors.white.withValues(alpha:.55),fontSize:10))
+     ])),
+     IconButton(onPressed:()=>Navigator.pop(ctx),icon:Icon(Icons.close_rounded,color:skin.accent))
+    ])),
+    Divider(height:1,color:skin.accent.withValues(alpha:.12)),
+    Expanded(child:found.isEmpty?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+     Icon(kind=='media'?Icons.photo_library_outlined:Icons.folder_open_rounded,size:42,color:skin.accent.withValues(alpha:.5)),
+     const SizedBox(height:10),Text(t('لا توجد عناصر بعد','Nothing shared yet'),style:TextStyle(color:Colors.white.withValues(alpha:.65)))
+    ])):kind=='media'?GridView.builder(
+     padding:const EdgeInsets.all(12),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:9,mainAxisSpacing:9,childAspectRatio:.88),
+     itemCount:found.length,itemBuilder:(context,index){
+      final m=found[index],type=(m['message_type']??'').toString(),path=(m['body']??'').toString();
+      final temporary=type=='view_once'||type=='view_twice';
+      final video=type=='video'||m['mime_type']?.toString().startsWith('video/')==true;
+      return Material(color:const Color(0xFF302A40),borderRadius:BorderRadius.circular(15),clipBehavior:Clip.antiAlias,child:InkWell(
+       onTap:(){Navigator.pop(ctx);_openLibraryItem(m);},
+       child:Stack(fit:StackFit.expand,children:[
+        if(type=='image'&&!temporary&&path.isNotEmpty)FutureBuilder<String>(future:_signed(path),builder:(context,snapshot)=>snapshot.hasData?Image.network(snapshot.data!,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Container(color:skin.partner,child:Icon(Icons.broken_image_outlined,color:skin.accent))):Container(color:skin.partner,child:Center(child:CircularProgressIndicator(color:skin.accent,strokeWidth:1.8))))
+        else DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[skin.partner,skin.bg,skin.accent.withValues(alpha:.22)])),child:Center(child:Icon(temporary?Icons.timer_outlined:(video?Icons.play_circle_fill_rounded:Icons.insert_drive_file_rounded),color:Colors.white.withValues(alpha:.9),size:35))),
+        DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.transparent,Colors.black.withValues(alpha:.68)]))),
+        PositionedDirectional(start:7,end:7,bottom:7,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+         if(video)Row(children:[const Icon(Icons.play_arrow_rounded,color:Colors.white,size:13),Text(t('فيديو','Video'),style:const TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w700))])
+         else if(temporary)Text(t('مؤقتة','Temporary'),style:const TextStyle(color:Colors.white,fontSize:9,fontWeight:FontWeight.w700)),
+         Text(_time(m['created_at']),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:Colors.white.withValues(alpha:.85),fontSize:9))
+        ]))
+       ])
+      ));
+     }
+    ):ListView.separated(
+     padding:const EdgeInsets.all(12),itemCount:found.length,separatorBuilder:(_,__)=>Divider(color:skin.accent.withValues(alpha:.10)),
+     itemBuilder:(context,index){final m=found[index];return ListTile(
+      contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:3),
+      leading:Container(width:44,height:44,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.12),borderRadius:BorderRadius.circular(13)),child:Icon(m['message_type']=='audio'?Icons.audio_file_rounded:Icons.insert_drive_file_outlined,color:skin.accent)),
+      title:Text((m['file_name']??(m['body']??'').toString().split('/').last).toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700)),
+      subtitle:Text(_time(m['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:10)),
+      trailing:Icon(Icons.open_in_new_rounded,color:skin.accent,size:18),
+      onTap:(){Navigator.pop(ctx);_openLibraryItem(m);}
+     );}
+    ))
+   ])
+  )));
  }
    @override void dispose(){typingTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));if(liveChannel!=null){unawaited(liveChannel!.untrack().then<void>((_){}));db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
  @override Widget build(BuildContext context){
