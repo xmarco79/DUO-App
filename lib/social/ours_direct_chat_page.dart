@@ -928,24 +928,54 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Future<void> _playVideo(String path,{String? messageId}) async {
   VideoPlayerController? controller;
   try {
-   final url = await _signed(path);
-   controller = VideoPlayerController.networkUrl(Uri.parse(url));
+   final url=await _signed(path);
+   controller=VideoPlayerController.networkUrl(Uri.parse(url));
    await controller.initialize();
-   final player = controller;
-   if (!mounted) { await player.dispose(); return; }
-   await showDialog<void>(context: context, barrierColor: Colors.black, builder: (ctx) => StatefulBuilder(builder: (ctx, setModal) => Dialog(backgroundColor: Colors.black, insetPadding: const EdgeInsets.all(12), child: Column(mainAxisSize: MainAxisSize.min, children: [
-    AspectRatio(aspectRatio: player.value.aspectRatio, child: VideoPlayer(player)),
-    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-     IconButton(onPressed: () => setModal(() { player.value.isPlaying ? player.pause() : player.play(); }), icon: Icon(player.value.isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white)),
-     IconButton(onPressed: () => setModal(() { player.seekTo(Duration.zero); }), icon: const Icon(Icons.replay, color: Colors.white))
-    ]),
-    Wrap(alignment:WrapAlignment.center,spacing:8,children:[
-     TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t('إغلاق','Close'), style: const TextStyle(color: Colors.white))),
-     if(messageId!=null)TextButton.icon(onPressed:(){Navigator.pop(ctx);_jumpToMessage(messageId);},icon:const Icon(Icons.my_location_rounded,color:Colors.white),label:Text(t('إظهار في المحادثة','Show in chat'),style:const TextStyle(color:Colors.white)))
-    ])
-   ]))));
-  } catch (e) { _show(t('تعذر تشغيل الفيديو. تحقق من الاتصال.','Could not play video. Check your connection.')); }
-  finally { await controller?.dispose(); }
+   final player=controller;
+   if(!mounted){await player.dispose();return;}
+   await player.setLooping(false);
+   await showDialog<void>(context:context,barrierDismissible:false,barrierColor:Colors.black,builder:(ctx){
+    return StatefulBuilder(builder:(ctx,setModal){
+     void toggle(){setModal((){player.value.isPlaying?player.pause():player.play();});}
+     String clock(Duration d){final sec=d.inSeconds;return '${(sec~/60).toString().padLeft(2,'0')}:${(sec%60).toString().padLeft(2,'0')}';}
+     final duration=player.value.duration;
+     final current=player.value.position;
+     final max=duration.inMilliseconds>0?duration.inMilliseconds.toDouble():1.0;
+     final progress=current.inMilliseconds.toDouble().clamp(0.0,max);
+     return Dialog.fullscreen(backgroundColor:const Color(0xFF08070D),child:SafeArea(child:Stack(children:[
+      Positioned.fill(child:Container(decoration:BoxDecoration(gradient:RadialGradient(center:Alignment.center,radius:1.1,colors:[skin.partner.withValues(alpha:.65),const Color(0xFF08070D)])))),
+      Column(children:[
+       Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:8),child:Row(children:[
+        IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close_rounded,color:Colors.white,size:25)),
+        const SizedBox(width:8),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('مشاهدة الفيديو','Video playback'),style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:16)),Text(t('مشغل OURS','OURS PLAYER'),style:TextStyle(color:_gold,fontWeight:FontWeight.w700,fontSize:10,letterSpacing:1.6))])),
+        Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:_gold.withValues(alpha:.12),border:Border.all(color:_gold.withValues(alpha:.3)),borderRadius:BorderRadius.circular(20)),child:Text('VIDEO',style:TextStyle(color:_gold,fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.2)))
+       ])),
+       Expanded(child:Center(child:Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:AspectRatio(aspectRatio:player.value.aspectRatio>0?player.value.aspectRatio:16/9,child:ClipRRect(borderRadius:BorderRadius.circular(20),child:Stack(fit:StackFit.expand,children:[
+        VideoPlayer(player),
+        if(!player.value.isPlaying)Container(color:Colors.black.withValues(alpha:.16),child:Center(child:InkWell(onTap:toggle,borderRadius:BorderRadius.circular(48),child:Container(width:76,height:76,decoration:BoxDecoration(shape:BoxShape.circle,color:_gold.withValues(alpha:.18),border:Border.all(color:_gold.withValues(alpha:.8),width:1.4)),child:const Icon(Icons.play_arrow_rounded,color:Colors.white,size:48))))),
+        if(player.value.isPlaying)Positioned(bottom:10,right:10,child:Container(padding:const EdgeInsets.all(6),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.35),borderRadius:BorderRadius.circular(8)),child:const Icon(Icons.equalizer_rounded,color:_gold,size:16)))
+       ])))))),
+       Padding(padding:const EdgeInsets.fromLTRB(18,18,18,22),child:Container(padding:const EdgeInsets.fromLTRB(14,14,14,12),decoration:BoxDecoration(color:const Color(0xFF171421),borderRadius:BorderRadius.circular(22),border:Border.all(color:_gold.withValues(alpha:.18)),boxShadow:[BoxShadow(color:_gold.withValues(alpha:.06),blurRadius:18)]),child:Column(mainAxisSize:MainAxisSize.min,children:[
+        Row(children:[Text(clock(current),style:const TextStyle(color:Colors.white)),Expanded(child:Slider(value:progress,min:0,max:max,onChanged:(v)=>setModal(()=>player.seekTo(Duration(milliseconds:v.round()))),activeColor:_gold,inactiveColor:Colors.white12)),Text(clock(duration),style:TextStyle(color:Colors.white.withValues(alpha:.65)))]),
+        Row(children:[
+         IconButton(onPressed:()=>setModal(()=>player.seekTo(Duration(seconds:(current.inSeconds-10).clamp(0,duration.inSeconds)))),icon:const Icon(Icons.replay_10_rounded,color:Colors.white,size:26)),
+         const Spacer(),
+         IconButton(onPressed:()=>setModal(()=>player.seekTo(Duration.zero)),icon:const Icon(Icons.restart_alt_rounded,color:Colors.white70,size:24)),
+         const SizedBox(width:10),
+         InkWell(onTap:toggle,borderRadius:BorderRadius.circular(40),child:Container(width:58,height:58,decoration:BoxDecoration(shape:BoxShape.circle,gradient:LinearGradient(colors:[_gold,Color.lerp(_gold,skin.accent,.5)!]),boxShadow:[BoxShadow(color:_gold.withValues(alpha:.24),blurRadius:18)]),child:Icon(player.value.isPlaying?Icons.pause_rounded:Icons.play_arrow_rounded,color:const Color(0xFF18121F),size:34))),
+         const SizedBox(width:10),
+         IconButton(onPressed:()=>setModal(()=>player.seekTo(Duration(seconds:(current.inSeconds+10).clamp(0,duration.inSeconds)))),icon:const Icon(Icons.forward_10_rounded,color:Colors.white,size:26)),
+         const Spacer(),
+         PopupMenuButton<double>(initialValue:1.0,color:const Color(0xFF282333),onSelected:(v)=>setModal(()=>player.setPlaybackSpeed(v)),itemBuilder:(_)=>[.5,.75,1,1.25,1.5,2].map((v)=>PopupMenuItem(value:v,child:Text('${v}x',style:const TextStyle(color:Colors.white)))).toList(),child:Padding(padding:const EdgeInsets.all(8),child:Text('${player.value.playbackSpeed}x',style:TextStyle(color:_gold,fontWeight:FontWeight.w800))))
+        ]),
+        if(messageId!=null)Padding(padding:const EdgeInsets.only(top:4),child:TextButton.icon(onPressed:(){Navigator.pop(ctx);_jumpToMessage(messageId);},icon:Icon(Icons.chat_bubble_outline_rounded,color:skin.accent,size:17),label:Text(t('العودة إلى الرسالة','Back to message'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w700))))
+       ])))
+      ])
+     ])));
+    });
+   });
+  }catch(e){_show(t('تعذر تشغيل الفيديو. تحقق من الاتصال.','Could not play video. Check your connection.'));}
+  finally{await controller?.dispose();}
  }
  Future<void> _consumeTemporaryMedia(String messageId) async{
   VideoPlayerController? videoController;
