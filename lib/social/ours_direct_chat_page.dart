@@ -1023,10 +1023,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    try{final result=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['png','jpg','jpeg','webp','gif'],withData:true);if(result==null||result.files.isEmpty)return;final file=result.files.single,bytes=file.bytes??(file.path==null?null:await File(file.path!).readAsBytes());if(bytes==null)return;await _upload(bytes,'sticker_'+DateTime.now().millisecondsSinceEpoch.toString()+'.'+file.name.split('.').last.toLowerCase(),'sticker');}
    catch(e){_show(t('تعذر إضافة الملصق: $e','Could not add sticker: $e'));}
   }
- Future<void> _saveVideoLocally(String path) async {
+ Future<void> _saveVideoLocally(String path,{void Function(double?)? onProgress}) async {
   try {
    if(path.isEmpty||path=='[viewed]')return;
-   if(mounted)_show(t('جارٍ تجهيز الفيديو للحفظ…','Preparing video for saving…'));
+   onProgress?.call(0);
    final url=await _signed(path);
    final client=HttpClient();
    late Uint8List bytes;
@@ -1035,8 +1035,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     final response=await request.close();
     if(response.statusCode<200||response.statusCode>=300)throw Exception('Download failed');
     final builder=BytesBuilder(copy:false);
-    await for(final chunk in response)builder.add(chunk);
-    bytes=builder.takeBytes();
+    final total=response.contentLength;
+    var received=0;
+    await for(final chunk in response){builder.add(chunk);received+=chunk.length;onProgress?.call(total>0?(received/total).clamp(0.0,1.0):null);}
+    bytes=builder.takeBytes();onProgress?.call(1);
    }finally{client.close();}
    if(bytes.isEmpty)throw Exception('Empty video');
    final name='OURS_video_${DateTime.now().millisecondsSinceEpoch}.mp4';
@@ -1057,6 +1059,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    if(!mounted){await player.dispose();return;}
    await player.setLooping(false);
    StateSetter? refreshModal;
+   double? saveProgress;
+   bool savingVideo=false;
    void refreshPlayer(){if(mounted&&player.value.isInitialized)refreshModal?.call((){});}
    player.addListener(refreshPlayer);
    try{await showDialog<void>(context:context,barrierDismissible:false,barrierColor:Colors.black,builder:(ctx){
@@ -1073,8 +1077,8 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       Column(children:[
        Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:8),child:Row(children:[
         IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close_rounded,color:Colors.white,size:25)),
-        IconButton(tooltip:t('حفظ الفيديو','Save video'),onPressed:()=>_saveVideoLocally(path),icon:Icon(Icons.download_rounded,color:_gold,size:23)),
-        const SizedBox(width:8),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('مشاهدة الفيديو','Video playback'),style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:16)),Text(t('مشغل OURS','OURS PLAYER'),style:TextStyle(color:_gold,fontWeight:FontWeight.w700,fontSize:10,letterSpacing:1.6))])),
+        IconButton(tooltip:t('حفظ الفيديو','Save video'),onPressed:savingVideo?null:()=>_saveVideoLocally(path,onProgress:(value){if(mounted)refreshModal?.call((){saveProgress=value;savingVideo=value!=null&&value<1;});}).whenComplete(()=>refreshModal?.call((){savingVideo=false;saveProgress=null;})),icon:Icon(savingVideo?Icons.downloading_rounded:Icons.download_rounded,color:_gold,size:23)),
+        const SizedBox(width:8),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('مشاهدة الفيديو','Video playback'),style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:16)),Text(t('مشغل OURS','OURS PLAYER'),style:TextStyle(color:_gold,fontWeight:FontWeight.w700,fontSize:10,letterSpacing:1.6)),if(savingVideo)Text(saveProgress==null?t('جارٍ الحفظ…','Saving…'):'\${(saveProgress!*100).round()}%',style:TextStyle(color:_gold,fontSize:10,fontWeight:FontWeight.w700))])),
         Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:_gold.withValues(alpha:.12),border:Border.all(color:_gold.withValues(alpha:.3)),borderRadius:BorderRadius.circular(20)),child:Text('VIDEO',style:TextStyle(color:_gold,fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.2)))
        ])),
        Expanded(child:Center(child:Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:AspectRatio(aspectRatio:player.value.aspectRatio>0?player.value.aspectRatio:16/9,child:ClipRRect(borderRadius:BorderRadius.circular(20),child:Stack(fit:StackFit.expand,children:[
