@@ -941,10 +941,12 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    final player=controller;
    if(!mounted){await player.dispose();return;}
    await player.setLooping(false);
-   void refreshPlayer(){if(mounted&&player.value.isInitialized){/* listener drives live progress and clock */}}
+   StateSetter? refreshModal;
+   void refreshPlayer(){if(mounted&&player.value.isInitialized)refreshModal?.call((){});}
    player.addListener(refreshPlayer);
    try{await showDialog<void>(context:context,barrierDismissible:false,barrierColor:Colors.black,builder:(ctx){
     return StatefulBuilder(builder:(ctx,setModal){
+     refreshModal=setModal;
      void toggle(){setModal((){player.value.isPlaying?player.pause():player.play();});}
      String clock(Duration d){final sec=d.inSeconds;return '${(sec~/60).toString().padLeft(2,'0')}:${(sec%60).toString().padLeft(2,'0')}';}
      final duration=player.value.duration;
