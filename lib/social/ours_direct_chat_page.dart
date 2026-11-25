@@ -1254,7 +1254,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       const SizedBox(height:7),Text(t('رسائل وصور وملفات وتسجيلات صوتية في مكان واحد.','Messages, photos, files and voice notes in one place.'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))
      ])))
      :ListView.builder(controller:scroll,padding:const EdgeInsets.all(12),itemCount:messages.length,itemBuilder:(ctx,i){
-      final m=messages[i];final mine=m['sender_id']==me;final isRtl=Directionality.of(ctx)==ui.TextDirection.rtl;final swipeSign=mine?(isRtl?1.0:-1.0):(isRtl?-1.0:1.0);final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';final isVisualMessage=type=='image'||type=='video'||type=='sticker'||type=='view_once'||type=='view_twice';final isOutlinedMedia=type=='image'||type=='video'||type=='view_once'||type=='view_twice';
+      final m=messages[i];final mine=m['sender_id']==me;final isRtl=Directionality.of(ctx)==ui.TextDirection.rtl;final swipeSign=mine?(isRtl?1.0:-1.0):(isRtl?-1.0:1.0);final type=m['message_type']?.toString()??'text';final path=m['body']?.toString()??'';final isVisualMessage=type=='image'||type=='video'||type=='sticker'||type=='view_once'||type=='view_twice';final isReplySwipeable=type=='text'||type=='image'||type=='video'||type=='sticker'||type=='audio'||type=='view_once'||type=='view_twice';final isOutlinedMedia=type=='image'||type=='video'||type=='view_once'||type=='view_twice';
       final createdAt=DateTime.tryParse(m['created_at']?.toString()??'')?.toLocal();
       final previousAt=i>0?DateTime.tryParse(messages[i-1]['created_at']?.toString()??'')?.toLocal():null;
       final showDate=createdAt!=null&&(previousAt==null||DateUtils.dateOnly(createdAt)!=DateUtils.dateOnly(previousAt));
@@ -1286,22 +1286,22 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        if(m['edited_at']!=null||pinnedMessageIds.contains(m['id'].toString()))Padding(padding:const EdgeInsets.only(bottom:3),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Row(mainAxisSize:MainAxisSize.min,children:[if(pinnedMessageIds.contains(m['id'].toString()))Icon(Icons.push_pin_rounded,size:10,color:skin.accent),if(pinnedMessageIds.contains(m['id'].toString()))const SizedBox(width:3),if(pinnedMessageIds.contains(m['id'].toString()))Text(t('مثبّتة','Pinned'),style:TextStyle(color:skin.accent,fontSize:9,fontWeight:FontWeight.w800)),if(pinnedMessageIds.contains(m['id'].toString())&&m['edited_at']!=null)const SizedBox(width:5),if(m['edited_at']!=null)Text(t('تم التعديل','Edited'),style:TextStyle(color:skin.accent.withValues(alpha:.8),fontSize:9,fontWeight:FontWeight.w600))]))),
        GestureDetector(
         onLongPress:()=>_messageActions(context,m,mine,type,path),
-        onHorizontalDragStart:type=='text'?(_){setState((){_draggingReplyMessageId=m['id'].toString();_replyDragOffset=0;});}:null,
-        onHorizontalDragUpdate:type=='text'?(details){
+        onHorizontalDragStart:isReplySwipeable?(_){setState((){_draggingReplyMessageId=m['id'].toString();_replyDragOffset=0;});}:null,
+        onHorizontalDragUpdate:isReplySwipeable?(details){
          // Own messages: right in Arabic, left in English. Partner messages: the opposite.
          final delta=(details.primaryDelta??0)*swipeSign;
          if(_draggingReplyMessageId==m['id'].toString()){
           setState(()=>_replyDragOffset=(_replyDragOffset+delta).clamp(0.0,76.0).toDouble());
          }
         }:null,
-        onHorizontalDragEnd:type=='text'?(details){
+        onHorizontalDragEnd:isReplySwipeable?(details){
          final velocity=(details.primaryVelocity??0)*swipeSign;
          final shouldReply=_draggingReplyMessageId==m['id'].toString()&&(_replyDragOffset>=58||(_replyDragOffset>=22&&velocity>520));
          setState((){_draggingReplyMessageId=null;_replyDragOffset=0;if(shouldReply)replyTo=m;});
         }:null,
-        onHorizontalDragCancel:type=='text'?(){if(_draggingReplyMessageId==m['id'].toString())setState((){_draggingReplyMessageId=null;_replyDragOffset=0;});}:null,
+        onHorizontalDragCancel:isReplySwipeable?(){if(_draggingReplyMessageId==m['id'].toString())setState((){_draggingReplyMessageId=null;_replyDragOffset=0;});}:null,
         child:Stack(alignment:AlignmentDirectional.centerStart,children:[
-         if(type=='text'&&_draggingReplyMessageId==m['id'].toString())
+         if(isReplySwipeable&&_draggingReplyMessageId==m['id'].toString())
           Positioned(left:swipeSign>0?5:null,right:swipeSign<0?5:null,child:Opacity(opacity:(_replyDragOffset/58).clamp(0.0,1.0).toDouble(),child:Transform.scale(scale:(.72+(_replyDragOffset/58).clamp(0.0,1.0).toDouble()*.28),child:Icon(Icons.reply_rounded,color:skin.accent,size:22)))),
          Transform.translate(offset:Offset((_draggingReplyMessageId==m['id'].toString()?_replyDragOffset*swipeSign:0),0),child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8)),
