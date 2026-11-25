@@ -1286,24 +1286,26 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        if(m['edited_at']!=null||pinnedMessageIds.contains(m['id'].toString()))Padding(padding:const EdgeInsets.only(bottom:3),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Row(mainAxisSize:MainAxisSize.min,children:[if(pinnedMessageIds.contains(m['id'].toString()))Icon(Icons.push_pin_rounded,size:10,color:skin.accent),if(pinnedMessageIds.contains(m['id'].toString()))const SizedBox(width:3),if(pinnedMessageIds.contains(m['id'].toString()))Text(t('مثبّتة','Pinned'),style:TextStyle(color:skin.accent,fontSize:9,fontWeight:FontWeight.w800)),if(pinnedMessageIds.contains(m['id'].toString())&&m['edited_at']!=null)const SizedBox(width:5),if(m['edited_at']!=null)Text(t('تم التعديل','Edited'),style:TextStyle(color:skin.accent.withValues(alpha:.8),fontSize:9,fontWeight:FontWeight.w600))]))),
        GestureDetector(
         onLongPress:()=>_messageActions(context,m,mine,type,path),
-        onHorizontalDragStart:(_){setState((){_draggingReplyMessageId=m['id'].toString();_replyDragOffset=0;});},
-        onHorizontalDragUpdate:(details){
-         // Positive horizontal delta always means a physical swipe to the right.
-         final delta=details.primaryDelta??0;
+        onHorizontalDragStart:type=='text'?(_){setState((){_draggingReplyMessageId=m['id'].toString();_replyDragOffset=0;});}:null,
+        onHorizontalDragUpdate:type=='text'?(details){
+         // Swipe toward logical end: left in Arabic (RTL), right in English (LTR).
+         final direction=Directionality.of(context)==ui.TextDirection.rtl?-1.0:1.0;
+         final delta=(details.primaryDelta??0)*direction;
          if(_draggingReplyMessageId==m['id'].toString()){
           setState(()=>_replyDragOffset=(_replyDragOffset+delta).clamp(0.0,76.0).toDouble());
          }
-        },
-        onHorizontalDragEnd:(details){
-         final velocity=details.primaryVelocity??0;
+        }:null,
+        onHorizontalDragEnd:type=='text'?(details){
+         final direction=Directionality.of(context)==ui.TextDirection.rtl?-1.0:1.0;
+         final velocity=(details.primaryVelocity??0)*direction;
          final shouldReply=_draggingReplyMessageId==m['id'].toString()&&(_replyDragOffset>=58||(_replyDragOffset>=22&&velocity>520));
          setState((){_draggingReplyMessageId=null;_replyDragOffset=0;if(shouldReply)replyTo=m;});
-        },
-        onHorizontalDragCancel:(){if(_draggingReplyMessageId==m['id'].toString())setState((){_draggingReplyMessageId=null;_replyDragOffset=0;});},
+        }:null,
+        onHorizontalDragCancel:type=='text'?(){if(_draggingReplyMessageId==m['id'].toString())setState((){_draggingReplyMessageId=null;_replyDragOffset=0;});}:null,
         child:Stack(alignment:AlignmentDirectional.centerStart,children:[
-         if(_draggingReplyMessageId==m['id'].toString())
+         if(type=='text'&&_draggingReplyMessageId==m['id'].toString())
           PositionedDirectional(start:5,child:Opacity(opacity:(_replyDragOffset/58).clamp(0.0,1.0).toDouble(),child:Transform.scale(scale:(.72+(_replyDragOffset/58).clamp(0.0,1.0).toDouble()*.28),child:Icon(Icons.reply_rounded,color:skin.accent,size:22)))),
-         Transform.translate(offset:Offset((_draggingReplyMessageId==m['id'].toString()?_replyDragOffset:0),0),child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
+         Transform.translate(offset:Offset((_draggingReplyMessageId==m['id'].toString()?_replyDragOffset*(Directionality.of(context)==ui.TextDirection.rtl?-1.0:1.0):0),0),child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8)),
          decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?const Color(0xFFB9B4C6).withValues(alpha:.58):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .8 : (isVisualMessage ? 0 : .55))),borderRadius:isOutlinedMedia?BorderRadius.circular(18):(isVisualMessage?BorderRadius.circular(15):null)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
