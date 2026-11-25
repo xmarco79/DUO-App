@@ -179,31 +179,29 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  @override
  Path getClip(Size size) {
   final w=size.width,h=size.height;
-  // Trace of the supplied reference: a full-height capsule body and a
-  // short, low swept tail attached only to the lower outer corner.
-  final tail=math.min(h*.165,w*.10);
+  // Balanced capsule body; a compact curved tail grows from the lower
+  // outer corner while the main baseline remains exactly horizontal.
+  final tail=math.min(h*.145,w*.085);
   final bodyRight=w-tail;
   final radius=math.min(h*.5,bodyRight*.5);
-  final shoulder=bodyRight-radius;
-  final notchX=bodyRight-h*.018;
-  final tailJoin=bodyRight-h*.205;
+  final scoopX=bodyRight-h*.035;
+  final bottomArcEnd=bodyRight-radius;
   double px(double value)=>tailOnLeft?w-value:value;
 
   return Path()
    ..moveTo(px(radius),0)
-   ..lineTo(px(shoulder),0)
-   // Long, smooth upper-right capsule shoulder.
-   ..cubicTo(px(bodyRight-radius*.48),0,px(bodyRight),radius*.42,px(bodyRight),radius)
-   ..lineTo(px(bodyRight),h*.49)
-   // The tiny inward scoop on the outer edge.
-   ..cubicTo(px(bodyRight),h*.60,px(notchX),h*.675,px(notchX),h*.735)
-   // The tail flows down and outward to its fine rounded tip.
-   ..cubicTo(px(notchX),h*.855,px(bodyRight-h*.035),h*.985,px(w),h*.99)
-   // Its underside returns quickly to the lower-right corner of the body.
-   ..cubicTo(px(bodyRight-h*.115),h*.975,px(tailJoin+h*.025),h*.925,px(tailJoin),h*.865)
-   // Smooth transition: the lower body keeps the same capsule curvature
-   // as the opposite end; only a compact swept tail is attached outside.
-   ..cubicTo(px(bodyRight-h*.14),h*.82,px(bodyRight-h*.10),h*.84,px(bodyRight-h*.07),h*.84)
+   ..lineTo(px(bodyRight-radius),0)
+   ..cubicTo(px(bodyRight-radius*.42),0,px(bodyRight),radius*.42,px(bodyRight),radius)
+   ..lineTo(px(bodyRight),h*.57)
+   // Gentle inward scoop, avoiding a corner or a sudden notch.
+   ..cubicTo(px(bodyRight),h*.635,px(scoopX),h*.675,px(scoopX),h*.735)
+   // Short, rounded tail tip.
+   ..cubicTo(px(scoopX),h*.835,px(bodyRight-h*.035),h*.955,px(w-tail*.04),h*.965)
+   // Smoothly rejoin the lower-right quarter-circle.
+   ..cubicTo(px(bodyRight-h*.105),h*.96,
+             px(bodyRight-radius*.12),h-radius*.10,
+             px(bottomArcEnd),h)
+   // Long, perfectly horizontal bottom edge.
    ..lineTo(px(radius),h)
    ..cubicTo(px(radius*.42),h,px(0),h-radius*.42,px(0),h-radius)
    ..lineTo(px(0),radius)
@@ -1287,23 +1285,24 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
        if(m['edited_at']!=null||pinnedMessageIds.contains(m['id'].toString()))Padding(padding:const EdgeInsets.only(bottom:3),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Row(mainAxisSize:MainAxisSize.min,children:[if(pinnedMessageIds.contains(m['id'].toString()))Icon(Icons.push_pin_rounded,size:10,color:skin.accent),if(pinnedMessageIds.contains(m['id'].toString()))const SizedBox(width:3),if(pinnedMessageIds.contains(m['id'].toString()))Text(t('مثبّتة','Pinned'),style:TextStyle(color:skin.accent,fontSize:9,fontWeight:FontWeight.w800)),if(pinnedMessageIds.contains(m['id'].toString())&&m['edited_at']!=null)const SizedBox(width:5),if(m['edited_at']!=null)Text(t('تم التعديل','Edited'),style:TextStyle(color:skin.accent.withValues(alpha:.8),fontSize:9,fontWeight:FontWeight.w600))]))),
        GestureDetector(
         onLongPress:()=>_messageActions(context,m,mine,type,path),
-        onHorizontalDragStart:(_){setState((){_draggingReplyMessageId=m['id'].toString();_replyDragOffset=0;});},
+        onHorizontalDragStart:(_){setState(()=>{_draggingReplyMessageId=m['id'].toString();_replyDragOffset=0;});},
         onHorizontalDragUpdate:(details){
-         final logicalDelta=(details.primaryDelta??0)*(ar?-1:1);
+         // Positive horizontal delta always means a physical swipe to the right.
+         final delta=details.primaryDelta??0;
          if(_draggingReplyMessageId==m['id'].toString()){
-          setState(()=>_replyDragOffset=(_replyDragOffset+logicalDelta).clamp(0.0,76.0).toDouble());
+          setState(()=>_replyDragOffset=(_replyDragOffset+delta).clamp(0.0,76.0).toDouble());
          }
         },
         onHorizontalDragEnd:(details){
-         final logicalVelocity=(details.primaryVelocity??0)*(ar?-1:1);
-         final shouldReply=_draggingReplyMessageId==m['id'].toString()&&(_replyDragOffset>=58||(_replyDragOffset>=22&&logicalVelocity>520));
-         setState((){_draggingReplyMessageId=null;_replyDragOffset=0;if(shouldReply)replyTo=m;});
+         final velocity=details.primaryVelocity??0;
+         final shouldReply=_draggingReplyMessageId==m['id'].toString()&&(_replyDragOffset>=58||(_replyDragOffset>=22&&velocity>520));
+         setState(()=>{_draggingReplyMessageId=null;_replyDragOffset=0;if(shouldReply)replyTo=m;});
         },
         onHorizontalDragCancel:(){if(_draggingReplyMessageId==m['id'].toString())setState((){_draggingReplyMessageId=null;_replyDragOffset=0;});},
         child:Stack(alignment:AlignmentDirectional.centerStart,children:[
          if(_draggingReplyMessageId==m['id'].toString())
           PositionedDirectional(start:5,child:Opacity(opacity:(_replyDragOffset/58).clamp(0.0,1.0).toDouble(),child:Transform.scale(scale:(.72+(_replyDragOffset/58).clamp(0.0,1.0).toDouble()*.28),child:Icon(Icons.reply_rounded,color:skin.accent,size:22)))),
-         Transform.translate(offset:Offset((ar?-1:1)*(_draggingReplyMessageId==m['id'].toString()?_replyDragOffset:0),0),child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
+         Transform.translate(offset:Offset((_draggingReplyMessageId==m['id'].toString()?_replyDragOffset:0),0),child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
          constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8)),
          decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?const Color(0xFFB9B4C6).withValues(alpha:.58):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .8 : (isVisualMessage ? 0 : .55))),borderRadius:isOutlinedMedia?BorderRadius.circular(18):(isVisualMessage?BorderRadius.circular(15):null)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
