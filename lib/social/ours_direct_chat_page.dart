@@ -186,7 +186,8 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
   final radius=math.min(h*.5,bodyRight*.5);
   final shoulder=bodyRight-radius;
   final notchX=bodyRight-h*.018;
-  final tailJoin=bodyRight-h*.205;
+  final lowerJoinX=bodyRight-h*.08;
+  final bottomStartX=bodyRight-h*.25;
   double px(double value)=>tailOnLeft?w-value:value;
 
   return Path()
@@ -199,11 +200,10 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
    ..cubicTo(px(bodyRight),h*.60,px(notchX),h*.675,px(notchX),h*.735)
    // The tail flows down and outward to its fine rounded tip.
    ..cubicTo(px(notchX),h*.855,px(bodyRight-h*.035),h*.985,px(w),h*.99)
-   // Its underside returns quickly to the lower-right corner of the body.
-   ..cubicTo(px(bodyRight-h*.115),h*.975,px(tailJoin+h*.025),h*.925,px(tailJoin),h*.865)
-   // Smooth transition: the lower body keeps the same capsule curvature
-   // as the opposite end; only a compact swept tail is attached outside.
-   ..cubicTo(px(bodyRight-h*.14),h*.82,px(bodyRight-h*.10),h*.84,px(bodyRight-h*.07),h*.84)
+   // A single clean underside sweep returns to the body's lower-right edge.
+   ..cubicTo(px(bodyRight-h*.03),h*.985,px(bodyRight-h*.035),h*.84,px(lowerJoinX),h*.84)
+   // The transition settles into a truly horizontal lower edge.
+   ..cubicTo(px(bodyRight-h*.14),h*.84,px(bodyRight-h*.19),h,px(bottomStartX),h)
    ..lineTo(px(radius),h)
    ..cubicTo(px(radius*.42),h,px(0),h-radius*.42,px(0),h-radius)
    ..lineTo(px(0),radius)
