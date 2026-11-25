@@ -1595,7 +1595,18 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
           ]))
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
           else Center(child:Text(path,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:16,height:1.35))),
-          
+          if(m['local_pending']==true)
+           Padding(
+            padding:const EdgeInsetsDirectional.only(top:7,bottom:2),
+            child:Align(
+             alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,
+             child:Row(mainAxisSize:MainAxisSize.min,children:[
+              SizedBox(width:10,height:10,child:CircularProgressIndicator(strokeWidth:1.5,color:skin.accent)),
+              const SizedBox(width:6),
+              Text(t('بانتظار الإرسال','Waiting to send'),style:TextStyle(color:skin.accent.withValues(alpha:.88),fontSize:9,fontWeight:FontWeight.w700)),
+             ]),
+            ),
+           ),
          ]))
         )))))
        ]),
