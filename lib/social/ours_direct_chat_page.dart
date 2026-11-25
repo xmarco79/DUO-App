@@ -986,7 +986,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){_show(t('تعذر تحميل الملف. حاول مجددًا.','Could not download file. Try again.'));}
   finally{client?.close(force:true);if(mounted)setState((){downloadProgress=null;downloading=false;});}
  }
-String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();return d==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(d);}
+String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();return d==null?'':DateFormat('h:mm a',ar?'ar':'en').format(d);}
  String _dateLabel(DateTime date){
   final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);
   if(day==today)return t('اليوم','Today');
@@ -1452,7 +1452,7 @@ class _OursAiPageState extends State<OursAiPage>{
   }finally{if(mounted)setState(()=>sending=false);}
  }
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
- String _time(String? value){final date=DateTime.tryParse(value??'')?.toLocal();return date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);}
+ String _time(String? value){final date=DateTime.tryParse(value??'')?.toLocal();return date==null?'':DateFormat('h:mm a',ar?'ar':'en').format(date);}
  String _dateLabel(DateTime date){final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);if(day==today)return t('اليوم','Today');if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');return _oursDate(day,ar);}
  void _jumpToMessage(int index){if(!scroll.hasClients)return;scroll.animateTo((index*155.0).clamp(0.0,scroll.position.maxScrollExtent),duration:const Duration(milliseconds:320),curve:Curves.easeOutCubic);}
  Future<void> _search()async{
@@ -1728,7 +1728,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   if(!mounted)return;
   await showModalBottomSheet<void>(context:context,backgroundColor:skin.bg,isScrollControlled:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.6,child:ListView(children:found.map((r)=>ListTile(title:Text((r['file_name']??r['body']).toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(_selfTime(r['created_at'])),onTap:(){Navigator.pop(ctx);_jumpSelfMessage(r['id'].toString());})).toList()))));
  }
- String _selfTime(dynamic value){final date=DateTime.tryParse(value?.toString()??'')?.toLocal();return date==null?'':DateFormat(ar?'HH:mm':'h:mm a').format(date);}
+ String _selfTime(dynamic value){final date=DateTime.tryParse(value?.toString()??'')?.toLocal();return date==null?'':DateFormat('h:mm a',ar?'ar':'en').format(date);}
  String _selfDate(DateTime date){final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);if(day==today)return t('اليوم','Today');if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');return _oursDate(day,ar);}
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(0,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
  @override void dispose(){if(channel!=null)db.removeChannel(channel!);recorder?.dispose();input.dispose();scroll.dispose();super.dispose();}
