@@ -190,10 +190,9 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
   final tailRootY=h*.62;
   final scoopX=bodyRight-h*.055;
   final tailTip=Offset(w,h*.965);
-  final circleJoin=Offset(bodyRight-radius*.10,h-radius*.14);
+  final circleJoin=Offset(bodyRight-radius*.293,h-radius*.293);
 
   double x(double value)=>tailOnLeft?w-value:value;
-  Offset p(double dx,double dy)=>Offset(x(dx),dy);
 
   final path=Path()
    // Top edge and upper-right quarter-circle.
@@ -219,8 +218,8 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
              x(bodyRight-h*.035),h*.925,
              x(circleJoin.dx),circleJoin.dy)
    // The visible lower-right arc completes the same radius as the left end.
-   ..cubicTo(x(bodyRight-radius*.035),h-radius*.055,
-             x(bodyRight-radius*.20),h,
+   ..cubicTo(x(bodyRight-radius*.558),h-radius*.028,
+             x(bodyRight-radius*.735),h,
              x(bottomRightX),h)
    // Long, exact horizontal baseline.
    ..lineTo(x(leftRadius),h)
