@@ -333,7 +333,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
        _oursWallpaperPreviewBubble(t('مرحبًا! هذه معاينة لشكل الرسائل على الخلفية.','Hello! This is how messages will look on your wallpaper.'),false,skin),
        const SizedBox(height:12),_oursWallpaperPreviewBubble(t('الخلفية صارت أجمل بكثير ✨','The chat looks better already ✨'),true,skin),
       ])
-      :ListView.builder(reverse:true,itemCount:previewMessages.length.clamp(0,8),itemBuilder:(context,index){
+      :ListView.builder(reverse:true,itemCount:previewMessages.length.clamp(0,8).toInt(),itemBuilder:(context,index){
        final m=previewMessages[previewMessages.length-1-index];
        final mine=currentUserId!=null&&m['sender_id']==currentUserId;
        final type=(m['message_type']??'text').toString();
@@ -355,7 +355,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
      constraints:BoxConstraints(maxHeight:MediaQuery.of(ctx).size.height*.48),
      decoration:BoxDecoration(color:const Color(0xFF171326).withValues(alpha:.97),borderRadius:const BorderRadius.vertical(top:Radius.circular(28)),border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.35))),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.3),blurRadius:24,offset:const Offset(0,-8))]),
      child:SingleChildScrollView(padding:const EdgeInsets.fromLTRB(18,12,18,18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Center(child(Container(width:38,height:4,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.4),borderRadius:BorderRadius.circular(8))))),
+      Center(child:Container(width:38,height:4,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.4),borderRadius:BorderRadius.circular(8)))),
       const SizedBox(height:12),
       Row(children:[Icon(Icons.tune_rounded,color:skin.accent),const SizedBox(width:8),Expanded(child:Text(t('ضبط الخلفية','Wallpaper controls'),style:TextStyle(color:skin.accent,fontSize:15,fontWeight:FontWeight.w900))),Text(t('اسحب الصورة لتحريكها','Drag photo to move'),style:const TextStyle(color:_lavender,fontSize:9))]),
       const SizedBox(height:8),
