@@ -178,41 +178,42 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  final w=size.width,h=size.height;
-  // Balanced capsule body; a compact curved tail grows from the lower
-  // outer corner while the main baseline remains exactly horizontal.
-  final tail=math.min(h*.145,w*.085);
-  final bodyRight=w-tail;
-  final radius=math.min(h*.5,bodyRight*.5);
-  final scoopX=bodyRight-h*.035;
-  final bottomArcEnd=bodyRight-radius;
-  double px(double value)=>tailOnLeft?w-value:value;
+  final radius=math.min(20.0,size.width*.32);
+  final tailWidth=math.min(14.0,size.width*.30);
+  const tailHeight=12.0;
+  final bodyBottom=size.height-tailHeight;
+  final path=Path()
+   ..moveTo(radius,0)
+   ..lineTo(size.width-radius,0)
+   ..cubicTo(size.width-radius*.42,0,size.width,radius*.42,size.width,radius)
+   ..lineTo(size.width,bodyBottom-radius)
+   ..cubicTo(size.width,bodyBottom-radius*.42,size.width-radius*.42,bodyBottom,size.width-radius,bodyBottom);
 
-  return Path()
-   ..moveTo(px(radius),0)
-   ..lineTo(px(bodyRight-radius),0)
-   ..cubicTo(px(bodyRight-radius*.42),0,px(bodyRight),radius*.42,px(bodyRight),radius)
-   ..lineTo(px(bodyRight),h*.57)
-   // Gentle inward scoop, avoiding a corner or a sudden notch.
-   ..cubicTo(px(bodyRight),h*.635,px(scoopX),h*.675,px(scoopX),h*.735)
-   // Short, rounded tail tip.
-   ..cubicTo(px(scoopX),h*.835,px(bodyRight-h*.035),h*.955,px(w-tail*.04),h*.965)
-   // Smoothly rejoin the lower-right quarter-circle.
-   ..cubicTo(px(bodyRight-h*.105),h*.96,
-             px(bodyRight-radius*.12),h-radius*.10,
-             px(bottomArcEnd),h)
-   // Long, perfectly horizontal bottom edge.
-   ..lineTo(px(radius),h)
-   ..cubicTo(px(radius*.42),h,px(0),h-radius*.42,px(0),h-radius)
-   ..lineTo(px(0),radius)
-   ..cubicTo(px(0),radius*.42,px(radius*.42),0,px(radius),0)
+  if(tailOnLeft){
+   path
+    ..lineTo(radius+tailWidth,bodyBottom)
+    ..cubicTo(radius+tailWidth*.78,bodyBottom+1,radius+tailWidth*.58,size.height-1,radius+tailWidth*.22,size.height-1)
+    ..cubicTo(radius+tailWidth*.04, size.height-2, radius+2.5, bodyBottom+4.5, radius, bodyBottom-radius*.04);
+  }else{
+   path
+    ..lineTo(size.width-radius-tailWidth,bodyBottom)
+    ..cubicTo(size.width-radius-tailWidth*.78,bodyBottom+1,size.width-radius-tailWidth*.58,size.height-1,size.width-radius-tailWidth*.22,size.height-1)
+    ..cubicTo(size.width-radius-tailWidth*.04,size.height-2,size.width-radius-2.5,bodyBottom+4.5,size.width-radius,bodyBottom-radius*.04);
+  }
+
+  path
+   ..lineTo(radius,bodyBottom)
+   ..cubicTo(radius*.42,bodyBottom,0,bodyBottom-radius*.42,0,bodyBottom-radius)
+   ..lineTo(0,radius)
+   ..cubicTo(0,radius*.42,radius*.42,0,radius,0)
    ..close();
+  return path;
  }
 
  @override
- bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>
-  oldClipper.tailOnLeft!=tailOnLeft;
+ bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
 }
+
 
 class _OursUnifiedMessageSurface extends StatelessWidget {
  final _ChatSkin skin; final bool isMine,isVisual; final Widget child;
