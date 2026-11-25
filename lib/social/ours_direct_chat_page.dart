@@ -186,7 +186,6 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
   final radius=math.min(h*.5,bodyRight*.5);
   final shoulder=bodyRight-radius;
   final notchX=bodyRight-h*.018;
-  final bottomStartX=bodyRight-h*.22;
   double px(double value)=>tailOnLeft?w-value:value;
 
   return Path()
@@ -199,10 +198,10 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
    ..cubicTo(px(bodyRight),h*.60,px(notchX),h*.675,px(notchX),h*.735)
    // Outer contour of the tail, ending at its fine tip.
    ..cubicTo(px(notchX),h*.855,px(bodyRight-h*.035),h*.985,px(w),h*.99)
-   // Underside of the tail sweeps back upward before joining the baseline.
-   ..cubicTo(px(bodyRight-h*.045),h*.985,px(bodyRight-h*.105),h*.925,px(bodyRight-h*.145),h*.895)
-   ..cubicTo(px(bodyRight-h*.18),h*.92,px(bottomStartX+h*.055),h,px(bottomStartX),h)
-   // The lower edge is a single perfectly straight horizontal segment.
+   // Tail underside curves back to the body's lower-right baseline endpoint.
+   ..cubicTo(px(bodyRight-h*.045),h*.985,px(bodyRight-h*.035),h*.975,px(bodyRight-h*.025),h*.965)
+   ..cubicTo(px(bodyRight-h*.012),h*.985,px(bodyRight-h*.006),h,px(bodyRight),h)
+   // Body bottom: a perfectly straight horizontal line from the tail junction to the left round end.
    ..lineTo(px(radius),h)
    ..cubicTo(px(radius*.42),h,px(0),h-radius*.42,px(0),h-radius)
    ..lineTo(px(0),radius)
