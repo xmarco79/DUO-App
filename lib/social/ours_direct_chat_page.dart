@@ -707,17 +707,20 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(items.isEmpty){await prefs.remove(_outboxKey);return;}
   await prefs.setString(_outboxKey,jsonEncode(items));
  }
- Future<void> _queueTextMessage(String body,String? replyId) async{
+ Future<void> _queueTextMessage(String body,String? replyId,{String? messageId,String? createdAt}) async{
   final random=math.Random.secure();
   final bytes=List<int>.generate(16,(_)=>random.nextInt(256));
   bytes[6]=(bytes[6]&0x0f)|0x40;bytes[8]=(bytes[8]&0x3f)|0x80;
   final hex=bytes.map((v)=>v.toRadixString(16).padLeft(2,'0')).join();
-  final id='${hex.substring(0,8)}-${hex.substring(8,12)}-${hex.substring(12,16)}-${hex.substring(16,20)}-${hex.substring(20)}';
-  final created=DateTime.now().toUtc().toIso8601String();
+  final generatedId='${hex.substring(0,8)}-${hex.substring(8,12)}-${hex.substring(12,16)}-${hex.substring(16,20)}-${hex.substring(20)}';
+  final id=messageId??generatedId;
+  final created=createdAt??DateTime.now().toUtc().toIso8601String();
   final row=<String,dynamic>{'id':id,'conversation_id':widget.conversationId,'sender_id':uid,'body':body,'message_type':'text','reply_to':replyId,'created_at':created,'local_pending':true};
   final queue=await _readOutbox();if(!queue.any((item)=>item['id'].toString()==id))queue.add(row);await _writeOutbox(queue);
   if(!mounted)return;
-  setState(()=>messages.add(row));messages.sort(_compareMessages);await _persistChatCache();_bottom();
+  final existing=messages.indexWhere((m)=>m['id'].toString()==id);
+  if(existing>=0){setState(()=>messages[existing]=row);}else{setState(()=>messages.add(row));}
+  messages.sort(_compareMessages);await _persistChatCache();_bottom();
  }
  Future<void> _syncPendingText() async{
   if(_syncingOutbox||!mounted)return;
@@ -802,16 +805,24 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  void _show(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
  Future<void> _sendText() async{
   final text=input.text.trim();if(text.isEmpty||sending)return;
-  final replyId=replyTo?['id']?.toString();setState(()=>sending=true);
+  final replyId=replyTo?['id']?.toString();
+  final random=math.Random.secure(),bytes=List<int>.generate(16,(_)=>random.nextInt(256));
+  bytes[6]=(bytes[6]&0x0f)|0x40;bytes[8]=(bytes[8]&0x3f)|0x80;
+  final hex=bytes.map((v)=>v.toRadixString(16).padLeft(2,'0')).join();
+  final id='${hex.substring(0,8)}-${hex.substring(8,12)}-${hex.substring(12,16)}-${hex.substring(16,20)}-${hex.substring(20)}';
+  final created=DateTime.now().toUtc().toIso8601String();
+  final payload=<String,dynamic>{'id':id,'conversation_id':widget.conversationId,'sender_id':uid,'body':text,'message_type':'text','reply_to':replyId,'created_at':created};
+  setState(()=>sending=true);
   try{
-   final random=math.Random.secure(),bytes=List<int>.generate(16,(_)=>random.nextInt(256));
-   bytes[6]=(bytes[6]&0x0f)|0x40;bytes[8]=(bytes[8]&0x3f)|0x80;
-   final hex=bytes.map((v)=>v.toRadixString(16).padLeft(2,'0')).join();
-   final id='${hex.substring(0,8)}-${hex.substring(8,12)}-${hex.substring(12,16)}-${hex.substring(16,20)}-${hex.substring(20)}';
-   await db.from('duo_direct_messages').upsert({'id':id,'conversation_id':widget.conversationId,'sender_id':uid,'body':text,'message_type':'text','reply_to':replyId},onConflict:'id',ignoreDuplicates:true);
-   input.clear();if(mounted)setState(()=>replyTo=null);
+   await db.from('duo_direct_messages').upsert(payload,onConflict:'id',ignoreDuplicates:true);
+   if(mounted){
+    final existing=messages.indexWhere((m)=>m['id'].toString()==id);
+    if(existing<0){setState(()=>messages.add(Map<String,dynamic>.from(payload)));messages.sort(_compareMessages);}
+    input.clear();setState(()=>replyTo=null);
+    await _persistChatCache();_bottom();
+   }
   }catch(e){
-   try{await _queueTextMessage(text,replyId);input.clear();if(mounted)setState(()=>replyTo=null);_show(t('حُفظت الرسالة محليًا وستُرسل عند عودة الاتصال','Message saved on this device and will send when connection returns'));}
+   try{await _queueTextMessage(text,replyId,messageId:id,createdAt:created);input.clear();if(mounted)setState(()=>replyTo=null);_show(t('حُفظت الرسالة محليًا وستُرسل عند عودة الاتصال','Message saved on this device and will send when connection returns'));}
    catch(_){_show(t('تعذر إرسال الرسالة أو حفظها محليًا','Could not send or save this message locally'));}
   }finally{if(mounted)setState(()=>sending=false);}
  }
