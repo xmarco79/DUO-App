@@ -372,9 +372,9 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
       _oursWallpaperSliderLabel(t('التكبير','Zoom'),'${zoom.toStringAsFixed(2)}×',skin),
       Slider(value:zoom,min:1,max:3.2,onChanged:(v)=>setEditor(()=>zoom=v),activeColor:skin.accent),
       _oursWallpaperSliderLabel(t('التعتيم','Dim'),'${(dim*100).round()}%',skin),
-      Slider(value:dim,min:0,max:.85,onChanged:(v)=>setEditor(()=>dim=v),activeColor:skin),
+      Slider(value:dim,min:0,max:.85,onChanged:(v)=>setEditor(()=>dim=v),activeColor:skin.accent),
       _oursWallpaperSliderLabel(t('وضوح الصورة','Image clarity'),'${((.55+opacity)*100).round()}%',skin),
-      Slider(value:opacity,min:.05,max:.45,onChanged:(v)=>setEditor(()=>opacity=v),activeColor:skin),
+      Slider(value:opacity,min:.05,max:.45,onChanged:(v)=>setEditor(()=>opacity=v),activeColor:skin.accent),
       Row(children:[
        Expanded(child:OutlinedButton.icon(onPressed:()=>setEditor((){zoom=1;rotation=0;dim=.48;opacity=.22;offsetX=0;offsetY=0;gestureZoom=1;gestureRotation=0;}),icon:const Icon(Icons.restart_alt_rounded),label:Text(t('إعادة ضبط','Reset')))),
        const SizedBox(width:8),Expanded(child:OutlinedButton.icon(onPressed:()=>setEditor(()=>rotation=(rotation+math.pi/2)%(math.pi*2)),icon:const Icon(Icons.rotate_right_rounded),label:Text(t('تدوير 90°','Rotate 90°'))))
