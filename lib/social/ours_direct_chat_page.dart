@@ -418,11 +418,12 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
  Timer? typingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId, _draggingReplyMessageId;
  double _replyDragOffset=0;
- bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;double wallpaperOpacity=.22,wallpaperZoom=1,wallpaperRotation=0,wallpaperDim=.55,wallpaperOffsetX=0,wallpaperOffsetY=0;_ChatSkin skin=_skins.first;
+ bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;
+ Timer? _outboxTimer;bool _syncingOutbox=false;double wallpaperOpacity=.22,wallpaperZoom=1,wallpaperRotation=0,wallpaperDim=.55,wallpaperOffsetX=0,wallpaperOffsetY=0;_ChatSkin skin=_skins.first;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
  
- @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();_startLiveStatus();}
+ @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();_startLiveStatus();_outboxTimer=Timer.periodic(const Duration(seconds:15),(_)=>_syncPendingText());}
  Future<void> _changeLocalNickname() async{
   final prefs=await SharedPreferences.getInstance();final key='ours_partner_alias_${uid}_${widget.partnerId}';
   final controller=TextEditingController(text:prefs.getString(key)??widget.partnerName);
@@ -686,23 +687,97 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   Expanded(child:Text(label,style:TextStyle(color:skin.accent,fontWeight:FontWeight.w700))),
   Text(value,style:TextStyle(color:skin.accent)),
  ]);
+ String get _chatCacheKey=>'ours_chat_cache_${uid}_${widget.conversationId}';
+ String get _outboxKey=>'ours_chat_outbox_${uid}_${widget.conversationId}';
+ Future<void> _persistChatCache() async{
+  try{
+   final prefs=await SharedPreferences.getInstance();
+   final safe=messages.where((m)=>!['view_once','view_twice'].contains(m['message_type'])).map((m)=>Map<String,dynamic>.from(m)).toList();
+   await prefs.setString(_chatCacheKey,jsonEncode(safe));
+  }catch(_){}
+ }
+ Future<List<Map<String,dynamic>>> _readOutbox() async{
+  final prefs=await SharedPreferences.getInstance();
+  final raw=prefs.getString(_outboxKey);if(raw==null||raw.isEmpty)return [];
+  try{return (jsonDecode(raw) as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();}
+  catch(_){return [];}
+ }
+ Future<void> _writeOutbox(List<Map<String,dynamic>> items) async{
+  final prefs=await SharedPreferences.getInstance();
+  if(items.isEmpty){await prefs.remove(_outboxKey);return;}
+  await prefs.setString(_outboxKey,jsonEncode(items));
+ }
+ Future<void> _queueTextMessage(String body,String? replyId) async{
+  final random=math.Random.secure();
+  final bytes=List<int>.generate(16,(_)=>random.nextInt(256));
+  bytes[6]=(bytes[6]&0x0f)|0x40;bytes[8]=(bytes[8]&0x3f)|0x80;
+  final hex=bytes.map((v)=>v.toRadixString(16).padLeft(2,'0')).join();
+  final id='${hex.substring(0,8)}-${hex.substring(8,12)}-${hex.substring(12,16)}-${hex.substring(16,20)}-${hex.substring(20)}';
+  final created=DateTime.now().toUtc().toIso8601String();
+  final row=<String,dynamic>{'id':id,'conversation_id':widget.conversationId,'sender_id':uid,'body':body,'message_type':'text','reply_to':replyId,'created_at':created,'local_pending':true};
+  final queue=await _readOutbox();queue.add(row);await _writeOutbox(queue);
+  if(!mounted)return;
+  setState(()=>messages.add(row));messages.sort(_compareMessages);await _persistChatCache();_bottom();
+ }
+ Future<void> _syncPendingText() async{
+  if(_syncingOutbox||!mounted)return;
+  _syncingOutbox=true;
+  try{
+   final queue=await _readOutbox();if(queue.isEmpty)return;
+   final remaining=<Map<String,dynamic>>[];
+   for(final item in queue){
+    try{
+     final payload=Map<String,dynamic>.from(item)..remove('local_pending');
+     await db.from('duo_direct_messages').upsert(payload,onConflict:'id',ignoreDuplicates:true);
+     if(mounted){
+      final index=messages.indexWhere((m)=>m['id'].toString()==item['id'].toString());
+      if(index>=0){final saved=Map<String,dynamic>.from(item)..remove('local_pending');setState(()=>messages[index]=saved);}
+     }
+    }catch(_){remaining.add(item);}
+   }
+   await _writeOutbox(remaining);await _persistChatCache();
+  }finally{_syncingOutbox=false;}
+ }
  Future<void> _load() async{
   try{
+   final prefs=await SharedPreferences.getInstance();
+   final cached=prefs.getString(_chatCacheKey);
+   if(cached!=null){
+    try{
+     final rows=(jsonDecode(cached) as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
+     final queued=await _readOutbox();
+     final combined=<String,Map<String,dynamic>>{};
+     for(final row in rows){combined[row['id'].toString()]=row;}
+     for(final row in queued){combined[row['id'].toString()]=row;}
+     if(mounted)setState((){messages..clear()..addAll(combined.values);messages.sort(_compareMessages);});
+    }catch(_){}
+   }
    final hidden=await db.from('ours_direct_message_hides').select('message_id').eq('user_id',uid);
    hiddenIds..clear()..addAll(hidden.map((r)=>r['message_id'].toString()));
    final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at',ascending:true);
    final ordered=List<Map<String,dynamic>>.from(rows).where((m)=>!hiddenIds.contains(m['id'].toString())).toList()..sort(_compareMessages);
-   if(!mounted)return;setState((){messages..clear()..addAll(ordered);loading=false;});
+   final queued=await _readOutbox();final merged=<String,Map<String,dynamic>>{};
+   for(final row in ordered){merged[row['id'].toString()]=row;}
+   for(final row in queued){merged[row['id'].toString()]=row;}
+   if(!mounted)return;setState((){messages..clear()..addAll(merged.values);loading=false;});
+   await _persistChatCache();await _syncPendingText();
    try{final pins=await db.from('ours_direct_message_pins').select('message_id').eq('user_id',uid).eq('conversation_id',widget.conversationId);if(mounted)setState(()=>pinnedMessageIds..clear()..addAll(pins.map((r)=>r['message_id'].toString())));}catch(_){}
    await db.rpc('mark_ours_direct_messages_read',params:{'p_conversation_id':widget.conversationId});
    _bottom();
-  }catch(e){if(mounted){setState(()=>loading=false);_show(t('تعذر تحميل المحادثة. تحقق من الاتصال وحاول مجددًا.','Could not load conversation. Check your connection and try again.'));}}
+  }catch(e){
+   final queued=await _readOutbox();
+   if(mounted){
+    if(queued.isNotEmpty)setState(()=>messages.removeWhere((m)=>m['local_pending']==true)..addAll(queued));
+    setState(()=>loading=false);_bottom();
+    if(messages.isEmpty)_show(t('لا يوجد اتصال. ستظهر الرسائل المحفوظة محليًا عند توفرها.','Offline. Locally cached messages will remain available.'));
+   }
+  }
  }
  void _listen(){
   final filter=PostgresChangeFilter(type:PostgresChangeFilterType.eq,column:'conversation_id',value:widget.conversationId);
   channel=db.channel('ours-direct-'+widget.conversationId)
    .onPostgresChanges(event:PostgresChangeEvent.insert,schema:'public',table:'duo_direct_messages',filter:filter,callback:(p){
-    final row=Map<String,dynamic>.from(p.newRecord);if(!mounted||hiddenIds.contains(row['id'].toString())||messages.any((m)=>m['id'].toString()==row['id'].toString()))return;setState((){messages.add(row);messages.sort(_compareMessages);});_bottom();
+    final row=Map<String,dynamic>.from(p.newRecord);if(!mounted||hiddenIds.contains(row['id'].toString())||messages.any((m)=>m['id'].toString()==row['id'].toString()))return;setState((){messages.add(row);messages.sort(_compareMessages);});_persistChatCache();_bottom();
     if(row['sender_id']?.toString()!=uid){db.rpc('mark_ours_direct_messages_read',params:{'p_conversation_id':widget.conversationId});}
    })
    .onPostgresChanges(event:PostgresChangeEvent.delete,schema:'public',table:'duo_direct_messages',callback:(p){
@@ -721,9 +796,19 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(scroll.position.maxScrollExtent,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
  void _show(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
  Future<void> _sendText() async{
-  final text=input.text.trim();if(text.isEmpty||sending)return;setState(()=>sending=true);
-  try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':text,'message_type':'text','reply_to':replyTo?['id']});input.clear();if(mounted)setState(()=>replyTo=null);}
-  catch(e){_show(t('تعذر إرسال الرسالة. حاول مرة أخرى.','Could not send message. Please try again.'));}finally{if(mounted)setState(()=>sending=false);}
+  final text=input.text.trim();if(text.isEmpty||sending)return;
+  final replyId=replyTo?['id']?.toString();setState(()=>sending=true);
+  try{
+   final random=math.Random.secure(),bytes=List<int>.generate(16,(_)=>random.nextInt(256));
+   bytes[6]=(bytes[6]&0x0f)|0x40;bytes[8]=(bytes[8]&0x3f)|0x80;
+   final hex=bytes.map((v)=>v.toRadixString(16).padLeft(2,'0')).join();
+   final id='${hex.substring(0,8)}-${hex.substring(8,12)}-${hex.substring(12,16)}-${hex.substring(16,20)}-${hex.substring(20)}';
+   await db.from('duo_direct_messages').upsert({'id':id,'conversation_id':widget.conversationId,'sender_id':uid,'body':text,'message_type':'text','reply_to':replyId},onConflict:'id',ignoreDuplicates:true);
+   input.clear();if(mounted)setState(()=>replyTo=null);
+  }catch(e){
+   try{await _queueTextMessage(text,replyId);input.clear();if(mounted)setState(()=>replyTo=null);_show(t('حُفظت الرسالة محليًا وستُرسل عند عودة الاتصال','Message saved on this device and will send when connection returns'));}
+   catch(_){_show(t('تعذر إرسال الرسالة أو حفظها محليًا','Could not send or save this message locally'));}
+  }finally{if(mounted)setState(()=>sending=false);}
  }
  String _mime(String name){
   const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','mp4':'video/mp4','mov':'video/quicktime','webm':'video/webm','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
@@ -1311,7 +1396,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    ])
   )));
  }
-   @override void dispose(){typingTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));if(liveChannel!=null){unawaited(liveChannel!.untrack().then<void>((_){}));db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
+   @override void dispose(){_outboxTimer?.cancel();typingTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));if(liveChannel!=null){unawaited(liveChannel!.untrack().then<void>((_){}));db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
  @override Widget build(BuildContext context){
   final me=db.auth.currentUser!.id;
   return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg, elevation:0, scrolledUnderElevation:0, toolbarHeight:76, centerTitle:true, surfaceTintColor:Colors.transparent, shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.14),width:.8)),
