@@ -236,6 +236,23 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
  }
 }
 
+Widget _wallpaperStudioAction(BuildContext ctx,{required IconData icon,required String title,required String subtitle,required Color accent,required VoidCallback onTap,bool danger=false}) {
+ return Material(color:Colors.transparent,child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(17),child:Container(
+  padding:const EdgeInsets.symmetric(horizontal:13,vertical:12),
+  decoration:BoxDecoration(color:accent.withValues(alpha:.075),borderRadius:BorderRadius.circular(17),border:Border.all(color:accent.withValues(alpha:.18))),
+  child:Row(children:[
+   Container(width:38,height:38,decoration:BoxDecoration(color:accent.withValues(alpha:.13),borderRadius:BorderRadius.circular(12)),child:Icon(icon,color:accent,size:20)),
+   const SizedBox(width:11),
+   Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Text(title,style:TextStyle(color:danger?accent:Colors.white,fontWeight:FontWeight.w800,fontSize:12)),
+    const SizedBox(height:3),
+    Text(subtitle,style:TextStyle(color:Colors.white.withValues(alpha:.55),fontSize:10))
+   ])),
+   Icon(Icons.chevron_right_rounded,color:accent.withValues(alpha:.7))
+  ])
+ )));
+}
+
 Future<Map<String,dynamic>?> _openOursWallpaperStudio({
  required BuildContext context,required _ChatSkin skin,required String Function(String,String) t,
  required String? currentPath,required String preferenceKey,required String filePrefix,
@@ -491,9 +508,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
       ]),
      )),
      if(currentExists)const SizedBox(height:14),
-     _wallpaperStudioAction(ctx,icon:Icons.add_photo_alternate_rounded,title:t('اختيار خلفية جديدة','Choose a new wallpaper'),subtitle:t('اختر صورة من جهازك وابدأ بتخصيصها','Pick an image from your device and customize it'),accent:skin.accent,primary:true,value:'new'),
+     _wallpaperStudioAction(ctx,icon:Icons.add_photo_alternate_rounded,title:t('اختيار خلفية جديدة','Choose a new wallpaper'),subtitle:t('اختر صورة من جهازك وابدأ بتخصيصها','Pick an image from your device and customize it'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'new')),
      if(currentExists)const SizedBox(height:9),
-     if(currentExists)_wallpaperStudioAction(ctx,icon:Icons.tune_rounded,title:t('تعديل الخلفية الحالية','Edit current wallpaper'),subtitle:t('غيّر موضعها والتكبير والتعتيم','Adjust position, zoom and dimming'),accent:skin.accent,value:'edit'),
+     if(currentExists)_wallpaperStudioAction(ctx,icon:Icons.tune_rounded,title:t('تعديل الخلفية الحالية','Edit current wallpaper'),subtitle:t('غيّر موضعها والتكبير والتعتيم','Adjust position, zoom and dimming'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'edit')),
      if(currentExists)Padding(padding:const EdgeInsets.only(top:8),child:TextButton.icon(
       style:TextButton.styleFrom(foregroundColor:Colors.redAccent,minimumSize:const Size.fromHeight(44)),
       onPressed:()=>Navigator.pop(ctx,'remove'),
