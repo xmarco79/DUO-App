@@ -255,7 +255,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
     ]))]),
     const SizedBox(height:16),
     Container(height:132,decoration:BoxDecoration(color:const Color(0xFF292338),borderRadius:BorderRadius.circular(20),border:Border.all(color:skin.accent.withValues(alpha:.18))),clipBehavior:Clip.antiAlias,child:Stack(fit:StackFit.expand,children:[
-     if(exists)Image.file(File(currentPath),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())
+     if(exists)Image.file(File(currentPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())
      else DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[skin.bg,skin.partner,skin.bg]))),
      DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.black.withValues(alpha:.04),Colors.black.withValues(alpha:.72)]))),
      PositionedDirectional(start:12,bottom:12,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -283,7 +283,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
  }
  File? source;
  if(action=='new'){final picked=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:96,maxWidth:3200,maxHeight:3200);if(picked==null)return null;source=File(picked.path);}
- else if(exists){source=File(currentPath);}
+ else if(exists){source=File(currentPath!);}
  if(source==null||!await source.exists())return null;
  var zoom=action=='edit'?currentZoom:1.0,rotation=action=='edit'?currentRotation:0.0,dim=action=='edit'?currentDim:.48,opacity=action=='edit'?currentOpacity:.22,offsetX=action=='edit'?currentOffsetX:0.0,offsetY=action=='edit'?currentOffsetY:0.0;
  var gestureZoom=zoom,gestureRotation=rotation;
