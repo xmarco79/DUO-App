@@ -767,7 +767,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }catch(e){
    final queued=await _readOutbox();
    if(mounted){
-    if(queued.isNotEmpty)setState(()=>messages.removeWhere((m)=>m['local_pending']==true)..addAll(queued));
+    if(queued.isNotEmpty){setState(()=>messages.removeWhere((m)=>m['local_pending']==true));setState(()=>messages.addAll(queued));messages.sort(_compareMessages);}
     setState(()=>loading=false);_bottom();
     if(messages.isEmpty)_show(t('لا يوجد اتصال. ستظهر الرسائل المحفوظة محليًا عند توفرها.','Offline. Locally cached messages will remain available.'));
    }
