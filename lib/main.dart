@@ -1404,33 +1404,89 @@ class _ChatPageState extends State<ChatPage> {
     final controller = TextEditingController(text: searchQuery);
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: purple,
-        title: const Text('البحث في المحادثة'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'اكتب كلمة أو جزءًا من رسالة',
-            prefixIcon: Icon(Icons.search),
-          ),
-          onChanged: (value) {
-            if (mounted) setState(() => searchQuery = value.trim());
-          },
+      builder: (dialogContext) => Dialog(
+        backgroundColor: chatTheme.background,
+        elevation: 18,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: BorderSide(color: chatTheme.accent.withValues(alpha: .34)),
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              if (mounted) setState(() => searchQuery = '');
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('مسح البحث'),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(children: [
+                Container(
+                  width: 42, height: 42,
+                  decoration: BoxDecoration(
+                    color: chatTheme.accent.withValues(alpha: .14),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(Icons.search_rounded, color: chatTheme.accent),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Text(
+                  oursText(context, 'البحث في المحادثة', 'Search conversation'),
+                  style: TextStyle(color: chatTheme.accent, fontSize: 18, fontWeight: FontWeight.w800),
+                )),
+              ]),
+              const SizedBox(height: 8),
+              Text(
+                oursText(context, 'اعثر على رسالة بسهولة', 'Find a message quickly'),
+                style: TextStyle(color: chatTheme.partner.withValues(alpha: .82), fontSize: 12),
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                textDirection: Directionality.of(context),
+                style: TextStyle(color: chatTheme.partner),
+                cursorColor: chatTheme.accent,
+                decoration: InputDecoration(
+                  hintText: oursText(context, 'اكتب كلمة أو جزءًا من رسالة', 'Type a word or part of a message'),
+                  hintStyle: TextStyle(color: chatTheme.partner.withValues(alpha: .55)),
+                  prefixIcon: Icon(Icons.search_rounded, color: chatTheme.accent),
+                  filled: true,
+                  fillColor: chatTheme.background.withValues(alpha: .72),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: chatTheme.accent.withValues(alpha: .22)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: chatTheme.accent, width: 1.4),
+                  ),
+                ),
+                onChanged: (value) {
+                  if (mounted) setState(() => searchQuery = value.trim());
+                },
+              ),
+              const SizedBox(height: 18),
+              Row(children: [
+                Expanded(child: TextButton(
+                  onPressed: () {
+                    if (mounted) setState(() => searchQuery = '');
+                    controller.clear();
+                  },
+                  style: TextButton.styleFrom(foregroundColor: chatTheme.accent),
+                  child: Text(oursText(context, 'مسح البحث', 'Clear')),
+                )),
+                const SizedBox(width: 8),
+                Expanded(child: FilledButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: chatTheme.accent,
+                    foregroundColor: chatTheme.background,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text(oursText(context, 'تم', 'Done')),
+                )),
+              ]),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('تم'),
-          ),
-        ],
+        ),
       ),
     );
     controller.dispose();
