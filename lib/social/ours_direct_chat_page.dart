@@ -433,17 +433,51 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Future<void> _chooseWallpaper() async {
   final currentExists=wallpaperPath!=null&&await File(wallpaperPath!).exists();
   final action=await showModalBottomSheet<String>(
-   context:context,backgroundColor:const Color(0xFF171326),showDragHandle:true,
-   builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    Padding(padding:const EdgeInsets.fromLTRB(18,12,18,8),child:Row(children:[
-     Icon(Icons.wallpaper_rounded,color:skin.accent,size:24),const SizedBox(width:10),
-     Expanded(child:Text(t('استوديو خلفية المحادثة','Chat wallpaper studio'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900)))
-    ])),
-    ListTile(leading:Icon(Icons.add_photo_alternate_outlined,color:skin.accent),title:Text(t('اختيار خلفية جديدة','Choose a new wallpaper')),subtitle:Text(t('اختر صورة ثم انتقل إلى محرر الخلفية','Select an image, then open the wallpaper editor')),onTap:()=>Navigator.pop(ctx,'new')),
-    if(currentExists)ListTile(leading:Icon(Icons.tune_rounded,color:skin.accent),title:Text(t('تعديل الخلفية الحالية','Edit current wallpaper')),subtitle:Text(t('استكمل التعديل دون اختيار صورة من جديد','Continue editing your current image')),onTap:()=>Navigator.pop(ctx,'edit')),
-    if(currentExists)ListTile(leading:const Icon(Icons.delete_outline_rounded,color:Colors.redAccent),title:Text(t('إزالة الخلفية','Remove wallpaper')),onTap:()=>Navigator.pop(ctx,'remove')),
-    const SizedBox(height:8),
-   ]))
+   context:context,backgroundColor:Colors.transparent,showDragHandle:false,isScrollControlled:true,
+   builder:(ctx)=>SafeArea(child:Container(
+    margin:const EdgeInsets.fromLTRB(10,0,10,12),
+    padding:const EdgeInsets.fromLTRB(18,12,18,20),
+    decoration:BoxDecoration(
+     color:const Color(0xFF171326),
+     borderRadius:BorderRadius.circular(28),
+     border:Border.all(color:skin.accent.withValues(alpha:.30)),
+     boxShadow:[BoxShadow(color:skin.accent.withValues(alpha:.12),blurRadius:28,offset:const Offset(0,-5))],
+    ),
+    child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Center(child:Container(width:38,height:4,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.38),borderRadius:BorderRadius.circular(8)))),
+     const SizedBox(height:18),
+     Row(children:[
+      Container(width:44,height:44,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.13),borderRadius:BorderRadius.circular(15)),child:Icon(Icons.wallpaper_rounded,color:skin.accent,size:23)),
+      const SizedBox(width:12),
+      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       Text(t('استوديو خلفية المحادثة','Chat wallpaper studio'),style:TextStyle(color:skin.accent,fontSize:18,fontWeight:FontWeight.w900)),
+       const SizedBox(height:3),
+       Text(t('اصنع أجواء محادثتك بطريقتك','Give your conversation its own atmosphere'),style:TextStyle(color:_lavender.withValues(alpha:.78),fontSize:11)),
+      ])),
+      if(currentExists)Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:skin.accent.withValues(alpha:.12),borderRadius:BorderRadius.circular(20)),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.check_circle_rounded,color:skin.accent,size:13),const SizedBox(width:5),Text(t('مفعّلة','Active'),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w800))])),
+     ]),
+     const SizedBox(height:18),
+     if(currentExists)ClipRRect(borderRadius:BorderRadius.circular(19),child:Container(
+      height:104,width:double.infinity,
+      decoration:BoxDecoration(color:skin.partner,border:Border.all(color:skin.accent.withValues(alpha:.24)),borderRadius:BorderRadius.circular(19)),
+      child:Stack(fit:StackFit.expand,children:[
+       Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>ColoredBox(color:skin.partner,child:Icon(Icons.image_not_supported_outlined,color:skin.accent))),
+       ColoredBox(color:skin.bg.withValues(alpha:.42)),
+       Align(alignment:AlignmentDirectional.bottomStart,child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[Icon(Icons.photo_library_outlined,color:Colors.white,size:16),const SizedBox(width:7),Text(t('الخلفية الحالية','Current wallpaper'),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:12))]))),
+      ]),
+     )),
+     if(currentExists)const SizedBox(height:14),
+     _wallpaperStudioAction(ctx,icon:Icons.add_photo_alternate_rounded,title:t('اختيار خلفية جديدة','Choose a new wallpaper'),subtitle:t('اختر صورة من جهازك وابدأ بتخصيصها','Pick an image from your device and customize it'),accent:skin.accent,primary:true,value:'new'),
+     if(currentExists)const SizedBox(height:9),
+     if(currentExists)_wallpaperStudioAction(ctx,icon:Icons.tune_rounded,title:t('تعديل الخلفية الحالية','Edit current wallpaper'),subtitle:t('غيّر موضعها والتكبير والتعتيم','Adjust position, zoom and dimming'),accent:skin.accent,value:'edit'),
+     if(currentExists)Padding(padding:const EdgeInsets.only(top:8),child:TextButton.icon(
+      style:TextButton.styleFrom(foregroundColor:Colors.redAccent,minimumSize:const Size.fromHeight(44)),
+      onPressed:()=>Navigator.pop(ctx,'remove'),
+      icon:const Icon(Icons.delete_outline_rounded,size:18),
+      label:Text(t('إزالة الخلفية','Remove wallpaper'),style:const TextStyle(fontWeight:FontWeight.w700)),
+     )),
+    ]),
+   )),
   );
   if(action==null)return;
   final prefs=await SharedPreferences.getInstance();
