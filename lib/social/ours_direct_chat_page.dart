@@ -730,7 +730,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   return types[name.split('.').last.toLowerCase()]??'';
  }
  Future<void> _upload(Uint8List bytes,String name,String type,{int? maxViews}) async{
-  if(bytes.isEmpty)return;if(bytes.length>180*1024*1024){_show(t('الحد الأقصى 180 ميجابايت','Maximum size is 180 MB'));return;}
+  if(bytes.isEmpty)return;if(bytes.length>50*1024*1024){_show(t('الحد الأقصى 50 ميجابايت','Maximum size is 50 MB'));return;}
   final mime=_mime(name);if(mime.isEmpty){_show(t('نوع الملف غير مدعوم','Unsupported file type'));return;}setState(()=>uploading=true);
   final safe=name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
   final path=widget.conversationId+'/'+uid+'/'+DateTime.now().microsecondsSinceEpoch.toString()+'_'+safe;
@@ -1683,7 +1683,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   return types[name.split('.').last.toLowerCase()]??'';
  }
  Future<void> _uploadSelf(Uint8List bytes,String name,String type)async{
-  if(bytes.isEmpty)return;if(bytes.length>180*1024*1024){_notice(t('الحد الأقصى 180 ميجابايت','Maximum size is 180 MB'));return;}
+  if(bytes.isEmpty)return;if(bytes.length>50*1024*1024){_notice(t('الحد الأقصى 50 ميجابايت','Maximum size is 50 MB'));return;}
   final mime=_selfMime(name);if(mime.isEmpty){_notice(t('نوع الملف غير مدعوم','Unsupported file type'));return;}
   setState(()=>uploading=true);
   final safe=name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
