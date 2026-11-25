@@ -201,7 +201,7 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
    ..cubicTo(px(notchX),h*.855,px(bodyRight-h*.035),h*.985,px(w),h*.99)
    // Underside of the tail sweeps back upward before joining the baseline.
    ..cubicTo(px(bodyRight-h*.045),h*.985,px(bodyRight-h*.105),h*.925,px(bodyRight-h*.145),h*.895)
-   ..cubicTo(px(bodyRight-h*.18),h*.92,px(bodyRight-h*.19),h*.97,px(bottomStartX),h)
+   ..cubicTo(px(bodyRight-h*.18),h*.92,px(bottomStartX+h*.055),h,px(bottomStartX),h)
    // The lower edge is a single perfectly straight horizontal segment.
    ..lineTo(px(radius),h)
    ..cubicTo(px(radius*.42),h,px(0),h-radius*.42,px(0),h-radius)
