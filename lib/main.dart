@@ -974,6 +974,7 @@ class _ChatPageState extends State<ChatPage> {
               if (newMessage['sender_id'] != currentUserId) {
                 if (!quietMode) showMessage('رسالة جديدة من $partnerName');
               }
+              _persistOfflineMessages();
               scrollToBottom();
             }
           },
@@ -994,6 +995,7 @@ class _ChatPageState extends State<ChatPage> {
               final index = messages.indexWhere((item) => item['id'] == updated['id']);
               if (index >= 0) messages[index] = updated;
             });
+            _persistOfflineMessages();
           },
         )
         .subscribe();
