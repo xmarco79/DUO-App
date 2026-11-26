@@ -164,7 +164,7 @@ Future<void> main() async {
     publishableKey: 'sb_publishable_xUgF7Wh8fE4wMpuZSrROwA_DNdPJKGM',
   );
 
-  await OursPushService.initialize();
+  try { await OursPushService.initialize().timeout(const Duration(seconds: 6)); } catch (_) { /* Push is optional at startup. */ }
 
   runApp(const OursApp());
 }
@@ -669,6 +669,8 @@ class _ChatPageState extends State<ChatPage> {
   RealtimeChannel? channel;
   RealtimeChannel? presenceChannel;
   bool partnerOnline = false;
+  Timer? _groupOutboxTimer;
+  bool _syncingGroupOutbox = false;
 
   String get currentUserId => db.auth.currentUser!.id;
 
@@ -681,6 +683,33 @@ class _ChatPageState extends State<ChatPage> {
     loadParticipantNames();
     listenToMessages();
     listenToPresence();
+    _groupOutboxTimer = Timer.periodic(const Duration(seconds: 15), (_) => _syncGroupOutbox());
+  }
+
+  String get _groupCacheKey => 'ours_group_chat_cache_${currentUserId}_${widget.spaceId}';
+  String get _groupOutboxKey => 'ours_group_chat_outbox_${currentUserId}_${widget.spaceId}';
+  Future<void> _persistGroupMessages() async {
+    try { final prefs = await SharedPreferences.getInstance(); final safe = messages.where((m) => !['view_once','view_twice'].contains(m['message_type'])).toList(); await prefs.setString(_groupCacheKey, jsonEncode(safe)); } catch (_) {}
+  }
+  Future<List<Map<String,dynamic>>> _readGroupOutbox() async {
+    final prefs = await SharedPreferences.getInstance(); final raw = prefs.getString(_groupOutboxKey); if (raw == null || raw.isEmpty) return [];
+    try { return (jsonDecode(raw) as List).map((e) => Map<String,dynamic>.from(e as Map)).toList(); } catch (_) { return []; }
+  }
+  Future<void> _writeGroupOutbox(List<Map<String,dynamic>> items) async {
+    final prefs = await SharedPreferences.getInstance(); if (items.isEmpty) { await prefs.remove(_groupOutboxKey); return; } await prefs.setString(_groupOutboxKey,jsonEncode(items));
+  }
+  Future<void> _queueGroupText(String body,String? replyId) async {
+    final bytes=List<int>.generate(16,(_) => math.Random.secure().nextInt(256)); bytes[6]=(bytes[6]&0x0f)|0x40; bytes[8]=(bytes[8]&0x3f)|0x80;
+    final hex=bytes.map((v)=>v.toRadixString(16).padLeft(2,'0')).join(); final id='${hex.substring(0,8)}-${hex.substring(8,12)}-${hex.substring(12,16)}-${hex.substring(16,20)}-${hex.substring(20)}';
+    final row=<String,dynamic>{'id':id,'space_id':widget.spaceId,'sender_id':currentUserId,'body':body,'message_type':'text','reply_to':replyId,'created_at':DateTime.now().toUtc().toIso8601String(),'local_pending':true};
+    final queue=await _readGroupOutbox(); queue.add(row); await _writeGroupOutbox(queue); if(!mounted)return; setState(()=>messages.add(row)); messages.sort((a,b)=>(a['created_at']??'').toString().compareTo((b['created_at']??'').toString())); await _persistGroupMessages(); scrollToBottom();
+  }
+  Future<void> _syncGroupOutbox() async {
+    if(_syncingGroupOutbox||!mounted)return; _syncingGroupOutbox=true;
+    try { final queue=await _readGroupOutbox(); if(queue.isEmpty)return; final remaining=<Map<String,dynamic>>[];
+      for(var i=0;i<queue.length;i++){final item=queue[i];try{final payload=Map<String,dynamic>.from(item)..remove('local_pending'); await db.from('duo_messages').upsert(payload,onConflict:'id',ignoreDuplicates:true); final index=messages.indexWhere((m)=>m['id'].toString()==item['id'].toString()); if(mounted&&index>=0){final saved=Map<String,dynamic>.from(item)..remove('local_pending');setState(()=>messages[index]=saved);}}catch(_){remaining.addAll(queue.skip(i));break;}}
+      await _writeGroupOutbox(remaining); await _persistGroupMessages();
+    } finally {_syncingGroupOutbox=false;}
   }
 
   Future<void> loadChatTheme() async {
@@ -894,6 +923,8 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> loadMessages() async {
     try {
+      final prefs=await SharedPreferences.getInstance(); final cached=prefs.getString(_groupCacheKey);
+      if(cached!=null){try{final rows=(jsonDecode(cached) as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();final queued=await _readGroupOutbox();final merged=<String,Map<String,dynamic>>{};for(final row in rows){merged[row['id'].toString()]=row;}for(final row in queued){merged[row['id'].toString()]=row;}if(mounted)setState(()=>{messages=merged.values.toList(),loading=false});}catch(_){}}
       final result = await db
           .from('duo_messages')
           .select()
@@ -902,17 +933,14 @@ class _ChatPageState extends State<ChatPage> {
 
       if (!mounted) return;
 
-      setState(() {
-        messages = List<Map<String, dynamic>>.from(result);
-        loading = false;
-      });
-
-      scrollToBottom();
+      final queued=await _readGroupOutbox(); final merged=<String,Map<String,dynamic>>{};
+      for(final row in List<Map<String,dynamic>>.from(result)){merged[row['id'].toString()]=row;} for(final row in queued){merged[row['id'].toString()]=row;}
+      setState((){messages=merged.values.toList();messages.sort((a,b)=>(a['created_at']??'').toString().compareTo((b['created_at']??'').toString()));loading=false;});
+      await _persistGroupMessages(); await _syncGroupOutbox(); scrollToBottom();
     } catch (e) {
-      if (!mounted) return;
-
-      setState(() => loading = false);
-      showMessage('تعذر تحميل الرسائل: $e');
+      final queued=await _readGroupOutbox(); if(!mounted)return;
+      if(queued.isNotEmpty){final merged=<String,Map<String,dynamic>>{};for(final row in messages){merged[row['id'].toString()]=row;}for(final row in queued){merged[row['id'].toString()]=row;}setState(()=>{messages=merged.values.toList(),loading=false});}else{setState(()=>loading=false);}
+      if(messages.isEmpty)showMessage('لا توجد رسائل محفوظة على هذا الجهاز بعد.');
     }
   }
 
@@ -946,6 +974,7 @@ class _ChatPageState extends State<ChatPage> {
               if (newMessage['sender_id'] != currentUserId) {
                 if (!quietMode) showMessage('رسالة جديدة من $partnerName');
               }
+              _persistGroupMessages();
               scrollToBottom();
             }
           },
@@ -1340,8 +1369,10 @@ class _ChatPageState extends State<ChatPage> {
 
       messageController.clear();
       setState(() => replyingTo = null);
+      await _persistGroupMessages();
     } catch (e) {
-      showMessage('تعذر إرسال الرسالة: $e');
+      try { await _queueGroupText(text, replyingTo?['id']?.toString()); messageController.clear(); if(mounted)setState(()=>replyingTo=null); showMessage('حُفظت الرسالة محليًا وستُرسل عند عودة الاتصال'); }
+      catch (_) { showMessage('تعذر إرسال الرسالة أو حفظها محليًا'); }
     } finally {
       if (mounted) {
         setState(() => sending = false);
@@ -1504,6 +1535,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    _groupOutboxTimer?.cancel();
     messageController.dispose();
     scrollController.dispose();
     audioRecorder?.dispose();
