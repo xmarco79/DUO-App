@@ -387,7 +387,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
       const SizedBox(height:8),
       ClipRRect(borderRadius:BorderRadius.circular(15),child:SizedBox(height:78,child:GestureDetector(
        onScaleStart:(d){if(!moveMode)return;gestureZoom=zoom;gestureRotation=rotation;},
-       onScaleUpdate:(d){if(!moveMode)return;if(d.focalPointDelta.distance<2.5&&d.scale==1.0&&d.rotation==0.0)return;setEditor((){zoom=(gestureZoom*d.scale).clamp(1.0,3.2);rotation=gestureRotation+d.rotation;if(d.focalPointDelta.distance>=2.5){offsetX+=d.focalPointDelta.dx;offsetY+=d.focalPointDelta.dy;}}),
+       onScaleUpdate:(d){if(!moveMode)return;if(d.focalPointDelta.distance<2.5&&d.scale==1.0&&d.rotation==0.0)return;setEditor((){zoom=(gestureZoom*d.scale).clamp(1.0,3.2);rotation=gestureRotation+d.rotation;if(d.focalPointDelta.distance>=2.5){offsetX+=d.focalPointDelta.dx;offsetY+=d.focalPointDelta.dy;}});},
        child:Stack(fit:StackFit.expand,children:[
         Transform.translate(offset:Offset(offsetX,offsetY),child:Transform.rotate(angle:rotation,child:Transform.scale(scale:zoom,child:Image.file(source!,fit:BoxFit.cover)))),
         ColoredBox(color:skin.bg.withValues(alpha:dim*.65)),
@@ -395,15 +395,15 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
        ])
       ))),
       const SizedBox(height:10),
-      _oursWallpaperSliderLabel(t('التكبير','التكبير'),'${zoom.toStringAsFixed(2)}×',skin),
+      _oursWallpaperSliderLabel(t('التكبير','Zoom'),'${zoom.toStringAsFixed(2)}×',skin),
       Slider(value:zoom,min:1,max:3.2,onChanged:(v)=>setEditor(()=>zoom=v),activeColor:skin.accent),
-      _oursWallpaperSliderLabel(t('التعتيم','التعتيم'),'${(dim*100).round()}%',skin),
+      _oursWallpaperSliderLabel(t('التعتيم','Dim'),'${(dim*100).round()}%',skin),
       Slider(value:dim,min:0,max:.85,onChanged:(v)=>setEditor(()=>dim=v),activeColor:skin.accent),
-      _oursWallpaperSliderLabel(t('وضوح الصورة','وضوح الصورة'),'${((.55+opacity)*100).round()}%',skin),
+      _oursWallpaperSliderLabel(t('وضوح الصورة','Image clarity'),'${((.55+opacity)*100).round()}%',skin),
       Slider(value:opacity,min:.05,max:.45,onChanged:(v)=>setEditor(()=>opacity=v),activeColor:skin.accent),
       Row(children:[
-       Expanded(child:OutlinedButton.icon(onPressed:()=>setEditor((){zoom=1;rotation=0;dim=.48;opacity=.22;offsetX=0;offsetY=0;gestureZoom=1;gestureRotation=0;}),icon:const Icon(Icons.restart_alt_rounded),label:Text(t('إعادة ضبط','إعادة ضبط')))),
-       const SizedBox(width:8),Expanded(child:OutlinedButton.icon(onPressed:()=>setEditor(()=>rotation=(rotation+math.pi/2)%(math.pi*2)),icon:const Icon(Icons.rotate_right_rounded),label:Text(t('تدوير 90°','تدوير 90°'))))
+       Expanded(child:OutlinedButton.icon(onPressed:()=>setEditor((){zoom=1;rotation=0;dim=.48;opacity=.22;offsetX=0;offsetY=0;gestureZoom=1;gestureRotation=0;}),icon:const Icon(Icons.restart_alt_rounded),label:Text(t('إعادة ضبط','Reset')))),
+       const SizedBox(width:8),Expanded(child:OutlinedButton.icon(onPressed:()=>setEditor(()=>rotation=(rotation+math.pi/2)%(math.pi*2)),icon:const Icon(Icons.rotate_right_rounded),label:Text(t('تدوير 90°','Rotate 90°'))))
       ]),
       const SizedBox(height:8),
       SizedBox(width:double.infinity,height:60,child:DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:[skin.accent,Color.lerp(skin.accent,Colors.white,.16)!]),borderRadius:BorderRadius.circular(19),boxShadow:[BoxShadow(color:skin.accent.withValues(alpha:.28),blurRadius:18,offset:const Offset(0,7))]),child:FilledButton.icon(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:Colors.transparent,foregroundColor:skin.bg,shadowColor:Colors.transparent,padding:const EdgeInsets.symmetric(vertical:16,horizontal:18),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(19))),icon:const Icon(Icons.check_circle_rounded,size:23),label:Text(t('حفظ وتطبيق الخلفية','Save and apply wallpaper'),style:const TextStyle(fontSize:15,fontWeight:FontWeight.w900)))))
