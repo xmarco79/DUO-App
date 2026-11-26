@@ -2273,6 +2273,885 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     }
   }
 
+  Future<void> changeUsername() async {
+    final controller = TextEditingController(text: username);
+    final nextUsername = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: purple,
+        title: Text(oursText(context, 'تغيير اسم المستخدم', 'Change username')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          autocorrect: false,
+          textCapitalization: TextCapitalization.none,
+          decoration: const InputDecoration(
+            prefixText: '@',
+            hintText: 'username',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(oursText(context, 'إلغاء', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: Text(oursText(context, 'حفظ', 'Save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (nextUsername == null || !mounted) return;
+
+    final normalized = nextUsername.trim().toLowerCase();
+    if (!RegExp(r'^[a-z0-9_]{3,20}
+    final controller = TextEditingController();
+    final password = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: purple,
+        title: Text(oursText(context, 'تغيير كلمة المرور', 'Change password')),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: oursText(context, 'كلمة المرور الجديدة', 'New password'),
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(oursText(context, 'إلغاء', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: Text(oursText(context, 'حفظ', 'Save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (password == null) return;
+    if (password.length < 8) {
+      showMessage(oursText(context, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'Password must be at least 8 characters'));
+      return;
+    }
+    try {
+      await db.auth.updateUser(UserAttributes(password: password));
+      showMessage(oursText(context, 'تم تحديث كلمة المرور', 'Password updated'));
+    } catch (e) {
+      showMessage(oursText(context, 'تعذر تغيير كلمة المرور. تحقق من اتصالك وحاول مجددًا.', 'Could not change password. Check your connection and retry.'));
+    }
+  }
+
+  Widget settingsTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+  }) {
+    return Card(
+      color: purple,
+      child: ListTile(
+        leading: Icon(icon, color: gold),
+        title: Text(title),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(color: lavender),
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    displayNameController.dispose();
+    bioController.dispose();
+    super.dispose();
+  }
+
+  Widget sectionTitle(String title, String subtitle, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 22, 4, 10),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: gold.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: gold.withOpacity(0.18)),
+            ),
+            child: Icon(icon, color: gold, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(color: gold, fontSize: 15, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: const TextStyle(color: lavender, fontSize: 11)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget settingsCard({required List<Widget> children}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: purple.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: gold.withOpacity(0.12)),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget settingsRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+    Widget? trailing,
+    Color? iconColor,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: (iconColor ?? gold).withOpacity(0.10),
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Icon(icon, color: iconColor ?? gold, size: 20),
+      ),
+      title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Text(subtitle, style: const TextStyle(color: lavender, fontSize: 11, height: 1.35)),
+      ),
+      trailing: trailing ?? (onTap == null ? null : const Icon(Icons.chevron_right_rounded, color: lavender)),
+      onTap: onTap,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fontOptions = const <Map<String, String>>[
+      {'name':'Noto Sans Arabic','group':'arabic','sample':'أهلاً بك في عالمنا'},
+      {'name':'Cairo','group':'arabic','sample':'جمال الحروف العربية'},
+      {'name':'Tajawal','group':'arabic','sample':'لغة الضاد الجميلة'},
+      {'name':'Almarai','group':'arabic','sample':'قراءة مريحة وواضحة'},
+      {'name':'IBM Plex Sans Arabic','group':'arabic','sample':'حروف عربية متوازنة'},
+      {'name':'Alexandria','group':'arabic','sample':'تفاصيل أنيقة وواضحة'},
+      {'name':'Readex Pro','group':'arabic','sample':'تصميم حديث ومريح'},
+      {'name':'Roboto','group':'latin','sample':'OURS — YOUR WORLD'},
+      {'name':'Inter','group':'latin','sample':'Private Universe'},
+      {'name':'Nunito','group':'latin','sample':'Made for two'},
+      {'name':'Lato','group':'latin','sample':'A little closer'},
+      {'name':'Open Sans','group':'latin','sample':'Simple and readable'},
+      {'name':'Manrope','group':'latin','sample':'Designed with care'},
+      {'name':'DM Sans','group':'latin','sample':'Your private space'},
+    ];
+    final visibleFonts = fontOptions.where((font) => fontCategory == 'all' || font['group'] == fontCategory).toList();
+    final displayName = displayNameController.text.trim();
+    final accountTitle = displayName.isNotEmpty
+        ? displayName
+        : (username.isNotEmpty ? '@$username' : oursText(context, 'حساب OURS', 'OURS account'));
+
+    return Scaffold(
+      backgroundColor: navy,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: navy,
+        centerTitle: false,
+        title: Text(
+          oursText(context, 'الإعدادات', 'Settings'),
+          style: const TextStyle(color: gold, fontSize: 19, fontWeight: FontWeight.w700),
+        ),
+        actions: [
+          IconButton(
+            tooltip: oursText(context, 'تحديث البيانات', 'Refresh account'),
+            onPressed: loading ? null : () {
+              setState(() => loading = true);
+              loadProfile();
+              loadPreferences();
+            },
+            icon: const Icon(Icons.refresh_rounded, color: lavender),
+          ),
+          const SizedBox(width: 6),
+        ],
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator(color: gold))
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 34),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [purple, navy.withOpacity(0.96)],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: gold.withOpacity(0.24)),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 18, offset: const Offset(0, 8)),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: uploadingAvatar ? null : chooseAvatar,
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 34,
+                              backgroundColor: navy,
+                              backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
+                              child: avatarUrl == null ? const Icon(Icons.person_rounded, color: gold, size: 34) : null,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                width: 23,
+                                height: 23,
+                                decoration: const BoxDecoration(color: gold, shape: BoxShape.circle),
+                                child: uploadingAvatar
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(5),
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: navy),
+                                      )
+                                    : const Icon(Icons.edit_rounded, color: navy, size: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(accountTitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 4),
+                            Text(email.isEmpty ? oursText(context, 'البريد غير متاح', 'Email unavailable') : email,
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: lavender, fontSize: 11)),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: gold.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: gold.withOpacity(0.22)),
+                              ),
+                              child: Text(
+                                username.isEmpty ? 'OURS · PRIVATE ACCOUNT' : '@$username  ·  OURS',
+                                style: const TextStyle(color: gold, fontSize: 10, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                sectionTitle(
+                  oursText(context, 'الملف الشخصي', 'Profile'),
+                  oursText(context, 'عدّل المعلومات التي تظهر لشريكك', 'Manage the details your partner sees'),
+                  Icons.person_outline_rounded,
+                ),
+                settingsCard(children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    child: TextField(
+                      controller: displayNameController,
+                      maxLength: 30,
+                      decoration: InputDecoration(
+                        labelText: oursText(context, 'الاسم الظاهر', 'Display name'),
+                        hintText: oursText(context, 'اكتب اسمك', 'Enter your name'),
+                        prefixIcon: const Icon(Icons.badge_outlined),
+                        filled: true,
+                        fillColor: navy.withOpacity(0.6),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        counterStyle: const TextStyle(color: lavender, fontSize: 10),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.cake_outlined),
+                      label: Text(birthDate == null
+                        ? oursText(context, 'إضافة تاريخ الميلاد', 'Add birthday')
+                        : oursText(context, 'تاريخ الميلاد: ${DateFormat('yyyy/MM/dd').format(birthDate!)}', 'Birthday: ${DateFormat('yyyy/MM/dd').format(birthDate!)}')),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: birthDate ?? DateTime(2008, 1, 1),
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null && mounted) setState(() => birthDate = picked);
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                    child: TextField(
+                      controller: bioController,
+                      maxLength: 160,
+                      minLines: 2,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: oursText(context, 'نبذة شخصية', 'About you'),
+                        hintText: oursText(context, 'مساحة صغيرة تعبّر عنك', 'A short introduction'),
+                        prefixIcon: const Icon(Icons.notes_rounded),
+                        filled: true,
+                        fillColor: navy.withOpacity(0.6),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        counterStyle: const TextStyle(color: lavender, fontSize: 10),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: FilledButton.icon(
+                        onPressed: saving ? null : saveProfile,
+                        icon: saving
+                            ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2, color: navy))
+                            : const Icon(Icons.check_rounded),
+                        label: Text(oursText(context, 'حفظ الملف الشخصي', 'Save profile')),
+                      ),
+                    ),
+                  ),
+                ]),
+
+                sectionTitle(
+                  oursText(context, 'التفضيلات', 'Preferences'),
+                  oursText(context, 'تحكّم بتجربة استخدام OURS', 'Make OURS work the way you like'),
+                  Icons.tune_rounded,
+                ),
+                settingsCard(children: [
+                  settingsRow(
+                    icon: Icons.notifications_off_outlined,
+                    title: oursText(context, 'الوضع الهادئ', 'Quiet mode'),
+                    subtitle: oursText(context, 'كتم التنبيهات أثناء استخدام التطبيق', 'Mute notifications while using the app'),
+                    trailing: Switch(
+                      value: quietMode,
+                      activeColor: gold,
+                      onChanged: (value) async {
+                        setState(() => quietMode = value);
+                        await savePreference('ours_quiet_mode', value);
+                      },
+                    ),
+                  ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.language_rounded,
+                    title: oursText(context, 'لغة التطبيق', 'App language'),
+                    subtitle: languageCode == 'ar' ? 'العربية' : 'English',
+                    trailing: DropdownButton<String>(
+                      value: languageCode,
+                      underline: const SizedBox.shrink(),
+                      dropdownColor: purple,
+                      items: const [
+                        DropdownMenuItem(value: 'ar', child: Text('العربية')),
+                        DropdownMenuItem(value: 'en', child: Text('English')),
+                      ],
+                      onChanged: (value) async {
+                        if (value == null) return;
+                        setState(() => languageCode = value);
+                        await OursAppSettings.setLanguage(value);
+                      },
+                    ),
+                  ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [gold.withOpacity(.24), lavender.withOpacity(.10)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: gold.withOpacity(.24)),
+                              ),
+                              child: const Icon(Icons.text_fields_rounded, color: gold, size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(oursText(context, 'مكتبة الخطوط', 'Font library'),
+                                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                                  const SizedBox(height: 3),
+                                  Text(oursText(context, 'اختر طابعًا يعبّر عنك — التغيير يطبق على التطبيق كاملًا',
+                                    'Choose your style — changes apply throughout the app'),
+                                    style: const TextStyle(color: lavender, fontSize: 10.5, height: 1.35)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [gold.withOpacity(.13), purple.withOpacity(.72), navy.withOpacity(.85)],
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: gold.withOpacity(.28)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: gold.withOpacity(.13),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(Icons.auto_awesome_rounded, color: gold, size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(oursText(context, 'الخط الحالي', 'CURRENT FONT'),
+                                      style: TextStyle(color: gold.withOpacity(.9), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1.1)),
+                                    const SizedBox(height: 3),
+                                    Text(fontFamily,
+                                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+                                    const SizedBox(height: 4),
+                                    Text(oursText(context, 'أهلاً بك في عالم OURS', 'Welcome to OURS'),
+                                      style: GoogleFonts.getFont(fontFamily, color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                                    Text(oursText(context, 'معاينة مباشرة للخط المختار', 'Live preview of your selected font'),
+                                      style: const TextStyle(color: lavender, fontSize: 10)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.check_circle_rounded, color: gold, size: 22),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () => setState(() => showAllFonts = !showAllFonts),
+                            icon: Icon(showAllFonts ? Icons.expand_less_rounded : Icons.grid_view_rounded, size: 19),
+                            label: Text(showAllFonts
+                              ? oursText(context, 'إخفاء مكتبة الخطوط', 'Hide font library')
+                              : oursText(context, 'استعراض الخطوط الـ14', 'Browse all 14 fonts')),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: gold,
+                              side: BorderSide(color: gold.withOpacity(.45)),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                          ),
+                        ),
+                        if (showAllFonts) ...[
+                        const SizedBox(height: 16),
+                        Text(oursText(context, 'تصفّح حسب النمط', 'BROWSE BY STYLE'),
+                          style: const TextStyle(color: lavender, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .8)),
+                        const SizedBox(height: 9),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              ['all', oursText(context, 'الكل', 'All')],
+                              ['arabic', oursText(context, 'عربي', 'Arabic')],
+                              ['latin', oursText(context, 'إنجليزي', 'English')],
+                            ].map((category) {
+                              final selected = fontCategory == category[0];
+                              return Padding(
+                                padding: const EdgeInsetsDirectional.only(end: 7),
+                                child: ChoiceChip(
+                                  label: Text(category[1]),
+                                  selected: selected,
+                                  onSelected: (_) => setState(() => fontCategory = category[0]),
+                                  showCheckmark: false,
+                                  labelStyle: TextStyle(
+                                    color: selected ? navy : lavender,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  selectedColor: gold,
+                                  backgroundColor: navy.withOpacity(.65),
+                                  side: BorderSide(color: selected ? gold : lavender.withOpacity(.18)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: visibleFonts.length,
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 9,
+                            mainAxisSpacing: 9,
+                            childAspectRatio: 1.30,
+                          ),
+                          itemBuilder: (context, index) {
+                            final font = visibleFonts[index];
+                            final name = font['name']!;
+                            final selected = fontFamily == name;
+                            return Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(15),
+                                onTap: () async {
+                                  setState(() => fontFamily = name);
+                                  await OursAppSettings.setFontFamily(name);
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: selected ? gold.withOpacity(.13) : navy.withOpacity(.62),
+                                    borderRadius: BorderRadius.circular(15),
+                                    border: Border.all(
+                                      color: selected ? gold : lavender.withOpacity(.14),
+                                      width: selected ? 1.5 : 1,
+                                    ),
+                                    boxShadow: selected ? [
+                                      BoxShadow(color: gold.withOpacity(.08), blurRadius: 13, spreadRadius: 1),
+                                    ] : null,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(color: selected ? gold : Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                                          ),
+                                          if (selected) const Icon(Icons.check_circle_rounded, color: gold, size: 16),
+                                        ],
+                                      ),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: AlignmentDirectional.centerStart,
+                                        child: Text(font['sample']!,
+                                          maxLines: 1,
+                                          style: GoogleFonts.getFont(name, color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+                                      ),
+                                      Text(font['group'] == 'arabic'
+                                          ? oursText(context, 'خط عربي مريح', 'Arabic typeface')
+                                          : oursText(context, 'خط إنجليزي واضح', 'English typeface'),
+                                        style: const TextStyle(color: lavender, fontSize: 9)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(15),
+                          decoration: BoxDecoration(
+                            color: navy.withOpacity(.72),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: lavender.withOpacity(.16)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(oursText(context, 'شكل الخط داخل OURS', 'HOW IT LOOKS IN OURS'),
+                                style: const TextStyle(color: gold, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .7)),
+                              const SizedBox(height: 10),
+                              Text(oursText(context, 'مرحبًا بك في عالمنا الخاص', 'Welcome to our private universe'),
+                                style: GoogleFonts.getFont(fontFamily, color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 5),
+                              Text(oursText(context, 'التفاصيل الصغيرة تصنع تجربة أجمل.', 'Little details make the experience beautiful.'),
+                                style: GoogleFonts.getFont(fontFamily, color: lavender, fontSize: 13)),
+                              const SizedBox(height: 5),
+                              Text('OURS  ·  MADE FOR TWO',
+                                style: GoogleFonts.getFont(fontFamily, color: gold.withOpacity(.9), fontSize: 10, letterSpacing: 1.1)),
+                            ],
+                          ),
+                        ),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: TextButton.icon(
+                            onPressed: () async {
+                              setState(() {
+                                fontFamily = 'Roboto';
+                                fontCategory = 'all';
+                                showAllFonts = false;
+                              });
+                              await OursAppSettings.setFontFamily('Roboto');
+                            },
+                            icon: const Icon(Icons.restart_alt_rounded, size: 17),
+                            label: Text(oursText(context, 'استعادة الخط الافتراضي', 'Restore default font')),
+                          ),
+                        ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.delete_outline_rounded,
+                    title: oursText(context, 'تأكيد الحذف', 'Confirm before deleting'),
+                    subtitle: oursText(context, 'اطلب تأكيدًا قبل حذف العناصر', 'Ask before deleting items'),
+                    trailing: Switch(
+                      value: confirmBeforeDelete,
+                      activeColor: gold,
+                      onChanged: (value) async {
+                        setState(() => confirmBeforeDelete = value);
+                        await savePreference('ours_confirm_delete', value);
+                      },
+                    ),
+                  ),
+                ]),
+
+                sectionTitle(
+                  oursText(context, 'الأمان والخصوصية', 'Security & privacy'),
+                  oursText(context, 'حسابك ومساحتكما الخاصة', 'Your account and private space'),
+                  Icons.shield_outlined,
+                ),
+                settingsCard(children: [
+                  settingsRow(
+                    icon: Icons.alternate_email_rounded,
+                    title: oursText(context, 'تغيير اسم المستخدم', 'Change username'),
+                    subtitle: username.isEmpty ? oursText(context, 'اختر اسمًا لحسابك', 'Set your account username') : '@$username',
+                    onTap: saving ? null : changeUsername,
+                  ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.password_rounded,
+                    title: oursText(context, 'تغيير كلمة المرور', 'Change password'),
+                    subtitle: oursText(context, 'استخدم كلمة مرور قوية وخاصة', 'Keep your account protected'),
+                    onTap: changePassword,
+                  ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.lock_outline_rounded,
+                    title: oursText(context, 'مساحتك الخاصة', 'Your private space'),
+                    subtitle: oursText(context, 'محتوى OURS مخصص لك ولشريكك فقط', 'Your OURS content is only for you and your partner'),
+                  ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
+                    icon: Icons.people_alt_outlined,
+                    title: oursText(context, 'حد الأعضاء', 'Member limit'),
+                    subtitle: oursText(context, 'حسابان فقط في كل مساحة', 'Exactly two accounts per space'),
+                    trailing: const Text('2 / 2', style: TextStyle(color: gold, fontWeight: FontWeight.w700)),
+                  ),
+                ]),
+
+                sectionTitle(
+                  oursText(context, 'حول التطبيق', 'About the app'),
+                  oursText(context, 'معلومات عن تجربتك مع OURS', 'Your OURS experience'),
+                  Icons.info_outline_rounded,
+                ),
+                settingsCard(children: [
+                  settingsRow(
+                    icon: Icons.all_inclusive_rounded,
+                    title: 'OURS',
+                    subtitle: 'YOUR PRIVATE UNIVERSE',
+                    trailing: const Text('1.0.0', style: TextStyle(color: lavender, fontSize: 12)),
+                  ),
+                ]),
+
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: signOut,
+                  icon: const Icon(Icons.logout_rounded),
+                  label: Text(oursText(context, 'تسجيل الخروج من الحساب', 'Sign out of account')),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: BorderSide(color: Colors.redAccent.withOpacity(0.55)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text('MADE FOR TWO  ·  OURS',
+                    style: TextStyle(color: lavender.withOpacity(0.65), fontSize: 10, letterSpacing: 2)),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class AudioMessageBubble extends StatefulWidget {
+  final String audioPath;
+  final bool isMine;
+
+  const AudioMessageBubble({
+    super.key,
+    required this.audioPath,
+    required this.isMine,
+  });
+
+  @override
+  State<AudioMessageBubble> createState() => _AudioMessageBubbleState();
+}
+
+class _AudioMessageBubbleState extends State<AudioMessageBubble> {
+  final AudioPlayer player = AudioPlayer();
+  bool loadingUrl = false;
+
+  Future<void> togglePlayback() async {
+    if (player.state == PlayerState.playing) {
+      await player.pause();
+      return;
+    }
+
+    setState(() => loadingUrl = true);
+    try {
+      // Generate a fresh signed URL each time so long-open chats do not
+      // attempt playback with an expired 15-minute URL.
+      final url = await Supabase.instance.client.storage
+          .from('duo-private')
+          .createSignedUrl(widget.audioPath, 900);
+      await player.play(UrlSource(url));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر تشغيل الرسالة الصوتية')),
+        );
+      }
+      debugPrint('Audio playback failed: $e');
+    } finally {
+      if (mounted) setState(() => loadingUrl = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    player.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<PlayerState>(
+      stream: player.onPlayerStateChanged,
+      initialData: player.state,
+      builder: (context, snapshot) {
+        final playing = snapshot.data == PlayerState.playing;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              onPressed: loadingUrl ? null : togglePlayback,
+              icon: loadingUrl
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: gold,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Icon(
+                      playing
+                          ? Icons.pause_circle_filled
+                          : Icons.play_circle_fill,
+                      color: gold,
+                      size: 34,
+                    ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              loadingUrl
+                  ? 'جارٍ التحميل...'
+                  : playing
+                      ? 'تشغيل الرسالة...'
+                      : 'رسالة صوتية',
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+).hasMatch(normalized)) {
+      showMessage(oursText(
+        context,
+        'اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا إنجليزيًا أو رقمًا أو _',
+        'Username must be 3–20 characters using letters, numbers, or _',
+      ));
+      return;
+    }
+    if (normalized == username) return;
+
+    setState(() => saving = true);
+    try {
+      final user = db.auth.currentUser;
+      if (user == null) throw Exception('No authenticated user');
+      await db
+          .from('duo_profiles')
+          .update({'username': normalized})
+          .eq('user_id', user.id);
+      if (!mounted) return;
+      setState(() => username = normalized);
+      showMessage(oursText(context, 'تم تغيير اسم المستخدم بنجاح', 'Username updated successfully'));
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString().toLowerCase().contains('duplicate') ||
+              e.toString().toLowerCase().contains('unique')
+          ? oursText(context, 'اسم المستخدم مستخدم بالفعل', 'That username is already taken')
+          : oursText(context, 'تعذر تغيير اسم المستخدم. تحقق من الاتصال وحاول مجددًا.', 'Could not update username. Check your connection and retry.');
+      showMessage(message);
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
   Future<void> changePassword() async {
     final controller = TextEditingController();
     final password = await showDialog<String>(
