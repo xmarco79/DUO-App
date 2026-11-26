@@ -2926,6 +2926,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 ),
                 settingsCard(children: [
                   settingsRow(
+                    icon: Icons.alternate_email_rounded,
+                    title: oursText(context, 'تغيير اسم المستخدم', 'Change username'),
+                    subtitle: username.isEmpty ? oursText(context, 'اختر اسمًا لحسابك', 'Set your account username') : '@$username',
+                    onTap: saving ? null : changeUsername,
+                  ),
+                  Divider(height: 1, indent: 68, color: gold.withOpacity(0.10)),
+                  settingsRow(
                     icon: Icons.password_rounded,
                     title: oursText(context, 'تغيير كلمة المرور', 'Change password'),
                     subtitle: oursText(context, 'استخدم كلمة مرور قوية وخاصة', 'Keep your account protected'),
