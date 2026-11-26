@@ -188,7 +188,7 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  @override
  Path getClip(Size size) {
   if(size.width<=0||size.height<=0)return Path();
-  // Start from the stable bubble; refine only the tail and lower contour.
+  // Stable body proportions with a single flat lower edge and a smooth integrated tail.
   final tailWidth=math.min(13.0,size.width*.20);
   final tailHeight=math.min(9.0,size.height*.22);
   final bodyBottom=size.height-tailHeight;
@@ -204,17 +204,16 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
   if(tailOnLeft){
    path
     ..lineTo(tailBase,bodyBottom)
-    ..cubicTo(radius+tailWidth*.72,bodyBottom+1.0,radius+tailWidth*.40,size.height-1.0,radius+tailWidth*.12,size.height-1.0)
-    ..cubicTo(radius+tailWidth*.02,size.height-1.0,radius*.10,bodyBottom-radius*.38,radius,bodyBottom-radius*.02);
+    ..cubicTo(radius+tailWidth*.72,bodyBottom+1.0,radius+tailWidth*.42,size.height-1.0,radius+tailWidth*.18,size.height-1.0)
+    ..cubicTo(radius+tailWidth*.05,size.height-1.0,0,bodyBottom-radius*.48,0,bodyBottom-radius);
   }else{
    path
     ..lineTo(size.width-tailBase,bodyBottom)
-    ..cubicTo(size.width-radius-tailWidth*.72,bodyBottom+1.0,size.width-radius-tailWidth*.40,size.height-1.0,size.width-radius-tailWidth*.12,size.height-1.0)
-    ..cubicTo(size.width-radius-tailWidth*.02,size.height-1.0,size.width-radius*.10,bodyBottom-radius*.38,size.width-radius,bodyBottom-radius*.02);
+    ..cubicTo(size.width-radius-tailWidth*.72,bodyBottom+1.0,size.width-radius-tailWidth*.42,size.height-1.0,size.width-radius-tailWidth*.18,size.height-1.0)
+    ..cubicTo(size.width-radius-tailWidth*.05,size.height-1.0,size.width,bodyBottom-radius*.48,size.width,bodyBottom-radius);
   }
+
   path
-   ..lineTo(radius,bodyBottom)
-   ..cubicTo(radius*.42,bodyBottom,0,bodyBottom-radius*.42,0,bodyBottom-radius)
    ..lineTo(0,radius)
    ..cubicTo(0,radius*.42,radius*.42,0,radius,0)
    ..close();
