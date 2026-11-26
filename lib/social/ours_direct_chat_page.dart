@@ -187,40 +187,63 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  final radius=math.min(20.0,size.width*.32);
-  final tailWidth=math.min(14.0,size.width*.30);
-  const tailHeight=12.0;
-  final bodyBottom=size.height-tailHeight;
-  final path=Path()
-   ..moveTo(radius,0)
-   ..lineTo(size.width-radius,0)
-   ..cubicTo(size.width-radius*.42,0,size.width,radius*.42,size.width,radius)
-   ..lineTo(size.width,bodyBottom-radius)
-   ..cubicTo(size.width,bodyBottom-radius*.42,size.width-radius*.42,bodyBottom,size.width-radius,bodyBottom);
+  // Match the supplied reference: a true capsule body with a low,
+  // smoothly integrated speech tail. The tail is mirrored for RTL/LTR.
+  if (size.width <= 0 || size.height <= 0) return Path();
 
-  if(tailOnLeft){
-   path
-    ..lineTo(radius+tailWidth,bodyBottom)
-    ..cubicTo(radius+tailWidth*.78,bodyBottom+1,radius+tailWidth*.58,size.height-1,radius+tailWidth*.22,size.height-1)
-    ..cubicTo(radius+tailWidth*.04, size.height-2, radius+2.5, bodyBottom+4.5, radius, bodyBottom-radius*.04);
-  }else{
-   path
-    ..lineTo(size.width-radius-tailWidth,bodyBottom)
-    ..cubicTo(size.width-radius-tailWidth*.78,bodyBottom+1,size.width-radius-tailWidth*.58,size.height-1,size.width-radius-tailWidth*.22,size.height-1)
-    ..cubicTo(size.width-radius-tailWidth*.04,size.height-2,size.width-radius-2.5,bodyBottom+4.5,size.width-radius,bodyBottom-radius*.04);
-  }
+  final tailWidth = math.min(22.0, size.width * .16);
+  final tailHeight = math.min(18.0, size.height * .30);
+  final bodyWidth = size.width - tailWidth;
+  final bodyBottom = size.height - tailHeight;
+  final radius = math.min(bodyBottom / 2, bodyWidth / 2);
+  final p = (double x, double y) =>
+      Offset(tailOnLeft ? size.width - x : x, y);
 
-  path
-   ..lineTo(radius,bodyBottom)
-   ..cubicTo(radius*.42,bodyBottom,0,bodyBottom-radius*.42,0,bodyBottom-radius)
-   ..lineTo(0,radius)
-   ..cubicTo(0,radius*.42,radius*.42,0,radius,0)
-   ..close();
+  final path = Path()
+    ..moveTo(p(radius, 0).dx, 0)
+    ..lineTo(p(bodyWidth - radius, 0).dx, 0)
+    ..cubicTo(
+      p(bodyWidth - radius * .42, 0).dx, 0,
+      p(bodyWidth, radius * .42).dx, radius * .42,
+      p(bodyWidth, radius).dx, radius,
+    )
+    // Keep the upper side vertical, then sweep naturally into the tail.
+    ..lineTo(p(bodyWidth, bodyBottom * .60).dx, bodyBottom * .60)
+    ..cubicTo(
+      p(bodyWidth, bodyBottom * .78).dx, bodyBottom * .78,
+      p(bodyWidth - tailWidth * .10, bodyBottom * .91).dx, bodyBottom * .91,
+      p(bodyWidth - tailWidth * .42, bodyBottom).dx, bodyBottom,
+    )
+    // The underside is deliberately horizontal, as in the reference.
+    ..lineTo(p(radius, bodyBottom).dx, bodyBottom)
+    ..cubicTo(
+      p(radius * .42, bodyBottom).dx, bodyBottom,
+      p(0, bodyBottom - radius * .42).dx, bodyBottom - radius * .42,
+      p(0, bodyBottom - radius).dx, bodyBottom - radius,
+    )
+    ..lineTo(p(0, radius).dx, radius)
+    ..cubicTo(
+      p(0, radius * .42).dx, radius * .42,
+      p(radius * .42, 0).dx, 0,
+      p(radius, 0).dx, 0,
+    )
+    // Tail tip: a single soft point with no sharp root or detached notch.
+    ..cubicTo(
+      p(radius * 1.10, bodyBottom + tailHeight * .18).dx,
+      bodyBottom + tailHeight * .18,
+      p(bodyWidth - tailWidth * .06, size.height - 1).dx,
+      size.height - 1,
+      p(size.width, size.height - 1).dx,
+      size.height - 1,
+    )
+    ..close();
+
   return path;
  }
 
  @override
- bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
+ bool shouldReclip(covariant _MessageBubbleClipper oldClipper) =>
+     oldClipper.tailOnLeft != tailOnLeft;
 }
 
 
