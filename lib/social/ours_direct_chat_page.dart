@@ -187,8 +187,7 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  // Match the supplied reference: a true capsule body with a low,
-  // smoothly integrated speech tail. The tail is mirrored for RTL/LTR.
+  // Capsule silhouette based on the supplied reference image.
   if (size.width <= 0 || size.height <= 0) return Path();
 
   final tailWidth = math.min(22.0, size.width * .16);
@@ -196,45 +195,40 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
   final bodyWidth = size.width - tailWidth;
   final bodyBottom = size.height - tailHeight;
   final radius = math.min(bodyBottom / 2, bodyWidth / 2);
-  final p = (double x, double y) =>
-      Offset(tailOnLeft ? size.width - x : x, y);
+  double x(double value) => tailOnLeft ? size.width - value : value;
 
   final path = Path()
-    ..moveTo(p(radius, 0).dx, 0)
-    ..lineTo(p(bodyWidth - radius, 0).dx, 0)
+    ..moveTo(x(radius), 0)
+    ..lineTo(x(bodyWidth - radius), 0)
     ..cubicTo(
-      p(bodyWidth - radius * .42, 0).dx, 0,
-      p(bodyWidth, radius * .42).dx, radius * .42,
-      p(bodyWidth, radius).dx, radius,
+      x(bodyWidth - radius * .42), 0,
+      x(bodyWidth), radius * .42,
+      x(bodyWidth), radius,
     )
-    // Keep the upper side vertical, then sweep naturally into the tail.
-    ..lineTo(p(bodyWidth, bodyBottom * .60).dx, bodyBottom * .60)
+    ..lineTo(x(bodyWidth), bodyBottom * .60)
+    // Smoothly leave the lower side and form one integrated tail.
     ..cubicTo(
-      p(bodyWidth, bodyBottom * .78).dx, bodyBottom * .78,
-      p(bodyWidth - tailWidth * .10, bodyBottom * .91).dx, bodyBottom * .91,
-      p(bodyWidth - tailWidth * .42, bodyBottom).dx, bodyBottom,
+      x(bodyWidth), bodyBottom * .78,
+      x(bodyWidth + tailWidth * .12), size.height - 1,
+      x(size.width), size.height - 1,
     )
-    // The underside is deliberately horizontal, as in the reference.
-    ..lineTo(p(radius, bodyBottom).dx, bodyBottom)
     ..cubicTo(
-      p(radius * .42, bodyBottom).dx, bodyBottom,
-      p(0, bodyBottom - radius * .42).dx, bodyBottom - radius * .42,
-      p(0, bodyBottom - radius).dx, bodyBottom - radius,
+      x(bodyWidth - tailWidth * .18), size.height - 2,
+      x(bodyWidth - tailWidth * .22), bodyBottom + tailHeight * .10,
+      x(bodyWidth - radius * .04), bodyBottom,
     )
-    ..lineTo(p(0, radius).dx, radius)
+    // The main lower edge remains perfectly horizontal.
+    ..lineTo(x(radius), bodyBottom)
     ..cubicTo(
-      p(0, radius * .42).dx, radius * .42,
-      p(radius * .42, 0).dx, 0,
-      p(radius, 0).dx, 0,
+      x(radius * .42), bodyBottom,
+      x(0), bodyBottom - radius * .42,
+      x(0), bodyBottom - radius,
     )
-    // Tail tip: a single soft point with no sharp root or detached notch.
+    ..lineTo(x(0), radius)
     ..cubicTo(
-      p(radius * 1.10, bodyBottom + tailHeight * .18).dx,
-      bodyBottom + tailHeight * .18,
-      p(bodyWidth - tailWidth * .06, size.height - 1).dx,
-      size.height - 1,
-      p(size.width, size.height - 1).dx,
-      size.height - 1,
+      x(0), radius * .42,
+      x(radius * .42), 0,
+      x(radius), 0,
     )
     ..close();
 
