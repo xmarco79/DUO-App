@@ -188,27 +188,38 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  @override
  Path getClip(Size size) {
   if(size.width<=0||size.height<=0)return Path();
-  // Premium capsule silhouette: generous rounded body and a soft, integrated tail.
-  final tailW=math.min(18.0,size.width*.15);
-  final tailH=math.min(10.0,size.height*.19);
+
+  // A true capsule body with one continuous, softly swept speech tail.
+  // The tail is part of the same contour: no seam, overlap or sharp join.
+  final tailH=math.min(11.0,math.max(7.0,size.height*.17));
   final bodyBottom=size.height-tailH;
-  final r=math.min(math.min(24.0,bodyBottom*.48),size.width*.30);
+  final radius=math.min(bodyBottom*.5,30.0);
+  final tailW=math.min(22.0,math.max(15.0,size.width*.12));
+  final tailOuter=math.max(radius+tailW+5.0,size.width-radius-5.0);
+  final tailInner=tailOuter-tailW;
+  final tipX=tailOuter-tailW*.53;
   final x=(double value)=>tailOnLeft?size.width-value:value;
   final path=Path()
-   ..moveTo(x(r),0)
-   ..lineTo(x(size.width-r),0)
-   ..cubicTo(x(size.width-r*.42),0,x(size.width),r*.42,x(size.width),r)
-   ..lineTo(x(size.width),bodyBottom-r)
-   ..cubicTo(x(size.width),bodyBottom-r*.42,x(size.width-r*.42),bodyBottom,x(size.width-r),bodyBottom)
-   // The body remains a clean horizontal capsule edge until the tail transition.
-   ..lineTo(x(size.width-tailW-r*.22),bodyBottom)
-   ..cubicTo(x(size.width-tailW*.52),bodyBottom+tailH*.10,x(size.width-tailW*.25),bodyBottom+tailH*.48,x(size.width-tailW*.08),size.height-tailH*.08)
-   ..cubicTo(x(size.width-tailW*.03),size.height-tailH*.02,x(size.width-tailW*.12),size.height,x(size.width-tailW*.55),size.height-tailH*.02)
-   ..cubicTo(x(size.width-tailW*.92),size.height-tailH*.10,x(size.width-tailW*.98),bodyBottom+tailH*.18,x(size.width-tailW),bodyBottom)
-   ..lineTo(x(r),bodyBottom)
-   ..cubicTo(x(r*.42),bodyBottom,0,bodyBottom-r*.42,0,bodyBottom-r)
-   ..lineTo(0,r)
-   ..cubicTo(0,r*.42,x(r*.42),0,x(r),0)
+   // Top edge and right capsule shoulder.
+   ..moveTo(x(radius),0)
+   ..lineTo(x(size.width-radius),0)
+   ..cubicTo(x(size.width-radius*.45),0,x(size.width),radius*.45,x(size.width),radius)
+   // Right side and lower capsule shoulder.
+   ..lineTo(x(size.width),bodyBottom-radius)
+   ..cubicTo(x(size.width),bodyBottom-radius*.45,x(size.width-radius*.45),bodyBottom,x(size.width-radius),bodyBottom)
+   // Keep the lower edge perfectly straight up to the tail root.
+   ..lineTo(x(tailOuter),bodyBottom)
+   // Sweep down into the tail with a broad, tangent transition.
+   ..cubicTo(x(tailOuter-tailW*.10),bodyBottom+tailH*.12,x(tailOuter-tailW*.20),size.height-tailH*.30,x(tipX+tailW*.20),size.height-tailH*.10)
+   // A tiny rounded nose instead of a needle-like point.
+   ..cubicTo(x(tipX+tailW*.08),size.height+tailH*.015,x(tipX-tailW*.08),size.height+tailH*.015,x(tipX-tailW*.20),size.height-tailH*.10)
+   // Return smoothly to the capsule baseline.
+   ..cubicTo(x(tailInner+tailW*.20),size.height-tailH*.30,x(tailInner+tailW*.10),bodyBottom+tailH*.12,x(tailInner),bodyBottom)
+   ..lineTo(x(radius),bodyBottom)
+   // Left capsule shoulder and side.
+   ..cubicTo(x(radius*.45),bodyBottom,0,bodyBottom-radius*.45,0,bodyBottom-radius)
+   ..lineTo(0,radius)
+   ..cubicTo(0,radius*.45,x(radius*.45),0,x(radius),0)
    ..close();
   return path;
  }
