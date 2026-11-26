@@ -332,7 +332,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
   return {'path':null,'opacity':.22,'zoom':1.0,'rotation':0.0,'dim':.55,'offset_x':0.0,'offset_y':0.0};
  }
  File? source;
- if(action=='new'){final picked=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:96,maxWidth:3200,maxHeight:3200);if(picked==null)return null;source=File(picked.path);}
+ if(action=='new'){final picked=await ImagePicker().pickImage(source:ImageSource.gallery);if(picked==null)return null;source=File(picked.path);}
  else if(exists){source=File(currentPath!);}
  if(source==null||!await source.exists())return null;
  var zoom=action=='edit'?currentZoom:1.0,rotation=action=='edit'?currentRotation:0.0,dim=action=='edit'?currentDim:.48,opacity=action=='edit'?currentOpacity:.22,offsetX=action=='edit'?currentOffsetX:0.0,offsetY=action=='edit'?currentOffsetY:0.0;
@@ -645,7 +645,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   }
   File? source;
   if(action=='new'){
-   final picked=await picker.pickImage(source:ImageSource.gallery,imageQuality:96,maxWidth:3200,maxHeight:3200);
+   final picked=await picker.pickImage(source:ImageSource.gallery);
    if(picked==null)return;
    source=File(picked.path);
   }else if(action=='history'&&restored!=null){source=File(restored['path'].toString());}
