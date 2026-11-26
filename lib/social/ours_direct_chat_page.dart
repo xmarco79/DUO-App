@@ -750,7 +750,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      final combined=<String,Map<String,dynamic>>{};
      for(final row in rows){combined[row['id'].toString()]=row;}
      for(final row in queued){combined[row['id'].toString()]=row;}
-     if(mounted)setState((){messages..clear()..addAll(combined.values);messages.sort(_compareMessages);});
+     if(mounted)setState((){messages..clear()..addAll(combined.values);messages.sort(_compareMessages);loading=false;});
     }catch(_){}
    }
    final hidden=await db.from('ours_direct_message_hides').select('message_id').eq('user_id',uid);
@@ -770,7 +770,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    if(mounted){
     if(queued.isNotEmpty){setState(()=>messages.removeWhere((m)=>m['local_pending']==true));setState(()=>messages.addAll(queued));messages.sort(_compareMessages);}
     setState(()=>loading=false);_bottom();
-    if(messages.isEmpty)_show(t('لا يوجد اتصال. ستظهر الرسائل المحفوظة محليًا عند توفرها.','Offline. Locally cached messages will remain available.'));
+    if(messages.isEmpty)_show(t('لا توجد رسائل محفوظة على هذا الجهاز بعد.','No messages have been saved on this device yet.'));
    }
   }
  }
