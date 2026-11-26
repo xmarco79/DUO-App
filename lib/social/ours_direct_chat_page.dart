@@ -707,6 +707,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     await source.copy(target.path);targetPath=target.path;
     await prefs.setString(historyKey,jsonEncode(history.take(20).toList()));
    }else if(action=='history'&&restored!=null){
+    if(wallpaperPath!=null&&wallpaperPath!=targetPath&&await File(wallpaperPath!).exists()){
+     history.removeWhere((e)=>e['path']==wallpaperPath);
+     history.insert(0,{'path':wallpaperPath,'opacity':wallpaperOpacity,'zoom':wallpaperZoom,'rotation':wallpaperRotation,'dim':wallpaperDim,'offset_x':wallpaperOffsetX,'offset_y':wallpaperOffsetY});
+    }
     history.removeWhere((e)=>e['path']==targetPath);
     await prefs.setString(historyKey,jsonEncode(history.take(20).toList()));
    }
