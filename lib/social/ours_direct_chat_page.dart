@@ -885,7 +885,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    await db.storage.from(_bucket).uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
    try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':type,'max_views':maxViews??1,'file_name':name,'file_size':bytes.length,'mime_type':mime});}
    catch(_){await db.storage.from(_bucket).remove([path]);rethrow;}
-  }catch(e){\n   try{await _queueMedia(bytes,name,type,maxViews:maxViews);}catch(queueError){_show(t('تعذر حفظ المرفق محليًا: $queueError','Could not save attachment locally: $queueError'));}\n  }finally{if(mounted)setState(()=>uploading=false);}
+  }catch(e){
+   try{await _queueMedia(bytes,name,type,maxViews:maxViews);}catch(queueError){_show(t('تعذر حفظ المرفق محليًا: $queueError','Could not save attachment locally: $queueError'));}
+  }finally{if(mounted)setState(()=>uploading=false);}
  }
  Future<Uint8List> _renderEditedImage(Uint8List bytes,int filter,double crop,List<List<Offset>> strokes) async{
   final codec=await ui.instantiateImageCodec(bytes);final frame=await codec.getNextFrame();final source=frame.image;
