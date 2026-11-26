@@ -297,7 +297,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
    margin:const EdgeInsets.fromLTRB(10,0,10,10),padding:const EdgeInsets.fromLTRB(18,12,18,18),
    decoration:BoxDecoration(color:const Color(0xFF171326),borderRadius:BorderRadius.circular(28),border:Border.all(color:skin.accent.withValues(alpha:.28)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.30),blurRadius:28,offset:const Offset(0,-5))]),
    child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Center(child:Container(width:38,height:4,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.42),borderRadius:BorderRadius.circular(8)))),
+    Center(child:GestureDetector(behavior:HitTestBehavior.opaque,onVerticalDragUpdate:(d)=>setEditor(()=>controlsHeight=(controlsHeight-d.delta.dy/MediaQuery.of(ctx).size.height).clamp(.25,.68)),child:Padding(padding:const EdgeInsets.symmetric(vertical:8,horizontal:24),child:Container(width:42,height:5,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.62),borderRadius:BorderRadius.circular(8)))))),
     const SizedBox(height:18),
     Row(children:[Container(width:44,height:44,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.13),borderRadius:BorderRadius.circular(15)),child:Icon(Icons.wallpaper_rounded,color:skin.accent,size:23)),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      Text(t('استوديو خلفية المحادثة','Chat wallpaper studio'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900)),
@@ -337,6 +337,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
  if(source==null||!await source.exists())return null;
  var zoom=action=='edit'?currentZoom:1.0,rotation=action=='edit'?currentRotation:0.0,dim=action=='edit'?currentDim:.48,opacity=action=='edit'?currentOpacity:.22,offsetX=action=='edit'?currentOffsetX:0.0,offsetY=action=='edit'?currentOffsetY:0.0;
  var gestureZoom=zoom,gestureRotation=rotation;
+ var controlsHeight=.43;
  final saved=await showDialog<bool>(context:context,barrierDismissible:false,builder:(dialogContext)=>StatefulBuilder(builder:(ctx,setEditor)=>Dialog.fullscreen(
   backgroundColor:skin.bg,
   child:Stack(fit:StackFit.expand,children:[
@@ -349,7 +350,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
       Text(t('معاينة خلفيتك','Your wallpaper preview'),style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.w900)),
       Text(t('شكل المحادثة قبل التطبيق','See how your chat will look'),style:TextStyle(color:Colors.white.withValues(alpha:.65),fontSize:10))
      ])),
-     Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:skin.accent.withValues(alpha:.16),borderRadius:BorderRadius.circular(20),border:Border.all(color:skin.accent.withValues(alpha:.4))),child:Text(t('مباشر','LIVE'),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w900)))
+     Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:skin.accent.withValues(alpha:.16),borderRadius:BorderRadius.circular(20),border:Border.all(color:skin.accent.withValues(alpha:.4))),child:Text('مباشر',style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w900)))
     ])),
     Expanded(child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,10),child:Column(children:[
      Expanded(child:previewMessages.isEmpty
@@ -376,7 +377,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
      ]))
     ]))),
     Container(
-     constraints:BoxConstraints(maxHeight:MediaQuery.of(ctx).size.height*.48),
+     height:MediaQuery.of(ctx).size.height*controlsHeight,
      decoration:BoxDecoration(color:const Color(0xFF171326).withValues(alpha:.97),borderRadius:const BorderRadius.vertical(top:Radius.circular(28)),border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.35))),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.3),blurRadius:24,offset:const Offset(0,-8))]),
      child:SingleChildScrollView(padding:const EdgeInsets.fromLTRB(18,12,18,18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Center(child:Container(width:38,height:4,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.4),borderRadius:BorderRadius.circular(8)))),
@@ -385,11 +386,11 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
       const SizedBox(height:8),
       ClipRRect(borderRadius:BorderRadius.circular(15),child:SizedBox(height:78,child:GestureDetector(
        onScaleStart:(d){gestureZoom=zoom;gestureRotation=rotation;},
-       onScaleUpdate:(d)=>setEditor((){zoom=(gestureZoom*d.scale).clamp(1.0,3.2);rotation=gestureRotation+d.rotation;offsetX+=d.focalPointDelta.dx;offsetY+=d.focalPointDelta.dy;}),
+       onScaleUpdate:(d){if(d.focalPointDelta.distance<2.5&&d.scale==1.0&&d.rotation==0.0)return;setEditor((){zoom=(gestureZoom*d.scale).clamp(1.0,3.2);rotation=gestureRotation+d.rotation;if(d.focalPointDelta.distance>=2.5){offsetX+=d.focalPointDelta.dx;offsetY+=d.focalPointDelta.dy;}});},
        child:Stack(fit:StackFit.expand,children:[
         Transform.translate(offset:Offset(offsetX,offsetY),child:Transform.rotate(angle:rotation,child:Transform.scale(scale:zoom,child:Image.file(source!,fit:BoxFit.cover)))),
         ColoredBox(color:skin.bg.withValues(alpha:dim*.65)),
-        Center(child:Text(t('اسحب هنا للتحريك والتكبير','Drag here to position and zoom'),style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w700)))
+        Center(child:const Text('اسحب الصورة لتحريكها، واستخدم إصبعين للتكبير والتدوير',style:TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w700)))
        ])
       ))),
       const SizedBox(height:10),
@@ -404,15 +405,11 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
        const SizedBox(width:8),Expanded(child:OutlinedButton.icon(onPressed:()=>setEditor(()=>rotation=(rotation+math.pi/2)%(math.pi*2)),icon:const Icon(Icons.rotate_right_rounded),label:Text(t('تدوير 90°','Rotate 90°'))))
       ]),
       const SizedBox(height:8),
-      SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg,padding:const EdgeInsets.symmetric(vertical:13)),icon:const Icon(Icons.check_rounded),label:Text(t('تطبيق الخلفية','Apply wallpaper'),style:const TextStyle(fontWeight:FontWeight.w900))))
+      SizedBox(width:double.infinity,height:54,child:FilledButton.icon(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg,padding:const EdgeInsets.symmetric(vertical:15),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),elevation:5,shadowColor:skin.accent.withValues(alpha:.32)),icon:const Icon(Icons.check_circle_rounded,size:22),label:const Text('حفظ وتطبيق الخلفية',style:TextStyle(fontSize:15,fontWeight:FontWeight.w900))))
      ]))
     )
    ])),
-   Positioned.fill(child:IgnorePointer(child:GestureDetector(
-    behavior:HitTestBehavior.translucent,
-    onScaleStart:(d){gestureZoom=zoom;gestureRotation=rotation;},
-    onScaleUpdate:(d){if(d.pointerCount>0)setEditor((){zoom=(gestureZoom*d.scale).clamp(1.0,3.2);rotation=gestureRotation+d.rotation;offsetX+=d.focalPointDelta.dx;offsetY+=d.focalPointDelta.dy;});}
-   )))
+   
   ])
  )));
  if(saved!=true)return null;
@@ -661,6 +658,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   var offsetX=action=='edit'?wallpaperOffsetX:((restored?['offset_x'] as num?)?.toDouble()??0.0);
   var offsetY=action=='edit'?wallpaperOffsetY:((restored?['offset_y'] as num?)?.toDouble()??0.0);
   var gestureZoom=zoom,gestureRotation=rotation;
+  var controlsHeight=.43;
   final saved=await showDialog<bool>(
    context:context,barrierDismissible:false,
    builder:(dialogContext)=>StatefulBuilder(builder:(ctx,setEditor)=>Dialog.fullscreen(
@@ -668,10 +666,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
     child:Stack(fit:StackFit.expand,children:[
      Positioned.fill(child:GestureDetector(
       onScaleStart:(d){gestureZoom=zoom;gestureRotation=rotation;},
-      onScaleUpdate:(d)=>setEditor((){
+      onScaleUpdate:(d){if(d.focalPointDelta.distance<2.5&&d.scale==1.0&&d.rotation==0.0)return;setEditor((){
        zoom=(gestureZoom*d.scale).clamp(1.0,3.2);rotation=gestureRotation+d.rotation;
-       offsetX+=d.focalPointDelta.dx;offsetY+=d.focalPointDelta.dy;
-      }),
+       if(d.focalPointDelta.distance>=2.5){offsetX+=d.focalPointDelta.dx;offsetY+=d.focalPointDelta.dy;}
+      });},
       child:ColoredBox(color:skin.bg,child:Transform.translate(offset:Offset(offsetX,offsetY),child:Transform.rotate(angle:rotation,child:Transform.scale(scale:zoom,child:Opacity(opacity:(.55+opacity).clamp(.55,1.0),child:Image.file(source!,fit:BoxFit.contain,width:double.infinity,height:double.infinity,errorBuilder:(_,__,___)=>ColoredBox(color:skin.bg))))))),
      )),
      Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:dim)))),
@@ -682,7 +680,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
         Text(t('محرر الخلفية','Wallpaper editor'),style:TextStyle(color:skin.accent,fontSize:17,fontWeight:FontWeight.w900)),
         Text(t('الصورة كاملة مع معاينة المحادثة','Full image with live chat preview'),style:TextStyle(color:Colors.white.withValues(alpha:.72),fontSize:10))
        ])),
-       Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:skin.accent.withValues(alpha:.16),borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.35))),child:Text(t('مباشر','LIVE'),style:TextStyle(color:skin.accent,fontSize:9,fontWeight:FontWeight.w900)))
+       Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:skin.accent.withValues(alpha:.16),borderRadius:BorderRadius.circular(18),border:Border.all(color:skin.accent.withValues(alpha:.35))),child:Text('مباشر',style:TextStyle(color:skin.accent,fontSize:9,fontWeight:FontWeight.w900)))
       ])),
       Expanded(child:Padding(padding:const EdgeInsets.fromLTRB(18,8,18,12),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
        _oursWallpaperPreviewBubble(t('أهلًا! هذه معاينة لرسائل المحادثة على الخلفية.','Hello! This is a preview of messages on your wallpaper.'),false,skin),
@@ -690,12 +688,12 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
        _oursWallpaperPreviewBubble(t('تقدر تشوف الصورة كاملة وتضبطها قبل الحفظ.','See the full image and adjust it before saving.'),true,skin),
       ]))),
       Container(
-       constraints:BoxConstraints(maxHeight:MediaQuery.of(ctx).size.height*.43),
+       height:MediaQuery.of(ctx).size.height*controlsHeight,
        decoration:BoxDecoration(color:const Color(0xFF171326).withValues(alpha:.96),borderRadius:const BorderRadius.vertical(top:Radius.circular(27)),border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.35))),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.28),blurRadius:24,offset:const Offset(0,-7))]),
        child:SingleChildScrollView(padding:const EdgeInsets.fromLTRB(18,11,18,18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Center(child:Container(width:38,height:4,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.4),borderRadius:BorderRadius.circular(8)))),
+        Center(child:GestureDetector(behavior:HitTestBehavior.opaque,onVerticalDragUpdate:(d)=>setEditor(()=>controlsHeight=(controlsHeight-d.delta.dy/MediaQuery.of(ctx).size.height).clamp(.25,.68)),child:Padding(padding:const EdgeInsets.symmetric(vertical:8,horizontal:24),child:Container(width:42,height:5,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.62),borderRadius:BorderRadius.circular(8)))))),
         const SizedBox(height:11),
-        Row(children:[Icon(Icons.tune_rounded,color:skin.accent),const SizedBox(width:8),Expanded(child:Text(t('خيارات الخلفية','Wallpaper controls'),style:TextStyle(color:skin.accent,fontSize:14,fontWeight:FontWeight.w900))),Text(t('اسحب الصورة للتحريك','Drag to move'),style:const TextStyle(color:_lavender,fontSize:9))]),
+        Row(children:[Icon(Icons.tune_rounded,color:skin.accent),const SizedBox(width:8),Expanded(child:Text(t('خيارات الخلفية','Wallpaper controls'),style:TextStyle(color:skin.accent,fontSize:14,fontWeight:FontWeight.w900))),const Text('اسحب الصورة للتحريك',style:TextStyle(color:_lavender,fontSize:9))]),
         _wallpaperSliderLabel(t('التكبير','Zoom'),'\u0024{zoom.toStringAsFixed(2)}×'),
         Slider(value:zoom,min:1,max:3.2,onChanged:(v)=>setEditor(()=>zoom=v),activeColor:skin.accent),
         _wallpaperSliderLabel(t('التعتيم','Dim'),'\u0024{(dim*100).round()}%'),
@@ -707,7 +705,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
          const SizedBox(width:8),Expanded(child:OutlinedButton.icon(onPressed:()=>setEditor(()=>rotation=(rotation+math.pi/2)%(math.pi*2)),icon:const Icon(Icons.rotate_right_rounded),label:Text(t('تدوير 90°','Rotate 90°'))))
         ]),
         const SizedBox(height:7),
-        SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg,padding:const EdgeInsets.symmetric(vertical:13)),icon:const Icon(Icons.check_rounded),label:Text(t('حفظ وتطبيق الخلفية','Save and apply wallpaper'),style:const TextStyle(fontWeight:FontWeight.w900))))
+        SizedBox(width:double.infinity,height:54,child:FilledButton.icon(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg,padding:const EdgeInsets.symmetric(vertical:15),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),elevation:5,shadowColor:skin.accent.withValues(alpha:.32)),icon:const Icon(Icons.check_circle_rounded,size:22),label:const Text('حفظ وتطبيق الخلفية',style:TextStyle(fontSize:15,fontWeight:FontWeight.w900))))
        ]))
       )
      ]))
