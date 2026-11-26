@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,7 +21,26 @@ class OursSocialHomePage extends StatefulWidget {
 class _OursSocialHomePageState extends State<OursSocialHomePage> with WidgetsBindingObserver{
  final db=Supabase.instance.client; int tab=0,unreadMessages=0; String? spaceId,error,conversationId,partnerId,partnerName,partnerAlias,partnerAvatarUrl; bool loading=true;RealtimeChannel? unreadChannel,presenceChannel;
  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);_load();}
- Future<void> _load() async {try{
+ String get _homeCacheKey=>'ours_home_offline_${db.auth.currentUser!.id}';
+ Future<void> _load() async {
+  var restored=false;
+  try{
+   final prefs=await SharedPreferences.getInstance();
+   final cached=prefs.getString(_homeCacheKey);
+   if(cached!=null){
+    final data=Map<String,dynamic>.from(jsonDecode(cached) as Map);
+    if(mounted){
+     setState((){
+      spaceId=data['space_id']?.toString();conversationId=data['conversation_id']?.toString();
+      partnerId=data['partner_id']?.toString();partnerName=data['partner_name']?.toString();
+      partnerAlias=data['partner_alias']?.toString();partnerAvatarUrl=data['partner_avatar_url']?.toString();
+      loading=false;
+     });
+     restored=spaceId!=null&&conversationId!=null&&partnerId!=null;
+    }
+   }
+  }catch(_){}
+  try{
   final raw=await db.rpc('ensure_ours_pair_space'); final m=Map<String,dynamic>.from(raw as Map);
   final me=db.auth.currentUser!.id;
   String? foundConversation=m['conversation_id']?.toString(),foundPartner,foundName,foundAvatar;
@@ -39,9 +59,10 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> with WidgetsBin
   final prefs=await SharedPreferences.getInstance();
   final alias=foundPartner==null?null:prefs.getString('ours_partner_alias_${me}_$foundPartner');
   if(mounted)setState(() { spaceId=m['space_id'].toString(); conversationId=foundConversation; partnerId=foundPartner; partnerName=foundName; partnerAlias=alias; partnerAvatarUrl=foundAvatar; loading=false; });
+  try{await prefs.setString(_homeCacheKey,jsonEncode({'space_id':spaceId,'conversation_id':conversationId,'partner_id':partnerId,'partner_name':partnerName,'partner_alias':partnerAlias,'partner_avatar_url':partnerAvatarUrl}));}catch(_){}
   if(foundConversation!=null){await _refreshUnread();_listenUnread();}
   _startPresence();
- }catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}}
+ }catch(e){if(mounted){if(restored){setState(()=>loading=false);}else{setState(() { error=e.toString(); loading=false; });}}}}
  Future<void> _refreshUnread()async{
   final id=conversationId;if(id==null||db.auth.currentUser==null)return;
   try{
