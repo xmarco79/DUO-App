@@ -41,15 +41,15 @@ class _OursSocialHomePageState extends State<OursSocialHomePage> with WidgetsBin
    }
   }catch(_){}
   try{
-  final raw=await db.rpc('ensure_ours_pair_space'); final m=Map<String,dynamic>.from(raw as Map);
+  final raw=await db.rpc('ensure_ours_pair_space').timeout(const Duration(seconds:7)); final m=Map<String,dynamic>.from(raw as Map);
   final me=db.auth.currentUser!.id;
   String? foundConversation=m['conversation_id']?.toString(),foundPartner,foundName,foundAvatar;
   if(foundConversation!=null&&foundConversation.isNotEmpty){
-   final members=await db.from('duo_conversation_members').select('user_id').eq('conversation_id',foundConversation);
+   final members=await db.from('duo_conversation_members').select('user_id').eq('conversation_id',foundConversation).timeout(const Duration(seconds:7));
    final others=members.where((row)=>row['user_id'].toString()!=me).toList();
    if(others.isNotEmpty){
     foundPartner=others.first['user_id'].toString();
-    final profile=await db.from('duo_profiles').select('username,display_name,avatar_path').eq('user_id',foundPartner).maybeSingle();
+    final profile=await db.from('duo_profiles').select('username,display_name,avatar_path').eq('user_id',foundPartner).maybeSingle().timeout(const Duration(seconds:7));
     final display=profile?['display_name']?.toString().trim()??'';
     foundName=display.isNotEmpty?display:(profile?['username']?.toString()??'zoi');
     final avatar=profile?['avatar_path']?.toString();
