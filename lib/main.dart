@@ -1,5 +1,6 @@
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -3090,101 +3091,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 }
 
 class AudioMessageBubble extends StatefulWidget {
-  final String audioPath;
-  final bool isMine;
-
-  const AudioMessageBubble({
-    super.key,
-    required this.audioPath,
-    required this.isMine,
-  });
-
-  @override
-  State<AudioMessageBubble> createState() => _AudioMessageBubbleState();
-}
-
-class _AudioMessageBubbleState extends State<AudioMessageBubble> {
-  final AudioPlayer player = AudioPlayer();
-  bool loadingUrl = false;
-
-  Future<void> togglePlayback() async {
-    if (player.state == PlayerState.playing) {
-      await player.pause();
-      return;
-    }
-
-    setState(() => loadingUrl = true);
-    try {
-      // Generate a fresh signed URL each time so long-open chats do not
-      // attempt playback with an expired 15-minute URL.
-      final url = await Supabase.instance.client.storage
-          .from('duo-private')
-          .createSignedUrl(widget.audioPath, 900);
-      await player.play(UrlSource(url));
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر تشغيل الرسالة الصوتية')),
-        );
-      }
-      debugPrint('Audio playback failed: $e');
-    } finally {
-      if (mounted) setState(() => loadingUrl = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    player.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<PlayerState>(
-      stream: player.onPlayerStateChanged,
-      initialData: player.state,
-      builder: (context, snapshot) {
-        final playing = snapshot.data == PlayerState.playing;
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              onPressed: loadingUrl ? null : togglePlayback,
-              icon: loadingUrl
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: gold,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : Icon(
-                      playing
-                          ? Icons.pause_circle_filled
-                          : Icons.play_circle_fill,
-                      color: gold,
-                      size: 34,
-                    ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              loadingUrl
-                  ? 'جارٍ التحميل...'
-                  : playing
-                      ? 'تشغيل الرسالة...'
-                      : 'رسالة صوتية',
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-lass AudioMessageBubble extends StatefulWidget {
   final String audioPath;
   final bool isMine;
 
