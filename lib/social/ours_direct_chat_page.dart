@@ -541,6 +541,10 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  }
  Future<void> _chooseWallpaper() async {
   final currentExists=wallpaperPath!=null&&await File(wallpaperPath!).exists();
+  final prefs=await SharedPreferences.getInstance();
+  final historyKey='ours_direct_wallpaper_history_'+widget.conversationId;
+  List<Map<String,dynamic>> history=[];
+  try{final raw=prefs.getString(historyKey);if(raw!=null)history=(jsonDecode(raw) as List).map((e)=>Map<String,dynamic>.from(e as Map)).where((e)=>e['path']!=null).toList();}catch(_){}
   final action=await showModalBottomSheet<String>(
    context:context,backgroundColor:Colors.transparent,showDragHandle:false,isScrollControlled:true,
    builder:(ctx)=>SafeArea(child:Container(
@@ -579,6 +583,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      _wallpaperStudioAction(ctx,icon:Icons.add_photo_alternate_rounded,title:t('اختيار خلفية جديدة','Choose a new wallpaper'),subtitle:t('اختر صورة من جهازك وابدأ بتخصيصها','Pick an image from your device and customize it'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'new')),
      if(currentExists)const SizedBox(height:9),
      if(currentExists)_wallpaperStudioAction(ctx,icon:Icons.tune_rounded,title:t('تعديل الخلفية الحالية','Edit current wallpaper'),subtitle:t('غيّر موضعها والتكبير والتعتيم','Adjust position, zoom and dimming'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'edit')),
+     if(history.isNotEmpty)_wallpaperStudioAction(ctx,icon:Icons.history_rounded,title:t('الخلفيات السابقة','Previous wallpapers'),subtitle:t('ارجع لأي خلفية استخدمتها من قبل','Restore a wallpaper you used before'),accent:skin.accent,onTap:()=>Navigator.pop(ctx,'history')),
      if(currentExists)Padding(padding:const EdgeInsets.only(top:8),child:TextButton.icon(
       style:TextButton.styleFrom(foregroundColor:Colors.redAccent,minimumSize:const Size.fromHeight(44)),
       onPressed:()=>Navigator.pop(ctx,'remove'),
@@ -589,13 +594,36 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    )),
   );
   if(action==null)return;
-  final prefs=await SharedPreferences.getInstance();
+  Map<String,dynamic>? restored;
+  if(action=='history'){
+   restored=await showModalBottomSheet<Map<String,dynamic>>(context:context,backgroundColor:Colors.transparent,isScrollControlled:true,builder:(ctx)=>SafeArea(child:Container(
+    height:MediaQuery.of(ctx).size.height*.68,margin:const EdgeInsets.fromLTRB(10,0,10,10),padding:const EdgeInsets.all(15),
+    decoration:BoxDecoration(color:const Color(0xFF171326),borderRadius:BorderRadius.circular(25),border:Border.all(color:skin.accent.withValues(alpha:.28))),
+    child:Column(children:[
+     Row(children:[Icon(Icons.history_rounded,color:skin.accent),const SizedBox(width:8),Expanded(child:Text(t('الخلفيات المحفوظة','Saved wallpapers'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w900,fontSize:16))),IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close,color:_lavender))]),
+     Expanded(child:ListView.separated(itemCount:history.length,separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(ctx,i){
+      final item=history[i],path=(item['path']??'').toString(),valid=path.isNotEmpty&&File(path).existsSync();
+      return Material(color:skin.partner.withValues(alpha:.6),borderRadius:BorderRadius.circular(14),child:ListTile(
+       leading:ClipRRect(borderRadius:BorderRadius.circular(9),child:SizedBox(width:58,height:58,child:valid?Image.file(File(path),fit:BoxFit.cover):ColoredBox(color:skin.bg,child:Icon(Icons.broken_image_outlined,color:skin.accent)))),
+       title:Text(t('خلفية محفوظة ${i+1}','Saved wallpaper ${i+1}'),style:const TextStyle(color:Colors.white,fontSize:12,fontWeight:FontWeight.w800)),
+       subtitle:Text(valid?t('اضغط لاستعادتها','Tap to restore'):t('الصورة غير متاحة','Image unavailable'),style:TextStyle(color:skin.accent,fontSize:10)),
+       trailing:Icon(Icons.restore_rounded,color:skin.accent),onTap:valid?()=>Navigator.pop(ctx,item):null,
+      ));
+     }))
+    ])
+   )));
+   if(restored==null)return;
+  }
   if(action=='remove'){
    final old=wallpaperPath;
+   if(old!=null&&await File(old).exists()){
+    history.removeWhere((e)=>e['path']==old);
+    history.insert(0,{'path':old,'opacity':wallpaperOpacity,'zoom':wallpaperZoom,'rotation':wallpaperRotation,'dim':wallpaperDim,'offset_x':wallpaperOffsetX,'offset_y':wallpaperOffsetY});
+    await prefs.setString(historyKey,jsonEncode(history.take(20).toList()));
+   }
    await prefs.remove('ours_direct_wallpaper_'+widget.conversationId);
    for(final key in ['opacity','zoom','rotation','dim','offset_x','offset_y']){await prefs.remove('ours_direct_wallpaper_'+key+'_'+widget.conversationId);}
    if(mounted)setState(()=>wallpaperPath=null);
-   if(old!=null){try{final f=File(old);if(await f.exists())await f.delete();}catch(_){}}
    return;
   }
   File? source;
@@ -603,14 +631,15 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    final picked=await picker.pickImage(source:ImageSource.gallery,imageQuality:96,maxWidth:3200,maxHeight:3200);
    if(picked==null)return;
    source=File(picked.path);
-  }else if(currentExists){source=File(wallpaperPath!);}
+  }else if(action=='history'&&restored!=null){source=File(restored['path'].toString());}
+  else if(currentExists){source=File(wallpaperPath!);}
   if(source==null||!await source.exists())return;
-  var zoom=action=='edit'?wallpaperZoom:1.0;
-  var rotation=action=='edit'?wallpaperRotation:0.0;
-  var dim=action=='edit'?wallpaperDim:.48;
-  var opacity=action=='edit'?wallpaperOpacity:.22;
-  var offsetX=action=='edit'?wallpaperOffsetX:0.0;
-  var offsetY=action=='edit'?wallpaperOffsetY:0.0;
+  var zoom=action=='edit'?wallpaperZoom:((restored?['zoom'] as num?)?.toDouble()??1.0);
+  var rotation=action=='edit'?wallpaperRotation:((restored?['rotation'] as num?)?.toDouble()??0.0);
+  var dim=action=='edit'?wallpaperDim:((restored?['dim'] as num?)?.toDouble()??.48);
+  var opacity=action=='edit'?wallpaperOpacity:((restored?['opacity'] as num?)?.toDouble()??.22);
+  var offsetX=action=='edit'?wallpaperOffsetX:((restored?['offset_x'] as num?)?.toDouble()??0.0);
+  var offsetY=action=='edit'?wallpaperOffsetY:((restored?['offset_y'] as num?)?.toDouble()??0.0);
   var gestureZoom=zoom,gestureRotation=rotation;
   final saved=await showDialog<bool>(
    context:context,barrierDismissible:false,
@@ -667,12 +696,19 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   );
   if(saved!=true)return;
   try{
-   String targetPath=wallpaperPath??'';
+   String targetPath=action=='history'&&restored!=null?restored['path'].toString():(wallpaperPath??'');
    if(action=='new'){
+    if(wallpaperPath!=null&&await File(wallpaperPath!).exists()){
+     history.removeWhere((e)=>e['path']==wallpaperPath);
+     history.insert(0,{'path':wallpaperPath,'opacity':wallpaperOpacity,'zoom':wallpaperZoom,'rotation':wallpaperRotation,'dim':wallpaperDim,'offset_x':wallpaperOffsetX,'offset_y':wallpaperOffsetY});
+    }
     final dir=await getApplicationDocumentsDirectory();
-    final target=File('${dir.path}/ours_chat_wallpaper_${widget.conversationId}.jpg');
-    await source.copy(target.path);
-    targetPath=target.path;
+    final target=File('${dir.path}/ours_chat_wallpaper_${widget.conversationId}_${DateTime.now().microsecondsSinceEpoch}.jpg');
+    await source.copy(target.path);targetPath=target.path;
+    await prefs.setString(historyKey,jsonEncode(history.take(20).toList()));
+   }else if(action=='history'&&restored!=null){
+    history.removeWhere((e)=>e['path']==targetPath);
+    await prefs.setString(historyKey,jsonEncode(history.take(20).toList()));
    }
    await prefs.setString('ours_direct_wallpaper_'+widget.conversationId,targetPath);
    await prefs.setDouble('ours_direct_wallpaper_opacity_'+widget.conversationId,opacity);
