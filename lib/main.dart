@@ -2339,7 +2339,40 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     if (nextUsername == null || !mounted) return;
 
     final normalized = nextUsername.trim().toLowerCase();
-    if (!RegExp(r'^[a-z0-9_]{3,20}
+    if (!RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(normalized)) {
+      showMessage(oursText(
+        context,
+        'اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا إنجليزيًا أو رقمًا أو _',
+        'Username must be 3–20 characters using letters, numbers, or _',
+      ));
+      return;
+    }
+    if (normalized == username) return;
+
+    setState(() => saving = true);
+    try {
+      final user = db.auth.currentUser;
+      if (user == null) throw Exception('No authenticated user');
+      await db
+          .from('duo_profiles')
+          .update({'username': normalized})
+          .eq('user_id', user.id);
+      if (!mounted) return;
+      setState(() => username = normalized);
+      showMessage(oursText(context, 'تم تغيير اسم المستخدم بنجاح', 'Username updated successfully'));
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString().toLowerCase().contains('duplicate') ||
+              e.toString().toLowerCase().contains('unique')
+          ? oursText(context, 'اسم المستخدم مستخدم بالفعل', 'That username is already taken')
+          : oursText(context, 'تعذر تغيير اسم المستخدم. تحقق من الاتصال وحاول مجددًا.', 'Could not update username. Check your connection and retry.');
+      showMessage(message);
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  Future<void> changePassword() async {
     final controller = TextEditingController();
     final password = await showDialog<String>(
       context: context,
@@ -3151,38 +3184,6 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
     );
   }
 }
-).hasMatch(normalized)) {
-      showMessage(oursText(
-        context,
-        'اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا إنجليزيًا أو رقمًا أو _',
-        'Username must be 3–20 characters using letters, numbers, or _',
-      ));
-      return;
-    }
-    if (normalized == username) return;
-
-    setState(() => saving = true);
-    try {
-      final user = db.auth.currentUser;
-      if (user == null) throw Exception('No authenticated user');
-      await db
-          .from('duo_profiles')
-          .update({'username': normalized})
-          .eq('user_id', user.id);
-      if (!mounted) return;
-      setState(() => username = normalized);
-      showMessage(oursText(context, 'تم تغيير اسم المستخدم بنجاح', 'Username updated successfully'));
-    } catch (e) {
-      if (!mounted) return;
-      final message = e.toString().toLowerCase().contains('duplicate') ||
-              e.toString().toLowerCase().contains('unique')
-          ? oursText(context, 'اسم المستخدم مستخدم بالفعل', 'That username is already taken')
-          : oursText(context, 'تعذر تغيير اسم المستخدم. تحقق من الاتصال وحاول مجددًا.', 'Could not update username. Check your connection and retry.');
-      showMessage(message);
-    } finally {
-      if (mounted) setState(() => saving = false);
-    }
-  }
 
   Future<void> changePassword() async {
     final controller = TextEditingController();
