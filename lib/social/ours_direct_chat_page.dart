@@ -187,10 +187,13 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  final radius=math.min(20.0,size.width*.32);
-  final tailWidth=math.min(14.0,size.width*.30);
-  const tailHeight=12.0;
+  if(size.width<=0||size.height<=0)return Path();
+  // Start from the stable bubble; refine only the tail and lower contour.
+  final tailWidth=math.min(13.0,size.width*.20);
+  final tailHeight=math.min(9.0,size.height*.22);
   final bodyBottom=size.height-tailHeight;
+  final radius=math.min(math.min(19.0,bodyBottom*.48),size.width*.28);
+  final tailBase=radius+tailWidth;
   final path=Path()
    ..moveTo(radius,0)
    ..lineTo(size.width-radius,0)
@@ -200,16 +203,15 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
   if(tailOnLeft){
    path
-    ..lineTo(radius+tailWidth,bodyBottom)
-    ..cubicTo(radius+tailWidth*.78,bodyBottom+1,radius+tailWidth*.58,size.height-1,radius+tailWidth*.22,size.height-1)
-    ..cubicTo(radius+tailWidth*.04, size.height-2, radius+2.5, bodyBottom+4.5, radius, bodyBottom-radius*.04);
+    ..lineTo(tailBase,bodyBottom)
+    ..cubicTo(radius+tailWidth*.72,bodyBottom+1.0,radius+tailWidth*.40,size.height-1.0,radius+tailWidth*.12,size.height-1.0)
+    ..cubicTo(radius+tailWidth*.02,size.height-1.0,radius*.10,bodyBottom-radius*.38,radius,bodyBottom-radius*.02);
   }else{
    path
-    ..lineTo(size.width-radius-tailWidth,bodyBottom)
-    ..cubicTo(size.width-radius-tailWidth*.78,bodyBottom+1,size.width-radius-tailWidth*.58,size.height-1,size.width-radius-tailWidth*.22,size.height-1)
-    ..cubicTo(size.width-radius-tailWidth*.04,size.height-2,size.width-radius-2.5,bodyBottom+4.5,size.width-radius,bodyBottom-radius*.04);
+    ..lineTo(size.width-tailBase,bodyBottom)
+    ..cubicTo(size.width-radius-tailWidth*.72,bodyBottom+1.0,size.width-radius-tailWidth*.40,size.height-1.0,size.width-radius-tailWidth*.12,size.height-1.0)
+    ..cubicTo(size.width-radius-tailWidth*.02,size.height-1.0,size.width-radius*.10,bodyBottom-radius*.38,size.width-radius,bodyBottom-radius*.02);
   }
-
   path
    ..lineTo(radius,bodyBottom)
    ..cubicTo(radius*.42,bodyBottom,0,bodyBottom-radius*.42,0,bodyBottom-radius)
@@ -222,7 +224,6 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  @override
  bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
 }
-
 
 class _OursUnifiedMessageSurface extends StatelessWidget {
  final _ChatSkin skin; final bool isMine,isVisual; final Widget child;
