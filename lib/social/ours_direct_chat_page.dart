@@ -188,35 +188,42 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  @override
  Path getClip(Size size) {
   if(size.width<=0||size.height<=0)return Path();
-  // Stable body proportions with a single flat lower edge and a smooth integrated tail.
-  final tailWidth=math.min(13.0,size.width*.20);
-  final tailHeight=math.min(9.0,size.height*.22);
-  final bodyBottom=size.height-tailHeight;
-  final radius=math.min(math.min(19.0,bodyBottom*.48),size.width*.28);
-  final tailBase=radius+tailWidth;
-  final path=Path()
-   ..moveTo(radius,0)
-   ..lineTo(size.width-radius,0)
-   ..cubicTo(size.width-radius*.42,0,size.width,radius*.42,size.width,radius)
-   ..lineTo(size.width,bodyBottom-radius)
-   ..cubicTo(size.width,bodyBottom-radius*.42,size.width-radius*.42,bodyBottom,size.width-radius,bodyBottom);
-
-  if(tailOnLeft){
+  // Reference silhouette: pill-like body, flat uninterrupted bottom, and a
+  // shallow curved notch flowing into a pointed tail at the lower corner.
+  final tailW=math.min(24.0,size.width*.16);
+  final tailH=math.min(18.0,size.height*.24);
+  final bodyBottom=size.height-tailH;
+  final r=math.min(math.min(bodyBottom*.47,size.height*.48),size.width*.22);
+  final path=Path();
+  if(!tailOnLeft){
    path
-    ..lineTo(tailBase,bodyBottom)
-    ..cubicTo(radius+tailWidth*.72,bodyBottom+1.0,radius+tailWidth*.42,size.height-1.0,radius+tailWidth*.18,size.height-1.0)
-    ..cubicTo(radius+tailWidth*.05,size.height-1.0,0,bodyBottom-radius*.48,0,bodyBottom-radius);
+    ..moveTo(r,0)
+    ..lineTo(size.width-r,0)
+    ..cubicTo(size.width-r*.45,0,size.width,r*.45,size.width,r)
+    ..lineTo(size.width,bodyBottom-r*.58)
+    ..cubicTo(size.width,bodyBottom-r*.18,size.width-tailW*.30,bodyBottom-r*.12,size.width-tailW*.34,bodyBottom+tailH*.10)
+    ..cubicTo(size.width-tailW*.28,bodyBottom+tailH*.62,size.width-tailW*.05,size.height-tailH*.03,size.width,size.height-tailH*.02)
+    ..cubicTo(size.width-tailW*.48,size.height-tailH*.10,size.width-tailW*.86,bodyBottom+tailH*.18,size.width-tailW,bodyBottom)
+    ..lineTo(r,bodyBottom)
+    ..cubicTo(r*.45,bodyBottom,0,bodyBottom-r*.45,0,bodyBottom-r)
+    ..lineTo(0,r)
+    ..cubicTo(0,r*.45,r*.45,0,r,0)
+    ..close();
   }else{
    path
-    ..lineTo(size.width-tailBase,bodyBottom)
-    ..cubicTo(size.width-radius-tailWidth*.72,bodyBottom+1.0,size.width-radius-tailWidth*.42,size.height-1.0,size.width-radius-tailWidth*.18,size.height-1.0)
-    ..cubicTo(size.width-radius-tailWidth*.05,size.height-1.0,size.width,bodyBottom-radius*.48,size.width,bodyBottom-radius);
+    ..moveTo(r,0)
+    ..lineTo(size.width-r,0)
+    ..cubicTo(size.width-r*.45,0,size.width,r*.45,size.width,r)
+    ..lineTo(size.width,bodyBottom-r)
+    ..cubicTo(size.width,bodyBottom-r*.45,size.width-r*.45,bodyBottom,size.width-r,bodyBottom)
+    ..lineTo(tailW,bodyBottom)
+    ..cubicTo(tailW*.86,bodyBottom+tailH*.18,tailW*.48,size.height-tailH*.10,0,size.height-tailH*.02)
+    ..cubicTo(tailW*.95,size.height-tailH*.03,tailW*.72,bodyBottom+tailH*.62,tailW*.66,bodyBottom+tailH*.10)
+    ..cubicTo(tailW*.70,bodyBottom-r*.18,0,bodyBottom-r*.18,0,bodyBottom-r*.58)
+    ..lineTo(0,r)
+    ..cubicTo(0,r*.45,r*.45,0,r,0)
+    ..close();
   }
-
-  path
-   ..lineTo(0,radius)
-   ..cubicTo(0,radius*.42,radius*.42,0,radius,0)
-   ..close();
   return path;
  }
 
