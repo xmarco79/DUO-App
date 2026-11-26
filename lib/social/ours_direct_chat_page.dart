@@ -753,9 +753,9 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
      if(mounted)setState((){messages..clear()..addAll(combined.values);messages.sort(_compareMessages);loading=false;});
     }catch(_){}
    }
-   final hidden=await db.from('ours_direct_message_hides').select('message_id').eq('user_id',uid);
+   final hidden=await db.from('ours_direct_message_hides').select('message_id').eq('user_id',uid).timeout(const Duration(seconds:6));
    hiddenIds..clear()..addAll(hidden.map((r)=>r['message_id'].toString()));
-   final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at',ascending:true);
+   final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at',ascending:true).timeout(const Duration(seconds:8));
    final ordered=List<Map<String,dynamic>>.from(rows).where((m)=>!hiddenIds.contains(m['id'].toString())).toList()..sort(_compareMessages);
    final queued=await _readOutbox();final merged=<String,Map<String,dynamic>>{};
    for(final row in ordered){merged[row['id'].toString()]=row;}
