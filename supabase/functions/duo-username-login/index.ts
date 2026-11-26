@@ -23,10 +23,6 @@ Deno.serve(async (req: Request) => {
         typeof password !== "string" || password.length < 1 || password.length > 128) {
       return json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة" }, 400);
     }
-    if (normalized !== "naif" && normalized !== "zoi") {
-      return json({ error: "هذا التطبيق مخصص لحسابَي naif و zoi فقط." }, 403);
-    }
-
 
     const url = Deno.env.get("SUPABASE_URL");
     const secretKeysRaw = Deno.env.get("SUPABASE_SECRET_KEYS");
