@@ -671,6 +671,15 @@ class _ChatPageState extends State<ChatPage> {
   bool partnerOnline = false;
 
   String get currentUserId => db.auth.currentUser!.id;
+  String get _offlineCacheKey => 'ours_group_chat_cache_${currentUserId}_${widget.spaceId}';
+
+  Future<void> _persistOfflineMessages() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_offlineCacheKey, jsonEncode(messages));
+    } catch (_) {}
+  }
+
 
   @override
   void initState() {
@@ -893,26 +902,45 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> loadMessages() async {
+    // Render the last saved conversation immediately; network is only a refresh.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getString(_offlineCacheKey);
+      if (cached != null && cached.isNotEmpty) {
+        final decoded = (jsonDecode(cached) as List)
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList();
+        if (mounted) {
+          setState(() {
+            messages = decoded;
+            loading = false;
+          });
+          scrollToBottom();
+        }
+      }
+    } catch (_) {}
+
     try {
       final result = await db
           .from('duo_messages')
           .select()
           .eq('space_id', widget.spaceId)
           .order('created_at', ascending: true);
-
       if (!mounted) return;
-
       setState(() {
         messages = List<Map<String, dynamic>>.from(result);
         loading = false;
       });
-
+      await _persistOfflineMessages();
       scrollToBottom();
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-
       setState(() => loading = false);
-      showMessage('تعذر تحميل الرسائل: $e');
+      if (messages.isEmpty) {
+        showMessage(oursText(context,
+          'لا يوجد اتصال بعد، وستظهر الرسائل عند توفر نسخة محفوظة على هذا الجهاز.',
+          'You are offline. Messages appear here once this device has a saved copy.'));
+      }
     }
   }
 
