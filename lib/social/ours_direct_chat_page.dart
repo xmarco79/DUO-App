@@ -683,7 +683,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
         _wallpaperSliderLabel(t('وضوح الصورة','Image clarity'),'\u0024{((.55+opacity)*100).round()}%'),
         Slider(value:opacity,min:.05,max:.45,onChanged:(v)=>setEditor(()=>opacity=v),activeColor:skin.accent),
         Row(children:[
-         Expanded(child:OutlinedButton.icon(onPressed:()=>setEditor(()=>{zoom=1;rotation=0;dim=.48;opacity=.22;offsetX=0;offsetY=0;gestureZoom=1;gestureRotation=0;}),icon:const Icon(Icons.restart_alt_rounded),label:Text(t('إعادة ضبط','Reset')))),
+         Expanded(child:OutlinedButton.icon(onPressed:()=>setEditor((){zoom=1;rotation=0;dim=.48;opacity=.22;offsetX=0;offsetY=0;gestureZoom=1;gestureRotation=0;}),icon:const Icon(Icons.restart_alt_rounded),label:Text(t('إعادة ضبط','Reset')))),
          const SizedBox(width:8),Expanded(child:OutlinedButton.icon(onPressed:()=>setEditor(()=>rotation=(rotation+math.pi/2)%(math.pi*2)),icon:const Icon(Icons.rotate_right_rounded),label:Text(t('تدوير 90°','Rotate 90°'))))
         ]),
         const SizedBox(height:7),
