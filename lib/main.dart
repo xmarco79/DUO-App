@@ -462,6 +462,17 @@ class _LoginPageState extends State<LoginPage> {
 
   SupabaseClient get db => Supabase.instance.client;
 
+  @override
+  void dispose() {
+    _groupOutboxTimer?.cancel();
+    if (channel != null) db.removeChannel(channel!);
+    if (presenceChannel != null) db.removeChannel(presenceChannel!);
+    messageController.dispose();
+    scrollController.dispose();
+    audioRecorder?.dispose();
+    super.dispose();
+  }
+
   void showMessage(String value) {
     if (!mounted) return;
 
@@ -669,9 +680,92 @@ class _ChatPageState extends State<ChatPage> {
   RealtimeChannel? channel;
   RealtimeChannel? presenceChannel;
   bool partnerOnline = false;
+  Timer? _groupOutboxTimer;
+  bool _syncingGroupOutbox = false;
 
   String get currentUserId => db.auth.currentUser!.id;
   String get _offlineCacheKey => 'ours_group_chat_cache_${currentUserId}_${widget.spaceId}';
+  String get _groupOutboxKey => 'ours_group_chat_outbox_${currentUserId}_${widget.spaceId}';
+
+  Future<List<Map<String, dynamic>>> _readGroupOutbox() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_groupOutboxKey);
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((row) => Map<String, dynamic>.from(row as Map)).toList();
+    } catch (_) { return []; }
+  }
+
+  Future<void> _writeGroupOutbox(List<Map<String, dynamic>> rows) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (rows.isEmpty) {
+      await prefs.remove(_groupOutboxKey);
+    } else {
+      await prefs.setString(_groupOutboxKey, jsonEncode(rows));
+    }
+  }
+
+  String _newLocalMessageId() {
+    final random = math.Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    final hex = bytes.map((v) => v.toRadixString(16).padLeft(2, '0')).join();
+    return '${hex.substring(0,8)}-${hex.substring(8,12)}-${hex.substring(12,16)}-${hex.substring(16,20)}-${hex.substring(20)}';
+  }
+
+  Future<void> _queueGroupText(String body) async {
+    final row = <String, dynamic>{
+      'id': _newLocalMessageId(),
+      'space_id': widget.spaceId,
+      'sender_id': currentUserId,
+      'body': body,
+      'message_type': 'text',
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+      'local_pending': true,
+      if (replyingTo != null) 'reply_to': replyingTo!['id'],
+    };
+    final queue = await _readGroupOutbox();
+    queue.add(row);
+    await _writeGroupOutbox(queue);
+    if (!mounted) return;
+    setState(() {
+      messages.add(row);
+      replyingTo = null;
+    });
+    await _persistOfflineMessages();
+    scrollToBottom();
+  }
+
+  Future<void> _syncGroupOutbox() async {
+    if (_syncingGroupOutbox || !mounted) return;
+    _syncingGroupOutbox = true;
+    try {
+      final queue = await _readGroupOutbox();
+      if (queue.isEmpty) return;
+      final remaining = <Map<String, dynamic>>[];
+      for (var i = 0; i < queue.length; i++) {
+        final item = queue[i];
+        try {
+          final payload = Map<String, dynamic>.from(item)..remove('local_pending');
+          await db.from('duo_messages').upsert(payload, onConflict: 'id', ignoreDuplicates: true);
+          final index = messages.indexWhere((m) => m['id'].toString() == item['id'].toString());
+          if (mounted && index >= 0) {
+            setState(() => messages[index] = Map<String, dynamic>.from(payload));
+          }
+        } catch (_) {
+          remaining.addAll(queue.skip(i));
+          break;
+        }
+      }
+      await _writeGroupOutbox(remaining);
+      await _persistOfflineMessages();
+    } finally {
+      _syncingGroupOutbox = false;
+    }
+  }
+
 
   Future<void> _persistOfflineMessages() async {
     try {
@@ -690,6 +784,7 @@ class _ChatPageState extends State<ChatPage> {
     loadParticipantNames();
     listenToMessages();
     listenToPresence();
+    _groupOutboxTimer = Timer.periodic(const Duration(seconds: 12), (_) => _syncGroupOutbox());
   }
 
   Future<void> loadChatTheme() async {
@@ -910,9 +1005,14 @@ class _ChatPageState extends State<ChatPage> {
         final decoded = (jsonDecode(cached) as List)
             .map((row) => Map<String, dynamic>.from(row as Map))
             .toList();
+        final queued = await _readGroupOutbox();
+        final merged = <String, Map<String, dynamic>>{};
+        for (final row in decoded) { merged[row['id'].toString()] = row; }
+        for (final row in queued) { merged[row['id'].toString()] = row; }
         if (mounted) {
           setState(() {
-            messages = decoded;
+            messages = merged.values.toList();
+            messages.sort((a, b) => (DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(1970)).compareTo(DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(1970)));
             loading = false;
           });
           scrollToBottom();
@@ -927,11 +1027,17 @@ class _ChatPageState extends State<ChatPage> {
           .eq('space_id', widget.spaceId)
           .order('created_at', ascending: true);
       if (!mounted) return;
+      final queued = await _readGroupOutbox();
+      final merged = <String, Map<String, dynamic>>{};
+      for (final row in List<Map<String, dynamic>>.from(result)) { merged[row['id'].toString()] = row; }
+      for (final row in queued) { merged[row['id'].toString()] = row; }
       setState(() {
-        messages = List<Map<String, dynamic>>.from(result);
+        messages = merged.values.toList();
+        messages.sort((a, b) => (DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(1970)).compareTo(DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(1970)));
         loading = false;
       });
       await _persistOfflineMessages();
+      await _syncGroupOutbox();
       scrollToBottom();
     } catch (_) {
       if (!mounted) return;
@@ -1358,20 +1464,32 @@ class _ChatPageState extends State<ChatPage> {
     setState(() => sending = true);
 
     try {
-      await db.from('duo_messages').insert({
+      final payload = <String, dynamic>{
+        'id': _newLocalMessageId(),
         'space_id': widget.spaceId,
         'sender_id': currentUserId,
         'body': text,
         'message_type': 'text',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
         if (replyingTo != null) 'reply_to': replyingTo!['id'],
-      });
-
+      };
+      await db.from('duo_messages').upsert(payload, onConflict: 'id', ignoreDuplicates: true);
       if (!mounted) return;
-
+      setState(() {
+        messages.add(payload);
+        replyingTo = null;
+      });
       messageController.clear();
-      setState(() => replyingTo = null);
-    } catch (e) {
-      showMessage('تعذر إرسال الرسالة: $e');
+      await _persistOfflineMessages();
+      scrollToBottom();
+    } catch (_) {
+      try {
+        await _queueGroupText(text);
+        messageController.clear();
+        showMessage(oursText(context, 'حُفظت الرسالة وستُرسل عند عودة الإنترنت', 'Message saved and will send when you are back online'));
+      } catch (_) {
+        showMessage(oursText(context, 'تعذر إرسال الرسالة أو حفظها محليًا', 'Could not send or save this message locally'));
+      }
     } finally {
       if (mounted) {
         setState(() => sending = false);
