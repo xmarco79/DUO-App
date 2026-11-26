@@ -164,7 +164,12 @@ Future<void> main() async {
     publishableKey: 'sb_publishable_xUgF7Wh8fE4wMpuZSrROwA_DNdPJKGM',
   );
 
-  await OursPushService.initialize();
+  // Push notifications are an online enhancement, never a startup dependency.
+  try {
+    await OursPushService.initialize().timeout(const Duration(seconds: 6));
+  } catch (_) {
+    // The app and its locally persisted session must still start offline.
+  }
 
   runApp(const OursApp());
 }
