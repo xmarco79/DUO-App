@@ -468,17 +468,6 @@ class _LoginPageState extends State<LoginPage> {
 
   SupabaseClient get db => Supabase.instance.client;
 
-  @override
-  void dispose() {
-    _groupOutboxTimer?.cancel();
-    if (channel != null) db.removeChannel(channel!);
-    if (presenceChannel != null) db.removeChannel(presenceChannel!);
-    messageController.dispose();
-    scrollController.dispose();
-    audioRecorder?.dispose();
-    super.dispose();
-  }
-
   void showMessage(String value) {
     if (!mounted) return;
 
@@ -1544,6 +1533,17 @@ class _ChatPageState extends State<ChatPage> {
         curve: Curves.easeOut,
       );
     });
+  }
+
+  @override
+  void dispose() {
+    _groupOutboxTimer?.cancel();
+    if (channel != null) db.removeChannel(channel!);
+    if (presenceChannel != null) db.removeChannel(presenceChannel!);
+    messageController.dispose();
+    scrollController.dispose();
+    audioRecorder?.dispose();
+    super.dispose();
   }
 
   void showMessage(String value) {
