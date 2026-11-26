@@ -924,7 +924,7 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> loadMessages() async {
     try {
       final prefs=await SharedPreferences.getInstance(); final cached=prefs.getString(_groupCacheKey);
-      if(cached!=null){try{final rows=(jsonDecode(cached) as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();final queued=await _readGroupOutbox();final merged=<String,Map<String,dynamic>>{};for(final row in rows){merged[row['id'].toString()]=row;}for(final row in queued){merged[row['id'].toString()]=row;}if(mounted)setState(()=>{messages=merged.values.toList(),loading=false});}catch(_){}}
+      if(cached!=null){try{final rows=(jsonDecode(cached) as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();final queued=await _readGroupOutbox();final merged=<String,Map<String,dynamic>>{};for(final row in rows){merged[row['id'].toString()]=row;}for(final row in queued){merged[row['id'].toString()]=row;}if(mounted)setState(() { messages=merged.values.toList(); loading=false; });}catch(_){}}
       final result = await db
           .from('duo_messages')
           .select()
@@ -939,7 +939,7 @@ class _ChatPageState extends State<ChatPage> {
       await _persistGroupMessages(); await _syncGroupOutbox(); scrollToBottom();
     } catch (e) {
       final queued=await _readGroupOutbox(); if(!mounted)return;
-      if(queued.isNotEmpty){final merged=<String,Map<String,dynamic>>{};for(final row in messages){merged[row['id'].toString()]=row;}for(final row in queued){merged[row['id'].toString()]=row;}setState(()=>{messages=merged.values.toList(),loading=false});}else{setState(()=>loading=false);}
+      if(queued.isNotEmpty){final merged=<String,Map<String,dynamic>>{};for(final row in messages){merged[row['id'].toString()]=row;}for(final row in queued){merged[row['id'].toString()]=row;}setState(() { messages=merged.values.toList(); loading=false; });}else{setState(()=>loading=false);}
       if(messages.isEmpty)showMessage('لا توجد رسائل محفوظة على هذا الجهاز بعد.');
     }
   }
