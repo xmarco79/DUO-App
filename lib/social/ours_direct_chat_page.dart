@@ -416,7 +416,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
  String t(String a,String e)=>ar?a:e;String get uid=>db.auth.currentUser!.id;
  
- @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();_startLiveStatus();_outboxTimer=Timer.periodic(const Duration(seconds:15),(_)=>_syncPendingText());}
+ @override void initState(){super.initState();localPartnerName=widget.partnerName;_loadSkin();_load();_listen();_startLiveStatus();_outboxTimer=Timer.periodic(const Duration(seconds:15),(_){_syncPendingText();_syncPendingMedia();});}
  Future<void> _changeLocalNickname() async{
   final prefs=await SharedPreferences.getInstance();final key='ours_partner_alias_${uid}_${widget.partnerId}';
   final controller=TextEditingController(text:prefs.getString(key)??widget.partnerName);
@@ -761,7 +761,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    for(final row in ordered){merged[row['id'].toString()]=row;}
    for(final row in queued){merged[row['id'].toString()]=row;}
    if(!mounted)return;setState((){messages..clear()..addAll(merged.values);loading=false;});
-   await _persistChatCache();await _syncPendingText();
+   await _persistChatCache();await _syncPendingText();await _syncPendingMedia();
    try{final pins=await db.from('ours_direct_message_pins').select('message_id').eq('user_id',uid).eq('conversation_id',widget.conversationId);if(mounted)setState(()=>pinnedMessageIds..clear()..addAll(pins.map((r)=>r['message_id'].toString())));}catch(_){}
    await db.rpc('mark_ours_direct_messages_read',params:{'p_conversation_id':widget.conversationId});
    _bottom();
@@ -823,6 +823,59 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   const types={'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif','m4a':'audio/mp4','aac':'audio/aac','mp3':'audio/mpeg','ogg':'audio/ogg','mp4':'video/mp4','mov':'video/quicktime','webm':'video/webm','pdf':'application/pdf','txt':'text/plain','csv':'text/csv','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','ppt':'application/vnd.ms-powerpoint','pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation','zip':'application/zip'};
   return types[name.split('.').last.toLowerCase()]??'';
  }
+ String get _mediaOutboxKey=>'ours_chat_media_outbox_${uid}_${widget.conversationId}';
+ String get _mediaCacheDirKey=>'ours_chat_media_cache_${uid}_${widget.conversationId}';
+ Future<List<Map<String,dynamic>>> _readMediaOutbox() async{
+  try{final p=await SharedPreferences.getInstance();final raw=p.getString(_mediaOutboxKey);if(raw==null)return [];return (jsonDecode(raw) as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();}catch(_){return [];}
+ }
+ Future<void> _writeMediaOutbox(List<Map<String,dynamic>> items) async{
+  final p=await SharedPreferences.getInstance();if(items.isEmpty){await p.remove(_mediaOutboxKey);return;}await p.setString(_mediaOutboxKey,jsonEncode(items));
+ }
+ String _newLocalMessageId(){
+  final random=math.Random.secure();final b=List<int>.generate(16,(_)=>random.nextInt(256));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;final h=b.map((v)=>v.toRadixString(16).padLeft(2,'0')).join();return '${h.substring(0,8)}-${h.substring(8,12)}-${h.substring(12,16)}-${h.substring(16,20)}-${h.substring(20)}';
+ }
+ Future<void> _queueMedia(Uint8List bytes,String name,String type,{int? maxViews}) async{
+  final root=await getApplicationSupportDirectory();final dir=Directory('${root.path}/ours_media_outbox/${widget.conversationId}');
+  await dir.create(recursive:true);final id=_newLocalMessageId();final safe=name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
+  final local=File('${dir.path}/${id}_${safe}');await local.writeAsBytes(bytes,flush:true);
+  final now=DateTime.now().toUtc().toIso8601String();final item=<String,dynamic>{'id':id,'conversation_id':widget.conversationId,'sender_id':uid,'message_type':type,'file_name':name,'file_size':bytes.length,'mime_type':_mime(name),'max_views':maxViews??1,'created_at':now,'local_file_path':local.path};
+  final queue=await _readMediaOutbox();queue.add(item);await _writeMediaOutbox(queue);
+  if(!mounted)return;setState(()=>messages.add({...item,'body':local.path,'local_pending':true,'local_pending_media':true}));messages.sort(_compareMessages);await _persistChatCache();
+  _show(t('حُفظ المرفق وسيُرسل تلقائيًا عند عودة الاتصال','Attachment saved and will send automatically when connection returns'));
+ }
+ Future<void> _syncPendingMedia() async{
+  if(!mounted)return;final queue=await _readMediaOutbox();if(queue.isEmpty)return;
+  final remaining=<Map<String,dynamic>>[];
+  for(var i=0;i<queue.length;i++){
+   final item=queue[i];final localPath=item['local_file_path']?.toString()??'';
+   try{
+    final file=File(localPath);if(!await file.exists())throw Exception('Queued attachment missing');
+    final name=(item['file_name']??file.uri.pathSegments.last).toString();final safe=name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');
+    final remotePath='${widget.conversationId}/${uid}/${item['id']}_${safe}';
+    await db.storage.from(_bucket).upload(remotePath,file,fileOptions:FileOptions(contentType:(item['mime_type']??_mime(name)).toString(),upsert:true,cacheControl:'3600'));
+    final payload=<String,dynamic>{'id':item['id'],'conversation_id':widget.conversationId,'sender_id':uid,'body':remotePath,'message_type':item['message_type'],'file_name':name,'file_size':item['file_size'],'mime_type':item['mime_type'],'max_views':item['max_views'],'created_at':item['created_at']};
+    await db.from('duo_direct_messages').upsert(payload,onConflict:'id',ignoreDuplicates:true);
+    if(await file.exists())await file.delete();
+    final index=messages.indexWhere((m)=>m['id'].toString()==item['id'].toString());
+    if(index>=0){final row=Map<String,dynamic>.from(payload);if(mounted)setState(()=>messages[index]=row);}
+   }catch(_){remaining.addAll(queue.skip(i));break;}
+  }
+  await _writeMediaOutbox(remaining);await _persistChatCache();
+ }
+ Future<File?> _cachedMediaFile(String path) async{
+  if(path.isEmpty||path=='[viewed]')return null;
+  try{
+   final root=await getApplicationSupportDirectory();final dir=Directory('${root.path}/ours_media_cache/${widget.conversationId}');await dir.create(recursive:true);
+   final safe=path.split('/').last.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'),'_');final file=File('${dir.path}/${safe}');
+   if(await file.exists()&&await file.length()>0)return file;
+   final url=await _signed(path);final client=HttpClient();
+   try{final req=await client.getUrl(Uri.parse(url));final res=await req.close();if(res.statusCode<200||res.statusCode>=300)return null;
+    final sink=file.openWrite();await res.pipe(sink);await sink.flush();await sink.close();
+   }finally{client.close();}
+   if(await file.exists()&&await file.length()>0)return file;
+  }catch(_){}
+  return null;
+ }
  Future<void> _upload(Uint8List bytes,String name,String type,{int? maxViews}) async{
   if(bytes.isEmpty)return;if(bytes.length>100*1024*1024){_show(t('الحد الأقصى 100 ميجابايت','Maximum size is 100 MB'));return;}
   final mime=_mime(name);if(mime.isEmpty){_show(t('نوع الملف غير مدعوم','Unsupported file type'));return;}setState(()=>uploading=true);
@@ -832,7 +885,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    await db.storage.from(_bucket).uploadBinary(path,bytes,fileOptions:FileOptions(contentType:mime,upsert:false,cacheControl:'3600'));
    try{await db.from('duo_direct_messages').insert({'conversation_id':widget.conversationId,'sender_id':uid,'body':path,'message_type':type,'max_views':maxViews??1,'file_name':name,'file_size':bytes.length,'mime_type':mime});}
    catch(_){await db.storage.from(_bucket).remove([path]);rethrow;}
-  }catch(e){_show(t('تعذر رفع المرفق. تحقق من الاتصال.','Could not upload the attachment. Check your connection.'));}finally{if(mounted)setState(()=>uploading=false);}
+  }catch(e){\n   try{await _queueMedia(bytes,name,type,maxViews:maxViews);}catch(queueError){_show(t('تعذر حفظ المرفق محليًا: $queueError','Could not save attachment locally: $queueError'));}\n  }finally{if(mounted)setState(()=>uploading=false);}
  }
  Future<Uint8List> _renderEditedImage(Uint8List bytes,int filter,double crop,List<List<Offset>> strokes) async{
   final codec=await ui.instantiateImageCodec(bytes);final frame=await codec.getNextFrame();final source=frame.image;
