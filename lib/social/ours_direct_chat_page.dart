@@ -187,45 +187,65 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
  @override
  Path getClip(Size size) {
-  if(size.width<=0||size.height<=0)return Path();
+  if (size.width <= 0 || size.height <= 0) return Path();
 
-  // A true capsule body with one continuous, softly swept speech tail.
-  // The tail is part of the same contour: no seam, overlap or sharp join.
-  final tailH=math.min(11.0,math.max(7.0,size.height*.17));
-  final bodyBottom=size.height-tailH;
-  final radius=math.min(bodyBottom*.5,30.0);
-  final tailW=math.min(22.0,math.max(15.0,size.width*.12));
-  final tailOuter=math.max(radius+tailW+5.0,size.width-radius-5.0);
-  final tailInner=tailOuter-tailW;
-  final tipX=tailOuter-tailW*.53;
-  final x=(double value)=>tailOnLeft?size.width-value:value;
-  final path=Path()
-   // Top edge and right capsule shoulder.
-   ..moveTo(x(radius),0)
-   ..lineTo(x(size.width-radius),0)
-   ..cubicTo(x(size.width-radius*.45),0,x(size.width),radius*.45,x(size.width),radius)
-   // Right side and lower capsule shoulder.
-   ..lineTo(x(size.width),bodyBottom-radius)
-   ..cubicTo(x(size.width),bodyBottom-radius*.45,x(size.width-radius*.45),bodyBottom,x(size.width-radius),bodyBottom)
-   // Keep the lower edge perfectly straight up to the tail root.
-   ..lineTo(x(tailOuter),bodyBottom)
-   // Sweep down into the tail with a broad, tangent transition.
-   ..cubicTo(x(tailOuter-tailW*.10),bodyBottom+tailH*.12,x(tailOuter-tailW*.20),size.height-tailH*.30,x(tipX+tailW*.20),size.height-tailH*.10)
-   // A tiny rounded nose instead of a needle-like point.
-   ..cubicTo(x(tipX+tailW*.08),size.height+tailH*.015,x(tipX-tailW*.08),size.height+tailH*.015,x(tipX-tailW*.20),size.height-tailH*.10)
-   // Return smoothly to the capsule baseline.
-   ..cubicTo(x(tailInner+tailW*.20),size.height-tailH*.30,x(tailInner+tailW*.10),bodyBottom+tailH*.12,x(tailInner),bodyBottom)
-   ..lineTo(x(radius),bodyBottom)
-   // Left capsule shoulder and side.
-   ..cubicTo(x(radius*.45),bodyBottom,0,bodyBottom-radius*.45,0,bodyBottom-radius)
-   ..lineTo(0,radius)
-   ..cubicTo(0,radius*.45,x(radius*.45),0,x(radius),0)
-   ..close();
-  return path;
+  // A clean capsule body with a short, rounded tail drawn as one contour.
+  // The bottom baseline stays straight on both sides of the tail root.
+  final tailHeight = math.min(12.0, math.max(8.0, size.height * .16));
+  final bodyBottom = size.height - tailHeight;
+  final radius = math.min(bodyBottom * .5, 28.0);
+  final tailWidth = math.min(23.0, math.max(16.0, size.width * .14));
+  final tailStart = math.max(radius + 5.0, size.width - radius - tailWidth * 1.18);
+  final tailEnd = tailStart + tailWidth;
+  final tipX = tailStart + tailWidth * .52;
+  double x(double value) => tailOnLeft ? size.width - value : value;
+
+  return Path()
+    ..moveTo(x(radius), 0)
+    ..lineTo(x(size.width - radius), 0)
+    ..cubicTo(
+      x(size.width - radius * .42), 0,
+      x(size.width), radius * .42,
+      x(size.width), radius,
+    )
+    ..lineTo(x(size.width), bodyBottom - radius)
+    ..cubicTo(
+      x(size.width), bodyBottom - radius * .42,
+      x(size.width - radius * .42), bodyBottom,
+      x(size.width - radius), bodyBottom,
+    )
+    ..lineTo(x(tailEnd), bodyBottom)
+    // Softly sweep out from the baseline into the integrated tail.
+    ..cubicTo(
+      x(tailEnd - tailWidth * .06), bodyBottom + tailHeight * .34,
+      x(tipX + tailWidth * .30), size.height - tailHeight * .04,
+      x(tipX + 2.0), size.height - 1.5,
+    )
+    // A tiny curved nose keeps the tip rounded rather than pointed.
+    ..cubicTo(
+      x(tipX + .8), size.height + .25,
+      x(tipX - .8), size.height + .25,
+      x(tipX - 2.0), size.height - 1.5,
+    )
+    ..cubicTo(
+      x(tipX - tailWidth * .30), size.height - tailHeight * .04,
+      x(tailStart + tailWidth * .06), bodyBottom + tailHeight * .34,
+      x(tailStart), bodyBottom,
+    )
+    ..lineTo(x(radius), bodyBottom)
+    ..cubicTo(
+      x(radius * .42), bodyBottom,
+      0, bodyBottom - radius * .42,
+      0, bodyBottom - radius,
+    )
+    ..lineTo(0, radius)
+    ..cubicTo(0, radius * .42, x(radius * .42), 0, x(radius), 0)
+    ..close();
  }
 
  @override
- bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
+ bool shouldReclip(covariant _MessageBubbleClipper oldClipper) =>
+     oldClipper.tailOnLeft != tailOnLeft;
 }
 
 class _OursUnifiedMessageSurface extends StatelessWidget {
@@ -1653,7 +1673,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
          if(isReplySwipeable&&_draggingReplyMessageId==m['id'].toString())
           Positioned(left:swipeSign>0?5:null,right:swipeSign<0?5:null,child:Opacity(opacity:(_replyDragOffset/58).clamp(0.0,1.0).toDouble(),child:Transform.scale(scale:(.72+(_replyDragOffset/58).clamp(0.0,1.0).toDouble()*.28),child:Icon(Icons.reply_rounded,color:skin.accent,size:22)))),
          Transform.translate(offset:Offset((_draggingReplyMessageId==m['id'].toString()?_replyDragOffset*swipeSign:0),0),child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
-         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(12,8,12,8)),
+         constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(14,10,14,15)),
          decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?const Color(0xFFB9B4C6).withValues(alpha:.58):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .8 : (isVisualMessage ? 0 : .55))),borderRadius:isOutlinedMedia?BorderRadius.circular(18):(isVisualMessage?BorderRadius.circular(15):null)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
 
