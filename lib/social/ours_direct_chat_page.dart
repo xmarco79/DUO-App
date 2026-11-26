@@ -761,7 +761,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
    for(final row in ordered){merged[row['id'].toString()]=row;}
    for(final row in queued){merged[row['id'].toString()]=row;}
    if(!mounted)return;setState((){messages..clear()..addAll(merged.values);loading=false;});
-   await _persistChatCache();await _syncPendingText();await _syncPendingMedia();
+   await _persistChatCache();await _syncPendingText();await _syncPendingMedia();await _cacheRecentMedia();
    try{final pins=await db.from('ours_direct_message_pins').select('message_id').eq('user_id',uid).eq('conversation_id',widget.conversationId);if(mounted)setState(()=>pinnedMessageIds..clear()..addAll(pins.map((r)=>r['message_id'].toString())));}catch(_){}
    await db.rpc('mark_ours_direct_messages_read',params:{'p_conversation_id':widget.conversationId});
    _bottom();
@@ -1367,12 +1367,21 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    Expanded(child:found.isEmpty?Center(child:Text(t('لا توجد نتائج','No results'))):ListView(children:found.map((m)=>ListTile(title:Text(m['body'].toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(_time(m['created_at'])),onTap:(){Navigator.pop(ctx);_jumpToMessage(m['id'].toString());})).toList()))
   ]))));
  }
- Future<void> _openImageActions(String url,{String? messageId}) async{
+ Future<void> _cacheRecentMedia() async{
+  final candidates=messages.where((m)=>['image','video','audio','file','sticker'].contains(m['message_type'])&&!['view_once','view_twice'].contains(m['message_type'])&&(m['body']??'').toString().isNotEmpty&&(m['local_file_path']==null)).toList().reversed.take(24).toList();
+  var changed=false;
+  for(final row in candidates){
+   final file=await _cachedMediaFile(row['body'].toString());
+   if(file!=null){row['local_file_path']=file.path;changed=true;}
+  }
+  if(changed){await _persistChatCache();if(mounted)setState((){});}
+ }
+ Future<void> _openImageActions(String url,{String? messageId,File? localFile}) async{
   if(!mounted)return;
   await showDialog<void>(context:context,barrierColor:Colors.black,builder:(ctx)=>Dialog(
    backgroundColor:Colors.black,insetPadding:EdgeInsets.zero,
    child:SizedBox.expand(child:SafeArea(child:Column(children:[
-    Expanded(child:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Center(child:Text(t('تعذر تحميل الصورة','Image failed to load'),style:const TextStyle(color:Colors.white))))))),
+    Expanded(child:Center(child:InteractiveViewer(minScale:.5,maxScale:5,child:localFile!=null?Image.file(localFile,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Center(child:Text(t('تعذر تحميل الصورة','Image failed to load'),style:const TextStyle(color:Colors.white)))):Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Center(child:Text(t('تعذر تحميل الصورة','Image failed to load'),style:const TextStyle(color:Colors.white))))))),
     Container(padding:const EdgeInsets.fromLTRB(10,8,10,12),decoration:BoxDecoration(color:skin.partner,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.18)))),child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
      TextButton.icon(onPressed:()=>Navigator.pop(ctx),icon:Icon(Icons.close,color:skin.accent),label:Text(t('إغلاق','Close'))),
      if(messageId!=null)TextButton.icon(onPressed:(){Navigator.pop(ctx);_jumpToMessage(messageId);},icon:Icon(Icons.my_location_rounded,color:skin.accent),label:Text(t('إظهار في المحادثة','Show in chat'))),
@@ -1401,7 +1410,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
   final path=message['body']?.toString()??'';
   if(type=='view_once'||type=='view_twice'){await _consumeTemporaryMedia(message['id'].toString());return;}
   if(type=='image'){
-   try{final url=await _signed(path);if(!mounted)return;await _openImageActions(url,messageId:message['id'].toString());}
+   try{final local=message['local_file_path']?.toString();if(local!=null&&await File(local).exists()){await _openImageActions('',messageId:message['id'].toString(),localFile:File(local));}else{final cached=await _cachedMediaFile(path);if(cached!=null){message['local_file_path']=cached.path;await _persistChatCache();await _openImageActions('',messageId:message['id'].toString(),localFile:cached);}else{final url=await _signed(path);await _openImageActions(url,messageId:message['id'].toString());}}}
    catch(_){_show(t('تعذر فتح الصورة. تحقق من الاتصال.','Could not open image. Check your connection.'));}
    return;
   }
