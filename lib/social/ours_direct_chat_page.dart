@@ -189,19 +189,19 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
   if(size.width<=0||size.height<=0)return Path();
   final h=size.height, w=size.width;
   final r=math.min(h*.48,26.0), tailH=math.min(h*.30,17.0);
-  final base=math.min(r+24.0,w*.34);
+  final base=math.min(r+18.0,w*.34);
   final p=Path();
-  // Rounded capsule body with an integrated, softly curved messenger tail.
+  // Rounded capsule with a clearly protruding, smoothly joined tail at the lower corner.
   p.moveTo(r,0);
   p.lineTo(w-r,0);
   p.quadraticBezierTo(w,0,w,r);
   p.lineTo(w,h-r);
   p.quadraticBezierTo(w,h,w-r,h);
-  p.lineTo(base+tailH*.35,h);
-  p.cubicTo(base+tailH*.10,h,base-tailH*.15,h-tailH*.10,base-tailH*.45,h-tailH*.30);
-  p.cubicTo(base-tailH*.70,h-tailH*.12,base-tailH*.92,h-tailH*.04,base-tailH*1.05,h-tailH*.02);
-  p.cubicTo(base-tailH*.55,h+tailH*.02,base-tailH*.05,h+tailH*.04,base-tailH*.12,h-tailH*.12);
-  p.cubicTo(base-tailH*.18,h-tailH*.30,r*.62,h-tailH*.52,r*.48,h-tailH*.62);
+  p.lineTo(base+tailH*.25,h);
+  p.cubicTo(base+tailH*.08,h,base-tailH*.08,h-tailH*.08,base-tailH*.30,h-tailH*.22);
+  p.cubicTo(base-tailH*.55,h-tailH*.06,-tailH*.82,h-tailH*.10,-tailH*.95,h-tailH*.12);
+  p.cubicTo(-tailH*.55,h-tailH*.08,base-tailH*.12,h-tailH*.16,base-tailH*.05,h-tailH*.32);
+  p.cubicTo(base-tailH*.04,h-tailH*.42,r*.65,h-tailH*.60,r*.48,h-tailH*.66);
   p.quadraticBezierTo(0,h*.62,0,r);
   p.quadraticBezierTo(0,0,r,0);
   p.close();
