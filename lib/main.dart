@@ -656,6 +656,9 @@ class _ChatPageState extends State<ChatPage> {
   bool uploadingImage = false;
   bool uploadingFile = false;
   bool recordingAudio = false;
+  Timer? recordingAudioTimer;
+  DateTime? recordingAudioStartedAt;
+  Duration recordingAudioElapsed = Duration.zero;
   AudioRecorder? audioRecorder;
   String? activeRecordingPath;
   final ImagePicker imagePicker = ImagePicker();
@@ -1230,6 +1233,20 @@ class _ChatPageState extends State<ChatPage> {
   }
 
 
+  Future<void> showSelfAttachmentPicker() async {
+    final choice = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: chatTheme.background,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(leading: Icon(Icons.image_outlined, color: chatTheme.accent), title: const Text('إرسال صورة'), onTap: () => Navigator.pop(ctx, 1)),
+        ListTile(leading: Icon(Icons.attach_file_rounded, color: chatTheme.accent), title: const Text('إرسال ملف'), onTap: () => Navigator.pop(ctx, 2)),
+      ])),
+    );
+    if (choice == 1) await sendImage();
+    if (choice == 2) await sendFile();
+  }
+
   Future<void> startAudioRecording() async {
     if (recordingAudio || sending || uploadingImage || uploadingFile) return;
     final recorder = audioRecorder ??= AudioRecorder();
@@ -1258,7 +1275,14 @@ class _ChatPageState extends State<ChatPage> {
       }
       setState(() {
         activeRecordingPath = path;
+        recordingAudioStartedAt = DateTime.now();
+        recordingAudioElapsed = Duration.zero;
         recordingAudio = true;
+      });
+      recordingAudioTimer?.cancel();
+      recordingAudioTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted || recordingAudioStartedAt == null) return;
+        setState(() => recordingAudioElapsed = DateTime.now().difference(recordingAudioStartedAt!));
       });
     } catch (e) {
       showMessage('تعذر بدء التسجيل: $e');
@@ -1268,6 +1292,9 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> cancelAudioRecording() async {
     final recorder = audioRecorder;
     if (recorder == null || !recordingAudio) return;
+    recordingAudioTimer?.cancel();
+    recordingAudioStartedAt = null;
+    recordingAudioElapsed = Duration.zero;
     try {
       await recorder.cancel();
       final path = activeRecordingPath;
@@ -1290,6 +1317,9 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> stopAndSendAudio() async {
     final recorder = audioRecorder;
     if (recorder == null || !recordingAudio) return;
+    recordingAudioTimer?.cancel();
+    recordingAudioStartedAt = null;
+    recordingAudioElapsed = Duration.zero;
     setState(() => sending = true);
     String? path;
     try {
@@ -1344,6 +1374,9 @@ class _ChatPageState extends State<ChatPage> {
         setState(() {
           recordingAudio = false;
           activeRecordingPath = null;
+          recordingAudioTimer?.cancel();
+          recordingAudioStartedAt = null;
+          recordingAudioElapsed = Duration.zero;
           sending = false;
         });
       }
@@ -1537,6 +1570,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void dispose() {
     _groupOutboxTimer?.cancel();
+    recordingAudioTimer?.cancel();
     messageController.dispose();
     scrollController.dispose();
     audioRecorder?.dispose();
@@ -1871,7 +1905,7 @@ class _ChatPageState extends State<ChatPage> {
                       ),
           ),
           Container(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: [chatTheme.mine, chatTheme.background], begin: Alignment.centerLeft, end: Alignment.centerRight),
               border: Border(
@@ -1889,10 +1923,23 @@ class _ChatPageState extends State<ChatPage> {
                     icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                   ),
                   Expanded(
-                    child: Text(
-                      'جارٍ تسجيل الرسالة الصوتية...',
-                      style: const TextStyle(color: gold, fontSize: 13),
-                      textAlign: TextAlign.center,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: chatTheme.partner.withValues(alpha: .72),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: chatTheme.accent.withValues(alpha: .25)),
+                      ),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Row(children: [
+                          Container(width: 9, height: 9, decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle)),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('تسجيل صوتي', style: TextStyle(color: chatTheme.accent, fontSize: 12, fontWeight: FontWeight.w700))),
+                          Text('${recordingAudioElapsed.inMinutes.toString().padLeft(2, '0')}:${(recordingAudioElapsed.inSeconds % 60).toString().padLeft(2, '0')}', style: TextStyle(color: chatTheme.accent, fontSize: 15, fontWeight: FontWeight.w900, fontFeatures: const [FontFeature.tabularFigures()])),
+                        ]),
+                        const SizedBox(height: 7),
+                        ClipRRect(borderRadius: BorderRadius.circular(5), child: LinearProgressIndicator(value: null, minHeight: 3, backgroundColor: chatTheme.accent.withValues(alpha: .18), color: Colors.redAccent)),
+                      ]),
                     ),
                   ),
                   IconButton(
@@ -1904,23 +1951,11 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                 ] else ...[
                 IconButton(
-                  tooltip: 'إرسال ملف',
-                  onPressed: uploadingFile || uploadingImage || sending ? null : sendFile,
-                  icon: uploadingFile ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: gold, strokeWidth: 2)) : const Icon(Icons.attach_file, color: gold),
-                ),
-                IconButton(
-                  tooltip: 'إرسال صورة',
-                  onPressed: uploadingImage || uploadingFile || sending ? null : sendImage,
-                  icon: uploadingImage
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: gold,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(Icons.image_outlined, color: gold),
+                  tooltip: 'إرفاق ملف أو صورة',
+                  onPressed: uploadingImage || uploadingFile || sending ? null : showSelfAttachmentPicker,
+                  icon: uploadingImage || uploadingFile
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: gold, strokeWidth: 2))
+                      : const Icon(Icons.add_circle_outline_rounded, color: gold),
                 ),
                 Expanded(
                   child: TextField(
