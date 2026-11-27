@@ -1236,12 +1236,111 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> showSelfAttachmentPicker() async {
     final choice = await showModalBottomSheet<int>(
       context: context,
-      backgroundColor: chatTheme.background,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        ListTile(leading: Icon(Icons.image_outlined, color: chatTheme.accent), title: const Text('إرسال صورة'), onTap: () => Navigator.pop(ctx, 1)),
-        ListTile(leading: Icon(Icons.attach_file_rounded, color: chatTheme.accent), title: const Text('إرسال ملف'), onTap: () => Navigator.pop(ctx, 2)),
-      ])),
+      backgroundColor: Colors.transparent,
+      showDragHandle: false,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(10, 0, 10, 12),
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
+          decoration: BoxDecoration(
+            color: chatTheme.background,
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: chatTheme.accent.withValues(alpha: .18)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: .22), blurRadius: 22, offset: const Offset(0, -5)),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.perm_media_rounded, color: chatTheme.accent, size: 22),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'إرسال الوسائط',
+                      style: TextStyle(color: chatTheme.accent, fontSize: 17, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: Icon(Icons.close_rounded, color: chatTheme.accent),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text('اختر ما تريد مشاركته', style: TextStyle(color: chatTheme.accent.withValues(alpha: .68), fontSize: 12)),
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => Navigator.pop(ctx, 1),
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF9C83F5).withValues(alpha: .11),
+                          border: Border.all(color: const Color(0xFF9C83F5).withValues(alpha: .27)),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(color: const Color(0xFF9C83F5).withValues(alpha: .2), borderRadius: BorderRadius.circular(14)),
+                              child: const Icon(Icons.photo_rounded, color: Color(0xFF9C83F5), size: 24),
+                            ),
+                            const SizedBox(height: 11),
+                            Text('صورة', style: TextStyle(color: chatTheme.accent, fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 4),
+                            Text('إرسال الصور', style: TextStyle(color: chatTheme.accent.withValues(alpha: .65), fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => Navigator.pop(ctx, 2),
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF67B9D4).withValues(alpha: .11),
+                          border: Border.all(color: const Color(0xFF67B9D4).withValues(alpha: .27)),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(color: const Color(0xFF67B9D4).withValues(alpha: .2), borderRadius: BorderRadius.circular(14)),
+                              child: const Icon(Icons.insert_drive_file_rounded, color: Color(0xFF67B9D4), size: 24),
+                            ),
+                            const SizedBox(height: 11),
+                            Text('ملف', style: TextStyle(color: chatTheme.accent, fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 4),
+                            Text('مستندات وملفات', style: TextStyle(color: chatTheme.accent.withValues(alpha: .65), fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
     if (choice == 1) await sendImage();
     if (choice == 2) await sendFile();
