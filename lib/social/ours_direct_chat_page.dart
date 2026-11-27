@@ -1751,7 +1751,7 @@ class _OursAiPageState extends State<OursAiPage>{
   if(mounted)setState(()=>skin=_skins.firstWhere((x)=>x.id==selected,orElse:()=>_skins.first));
  }
  Future<void> _chooseWallpaper()async{
-  final result=await _openOursWallpaperStudio(context:context,skin:skin,t:t,currentPath:wallpaperPath,preferenceKey:'ours_ai_wallpaper',filePrefix:'ours_ai',currentOpacity:wallpaperOpacity,currentZoom:wallpaperZoom,currentRotation:wallpaperRotation,currentDim:wallpaperDim,currentOffsetX:wallpaperOffsetX,currentOffsetY:wallpaperOffsetY,);
+  final result=await _openOursWallpaperStudio(context:context,skin:skin,t:t,currentPath:wallpaperPath,preferenceKey:'ours_ai_wallpaper',filePrefix:'ours_ai',currentOpacity:wallpaperOpacity,currentZoom:wallpaperZoom,currentRotation:wallpaperRotation,currentDim:wallpaperDim,currentOffsetX:wallpaperOffsetX,currentOffsetY:wallpaperOffsetY,previewMessages:[{'sender_id':uid,'message_type':'text','body':t('مرحبًا، كيف أقدر أساعدك؟','Hello, how can I help?')},{'sender_id':'ours-ai','message_type':'text','body':t('هذه معاينة لمحادثة OURS AI','Preview of OURS AI chat')}],currentUserId:uid,partnerName:'OURS AI');
   if(result==null)return;
   if(mounted)setState((){
    wallpaperPath=result['path'] as String?;
@@ -1795,10 +1795,10 @@ class _OursAiPageState extends State<OursAiPage>{
  Future<void> _restore() async{try{final p=await SharedPreferences.getInstance();final raw=p.getString('ours_ai_history_'+db.auth.currentUser!.id);if(raw!=null){final decoded=(jsonDecode(raw) as List).map((e)=>Map<String,String>.from(e)).toList();if(mounted)setState(()=>messages.addAll(decoded));}}catch(_){} }
  Future<void> _persist() async{try{final p=await SharedPreferences.getInstance();await p.setString('ours_ai_history_'+db.auth.currentUser!.id,jsonEncode(messages.take(100).toList()));}catch(_){} }
  @override void dispose(){input.dispose();scroll.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,centerTitle:true,title:Column(mainAxisSize:MainAxisSize.min,children:[Text('OURS AI',style:TextStyle(color:skin.accent,letterSpacing:2,fontWeight:FontWeight.w800)),Text(t('مساعدك الذكي','Your private assistant'),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:10))]),actions:[
-  IconButton(onPressed:_search,icon:Icon(Icons.search,color:skin.accent)),
-  IconButton(onPressed:_chooseTheme,icon:Icon(Icons.palette_outlined,color:skin.accent)),
-  IconButton(onPressed:_chooseWallpaper,icon:Icon(Icons.wallpaper_outlined,color:skin.accent))
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,elevation:0,scrolledUnderElevation:0,toolbarHeight:76,centerTitle:true,surfaceTintColor:Colors.transparent,shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.14),width:.8)),leadingWidth:48,leading:IconButton(tooltip:t('رجوع','Back'),onPressed:()=>Navigator.maybePop(context),icon:Icon(Icons.arrow_back_ios_new_rounded,color:skin.accent,size:19)),title:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:40,height:40,decoration:BoxDecoration(color:skin.partner,border:Border.all(color:skin.accent.withValues(alpha:.35)),shape:BoxShape.circle),child:Icon(Icons.auto_awesome_rounded,color:skin.accent,size:20)),const SizedBox(width:9),Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[Text('OURS AI',style:TextStyle(color:skin.accent,letterSpacing:1.3,fontWeight:FontWeight.w800,fontSize:14)),Text(t('مساعدك الذكي','Your private assistant'),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:10))])]),actions:[
+  IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_search,icon:Icon(Icons.search,color:skin.accent,size:19)),
+  IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_chooseTheme,icon:Icon(Icons.palette_outlined,color:skin.accent,size:19)),
+  IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_chooseWallpaper,icon:Icon(Icons.wallpaper_outlined,color:skin.accent,size:19))
  ]),
   body:Stack(children:[
    if(wallpaperPath==null)Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
@@ -1828,10 +1828,10 @@ class _OursAiPageState extends State<OursAiPage>{
      ]);
     })),
     if(sending)LinearProgressIndicator(color:skin.accent,minHeight:2),
-    Padding(padding:const EdgeInsets.fromLTRB(10,8,10,12),child:Row(children:[
-     Expanded(child:TextField(controller:input,minLines:1,maxLines:4,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اسأل OURS AI…','Ask OURS AI…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none)))),
-     IconButton(onPressed:sending?null:()=>_send(),icon:Icon(Icons.send_rounded,color:skin.accent))
-    ]))
+    SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(8,8,8,10),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.2)))),child:Row(children:[
+     Expanded(child:TextField(controller:input,minLines:1,maxLines:4,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اسأل OURS AI…','Ask OURS AI…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:11)))),
+     const SizedBox(width:5),IconButton.filled(onPressed:sending?null:()=>_send(),style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
+    ])))
    ]))
   ]));
 }
@@ -1901,7 +1901,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   if(mounted)setState(()=>skin=_skins.firstWhere((x)=>x.id==selected,orElse:()=>_skins.first));
  }
  Future<void> _chooseWallpaper()async{
-  final result=await _openOursWallpaperStudio(context:context,skin:skin,t:t,currentPath:wallpaperPath,preferenceKey:'ours_self_wallpaper',filePrefix:'ours_self',currentOpacity:wallpaperOpacity,currentZoom:wallpaperZoom,currentRotation:wallpaperRotation,currentDim:wallpaperDim,currentOffsetX:wallpaperOffsetX,currentOffsetY:wallpaperOffsetY);
+  final result=await _openOursWallpaperStudio(context:context,skin:skin,t:t,currentPath:wallpaperPath,preferenceKey:'ours_self_wallpaper',filePrefix:'ours_self',currentOpacity:wallpaperOpacity,currentZoom:wallpaperZoom,currentRotation:wallpaperRotation,currentDim:wallpaperDim,currentOffsetX:wallpaperOffsetX,currentOffsetY:wallpaperOffsetY,previewMessages:[{'sender_id':uid,'message_type':'text','body':t('هذه معاينة لمراسلة نفسك','Preview of Saved messages')},{'sender_id':uid,'message_type':'text','body':t('الخلفية تظهر خلف الرسائل تمامًا','Wallpaper preview behind your notes')}],currentUserId:uid,partnerName:t('مراسلة نفسي','Saved messages'));
   if(result==null)return;
   if(mounted)setState((){
    wallpaperPath=result['path'] as String?;
@@ -2065,9 +2065,9 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
    Text(t('مراسلة نفسي','Saved messages'),style:TextStyle(color:skin.accent,fontSize:16,fontWeight:FontWeight.w800)),
    Text(t('مساحة لا يراها غيرك','Private to you'),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:10))
   ]),actions:[
-   IconButton(onPressed:_searchSelf,icon:Icon(Icons.search,color:skin.accent)),
-   IconButton(onPressed:_chooseTheme,icon:Icon(Icons.palette_outlined,color:skin.accent)),
-   IconButton(onPressed:_chooseWallpaper,icon:Icon(Icons.wallpaper_outlined,color:skin.accent))
+   IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_searchSelf,icon:Icon(Icons.search,color:skin.accent,size:19)),
+   IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_chooseTheme,icon:Icon(Icons.palette_outlined,color:skin.accent,size:19)),
+   IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_chooseWallpaper,icon:Icon(Icons.wallpaper_outlined,color:skin.accent,size:19))
   ]),
   body:Stack(children:[
    if(wallpaperPath==null)Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
