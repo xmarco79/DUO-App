@@ -1591,9 +1591,13 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
      })),
     SafeArea(top:false,child:Container(margin:const EdgeInsets.fromLTRB(10,5,10,8),padding:const EdgeInsets.fromLTRB(9,10,9,9),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.96),borderRadius:BorderRadius.circular(25),border:Border.all(color:skin.accent.withValues(alpha:.16)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.18),blurRadius:22,offset:const Offset(0,-5))]),
      child:recording?Row(children:[
-      IconButton(onPressed:_cancelRecording,icon:const Icon(Icons.delete_outline,color:Colors.redAccent)),
-      Expanded(child:Text(t('جارٍ تسجيل الرسالة الصوتية…','Recording voice message…'),textAlign:TextAlign.center,style:TextStyle(color:skin.accent))),
-      IconButton(onPressed:sending?null:_sendRecording,icon:Icon(Icons.send,color:skin.accent))
+      IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,onPressed:sending?null:_cancelRecording,tooltip:t('إلغاء التسجيل','Cancel recording'),icon:Icon(Icons.close_rounded,color:skin.accent.withValues(alpha:.82),size:21)),
+      Expanded(child:Container(padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),decoration:BoxDecoration(gradient:LinearGradient(begin:AlignmentDirectional.centerStart,end:AlignmentDirectional.centerEnd,colors:[skin.partner.withValues(alpha:.92),skin.partner.withValues(alpha:.58)]),borderRadius:BorderRadius.circular(20),border:Border.all(color:skin.accent.withValues(alpha:.22))),child:Row(children:[
+       Icon(Icons.graphic_eq_rounded,color:skin.accent,size:22),const SizedBox(width:10),
+       Expanded(child:Text(t('تسجيل صوتي','Recording audio'),style:TextStyle(color:skin.accent,fontSize:12,fontWeight:FontWeight.w700))),
+       Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:6),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.48),borderRadius:BorderRadius.circular(12),border:Border.all(color:skin.accent.withValues(alpha:.16))),child:Text('${recordingElapsed.inMinutes.toString().padLeft(2,'0')}:${(recordingElapsed.inSeconds%60).toString().padLeft(2,'0')}',style:TextStyle(color:skin.accent,fontSize:15,fontWeight:FontWeight.w800,fontFeatures:const [FontFeature.tabularFigures()]))),
+      ]))),
+      IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,onPressed:sending?null:_sendRecording,tooltip:t('إيقاف وإرسال التسجيل','Stop and send recording'),icon:Icon(Icons.send_rounded,color:skin.accent))
      ]):Column(mainAxisSize:MainAxisSize.min,children:[
       if(downloading)Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:4),child:LinearProgressIndicator(value:downloadProgress,color:skin.accent,minHeight:2)),
       if(partnerTyping)Padding(padding:const EdgeInsetsDirectional.fromSTEB(16,0,16,6),child:Align(alignment:AlignmentDirectional.centerStart,child:Text(t('يكتب الآن…','Typing…'),style:TextStyle(color:skin.accent,fontSize:11,fontStyle:FontStyle.italic)))),
@@ -1998,11 +2002,16 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
     SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(8,8,8,10),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.2)))),child:Column(mainAxisSize:MainAxisSize.min,children:[
      if(replyTo!=null)Container(margin:const EdgeInsets.fromLTRB(10,0,10,6),padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(10)),child:Row(children:[Icon(Icons.reply,color:skin.accent,size:17),const SizedBox(width:7),Expanded(child:Text((replyTo!['file_name']??replyTo!['body']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))),IconButton(onPressed:()=>setState(()=>replyTo=null),icon:const Icon(Icons.close,size:16))])),
      Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
-      if(recording)IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,onPressed:()=>_stopRecording(send:false),tooltip:t('إلغاء التسجيل','Cancel recording'),icon:Icon(Icons.delete_outline_rounded,color:skin.accent,size:22)),
-      if(recording)Expanded(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-       Row(children:[const Icon(Icons.circle,color:Colors.red,size:9),const SizedBox(width:8),Text(t('جارٍ التسجيل','Recording'),style:TextStyle(color:skin.accent.withValues(alpha:.78),fontSize:11,fontWeight:FontWeight.w600)),const Spacer(),Text('${recordingElapsed.inMinutes.toString().padLeft(2,'0')}:${(recordingElapsed.inSeconds%60).toString().padLeft(2,'0')}',style:TextStyle(color:skin.accent,fontSize:14,fontWeight:FontWeight.w800,fontFeatures:const [FontFeature.tabularFigures()]))]),
-       const SizedBox(height:6),ClipRRect(borderRadius:BorderRadius.circular(4),child:LinearProgressIndicator(value:null,minHeight:3,backgroundColor:skin.accent.withValues(alpha:.18),color:Colors.red))
-      ])),
+      if(recording)IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,onPressed:()=>_stopRecording(send:false),tooltip:t('إلغاء التسجيل','Cancel recording'),icon:Icon(Icons.close_rounded,color:skin.accent.withValues(alpha:.82),size:21)),
+      if(recording)Expanded(child:Container(
+       padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),
+       decoration:BoxDecoration(gradient:LinearGradient(begin:AlignmentDirectional.centerStart,end:AlignmentDirectional.centerEnd,colors:[skin.partner.withValues(alpha:.92),skin.partner.withValues(alpha:.58)]),borderRadius:BorderRadius.circular(20),border:Border.all(color:skin.accent.withValues(alpha:.22))),
+       child:Row(children:[
+        Icon(Icons.graphic_eq_rounded,color:skin.accent,size:22),const SizedBox(width:10),
+        Expanded(child:Text(t('تسجيل صوتي','Recording audio'),style:TextStyle(color:skin.accent,fontSize:12,fontWeight:FontWeight.w700))),
+        Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:6),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.48),borderRadius:BorderRadius.circular(12),border:Border.all(color:skin.accent.withValues(alpha:.16))),child:Text('${recordingElapsed.inMinutes.toString().padLeft(2,'0')}:${(recordingElapsed.inSeconds%60).toString().padLeft(2,'0')}',style:TextStyle(color:skin.accent,fontSize:14,fontWeight:FontWeight.w800,fontFeatures:const [FontFeature.tabularFigures()]))),
+       ])
+      )),
       if(!recording)IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,onPressed:uploading||sending?null:_showAttachments,tooltip:t('إرفاق ملف','Attach file'),icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(color:skin.accent,strokeWidth:2)):Icon(Icons.add_circle_outline,color:skin.accent)),
       if(!recording)Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اكتب لنفسك…','Write a note…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:11)))),
       if(!recording)IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,onPressed:uploading||sending?null:_startRecording,tooltip:t('تسجيل صوتي','Record audio'),icon:Icon(Icons.mic_none_rounded,color:skin.accent)),
