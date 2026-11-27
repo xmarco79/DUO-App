@@ -1823,10 +1823,10 @@ class _OursAiPageState extends State<OursAiPage>{
      ]);
     })),
     if(sending)LinearProgressIndicator(color:skin.accent,minHeight:2),
-    Padding(padding:const EdgeInsets.fromLTRB(10,8,10,12),child:Row(children:[
-     Expanded(child:TextField(controller:input,minLines:1,maxLines:4,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اسأل OURS AI…','Ask OURS AI…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none)))),
-     IconButton(onPressed:sending?null:()=>_send(),icon:Icon(Icons.send_rounded,color:skin.accent))
-    ]))
+    SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(8,8,8,10),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.2)))),child:Row(children:[
+     Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اسأل OURS AI…','Ask OURS AI…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:11)))),
+     IconButton.filled(onPressed:sending?null:_send,style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
+    ])))
    ]))
   ]));
 }
