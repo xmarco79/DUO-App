@@ -9,6 +9,7 @@ on:
       - feature/ours-bubble-polish-build979
       - feature/ours-preserve-latest-chat-polish-20261125
       - feature/stable-bubble-refinement-20261126
+      - feature/unified-self-ai-chat-ui-20261127
   pull_request:
     branches:
       - feature/full-ours-worlds

@@ -1751,7 +1751,7 @@ class _OursAiPageState extends State<OursAiPage>{
   if(mounted)setState(()=>skin=_skins.firstWhere((x)=>x.id==selected,orElse:()=>_skins.first));
  }
  Future<void> _chooseWallpaper()async{
-  final result=await _openOursWallpaperStudio(context:context,skin:skin,t:t,currentPath:wallpaperPath,preferenceKey:'ours_ai_wallpaper',filePrefix:'ours_ai',currentOpacity:wallpaperOpacity,currentZoom:wallpaperZoom,currentRotation:wallpaperRotation,currentDim:wallpaperDim,currentOffsetX:wallpaperOffsetX,currentOffsetY:wallpaperOffsetY,previewMessages:[{'sender_id':uid,'message_type':'text','body':t('مرحبًا، كيف أقدر أساعدك؟','Hello, how can I help?')},{'sender_id':'ours-ai','message_type':'text','body':t('هذه معاينة لمحادثة OURS AI','Preview of OURS AI chat')}],currentUserId:uid,partnerName:'OURS AI');
+  final result=await _openOursWallpaperStudio(context:context,skin:skin,t:t,currentPath:wallpaperPath,preferenceKey:'ours_ai_wallpaper',filePrefix:'ours_ai',currentOpacity:wallpaperOpacity,currentZoom:wallpaperZoom,currentRotation:wallpaperRotation,currentDim:wallpaperDim,currentOffsetX:wallpaperOffsetX,currentOffsetY:wallpaperOffsetY,);
   if(result==null)return;
   if(mounted)setState((){
    wallpaperPath=result['path'] as String?;
