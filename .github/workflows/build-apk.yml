@@ -215,12 +215,12 @@ jobs:
 
           colors = root / "values/colors.xml"
           colors.parent.mkdir(parents=True, exist_ok=True)
-          color_text = colors.read_text() if colors.exists() else '<?xml version="1.0" encoding="utf-8"?>\\n<resources>\\n</resources>\\n'
+          color_text = colors.read_text() if colors.exists() else '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
           definition = '<color name="ours_icon_background">#09080C</color>'
           if re.search(r'<color name="ours_icon_background">.*?</color>', color_text):
               color_text = re.sub(r'<color name="ours_icon_background">.*?</color>', definition, color_text)
           else:
-              color_text = color_text.replace('</resources>', '    ' + definition + '\\n</resources>')
+              color_text = color_text.replace('</resources>', '    ' + definition + '\n</resources>')
           colors.write_text(color_text)
 
           splash_dir = root / "drawable-nodpi"
