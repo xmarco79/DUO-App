@@ -1970,7 +1970,130 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
        )))
       ]);
      })),
-    SafeArea(top:false,child:Container(margin:const EdgeInsets.fromLTRB(10,5,10,8),padding:const EdgeInsets.fromLTRB(9,10,9,9),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.96),borderRadius:BorderRadius.circular(25),border:Border.all(color:skin.accent.withValues(alpha:.16)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.18),blurRadius:22,offset:const Offset(0,-5))]),child:recording?Row(children:[IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,onPressed:sending?null:()=>_stopRecording(send:false),tooltip:t('إلغاء التسجيل','Cancel recording'),icon:Icon(Icons.close_rounded,color:skin.accent.withValues(alpha:.82),size:21)),Expanded(child:Container(padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),decoration:BoxDecoration(gradient:LinearGradient(begin:AlignmentDirectional.centerStart,end:AlignmentDirectional.centerEnd,colors:[skin.partner.withValues(alpha:.92),skin.partner.withValues(alpha:.58)]),borderRadius:BorderRadius.circular(20),border:Border.all(color:skin.accent.withValues(alpha:.22))),child:Row(children:[Icon(Icons.graphic_eq_rounded,color:skin.accent,size:22),const SizedBox(width:10),Expanded(child:Text(t('تسجيل صوتي','Recording audio'),style:TextStyle(color:skin.accent,fontSize:12,fontWeight:FontWeight.w700))),Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:6),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.48),borderRadius:BorderRadius.circular(12),border:Border.all(color:skin.accent.withValues(alpha:.16))),child:Text('${recordingElapsed.inMinutes.toString().padLeft(2,'0')}:${(recordingElapsed.inSeconds%60).toString().padLeft(2,'0')}',style:TextStyle(color:skin.accent,fontSize:15,fontWeight:FontWeight.w800,fontFeatures:const [FontFeature.tabularFigures()])))]))),IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,onPressed:sending?null:()=>_stopRecording(),tooltip:t('إيقاف وإرسال التسجيل','Stop and send recording'),icon:Icon(Icons.send_rounded,color:skin.accent))]):Column(mainAxisSize:MainAxisSize.min,children:[if(uploading)Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:4),child:LinearProgressIndicator(color:skin.accent,minHeight:2)),if(replyTo!=null)Container(margin:const EdgeInsets.fromLTRB(12,0,12,6),padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(12)),child:Row(children:[Icon(Icons.reply,color:skin.accent,size:18),const SizedBox(width:8),Expanded(child:Text((replyTo!['body']??replyTo!['file_name']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:12))),IconButton(onPressed:()=>setState(()=>replyTo=null),icon:const Icon(Icons.close,size:17))])),Row(crossAxisAlignment:CrossAxisAlignment.center,children:[IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,visualDensity:VisualDensity.standard,onPressed:uploading||sending?null:_showAttachments,tooltip:t('إرفاق صورة أو ملف أو ملصق','Attach photo, file or sticker'),icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.add_circle_outline_rounded,color:skin.accent,size:22)),Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,textDirection:Directionality.of(context),style:const TextStyle(fontSize:14,height:1.25),textAlignVertical:TextAlignVertical.center,onSubmitted:(_)=>_send(),decoration:InputDecoration(isDense:true,hintText:t('اكتب لنفسك…','Write a note…'),hintStyle:const TextStyle(fontSize:13,height:1.25),filled:true,fillColor:skin.partner.withValues(alpha:.94),border:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.48),width:1.1)),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:12)))),IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,visualDensity:VisualDensity.standard,onPressed:uploading||sending?null:_startRecording,tooltip:t('تسجيل صوتي','Record audio'),icon:Icon(Icons.mic_none_rounded,color:skin.accent,size:22)),IconButton.filled(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,visualDensity:VisualDensity.standard,onPressed:sending||uploading?null:_send,style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded,size:20))])])));
+    SafeArea(
+     top: false,
+     child: Container(
+      margin: const EdgeInsets.fromLTRB(10, 5, 10, 8),
+      padding: const EdgeInsets.fromLTRB(9, 10, 9, 9),
+      decoration: BoxDecoration(
+       color: skin.bg.withValues(alpha: .96),
+       borderRadius: BorderRadius.circular(25),
+       border: Border.all(color: skin.accent.withValues(alpha: .16)),
+       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .18), blurRadius: 22, offset: const Offset(0, -5))],
+      ),
+      child: recording
+       ? Row(children: [
+        IconButton(
+         constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+         padding: EdgeInsets.zero,
+         onPressed: sending ? null : () => _stopRecording(send: false),
+         tooltip: t('إلغاء التسجيل', 'Cancel recording'),
+         icon: Icon(Icons.close_rounded, color: skin.accent.withValues(alpha: .82), size: 21),
+        ),
+        Expanded(
+         child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+           gradient: LinearGradient(begin: AlignmentDirectional.centerStart, end: AlignmentDirectional.centerEnd, colors: [skin.partner.withValues(alpha: .92), skin.partner.withValues(alpha: .58)]),
+           borderRadius: BorderRadius.circular(20),
+           border: Border.all(color: skin.accent.withValues(alpha: .22)),
+          ),
+          child: Row(children: [
+           Icon(Icons.graphic_eq_rounded, color: skin.accent, size: 22),
+           const SizedBox(width: 10),
+           Expanded(child: Text(t('تسجيل صوتي', 'Recording audio'), style: TextStyle(color: skin.accent, fontSize: 12, fontWeight: FontWeight.w700))),
+           Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+            decoration: BoxDecoration(color: skin.bg.withValues(alpha: .48), borderRadius: BorderRadius.circular(12), border: Border.all(color: skin.accent.withValues(alpha: .16))),
+            child: Text('${recordingElapsed.inMinutes.toString().padLeft(2, '0')}:${(recordingElapsed.inSeconds % 60).toString().padLeft(2, '0')}', style: TextStyle(color: skin.accent, fontSize: 15, fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()])),
+           ),
+          ]),
+         ),
+        ),
+        IconButton(
+         constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+         padding: EdgeInsets.zero,
+         onPressed: sending ? null : () => _stopRecording(),
+         tooltip: t('إيقاف وإرسال التسجيل', 'Stop and send recording'),
+         icon: Icon(Icons.send_rounded, color: skin.accent),
+        ),
+       ])
+       : Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+         if (uploading)
+          Padding(
+           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+           child: LinearProgressIndicator(color: skin.accent, minHeight: 2),
+          ),
+         if (replyTo != null)
+          Container(
+           margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+           decoration: BoxDecoration(color: skin.partner, borderRadius: BorderRadius.circular(12)),
+           child: Row(children: [
+            Icon(Icons.reply, color: skin.accent, size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text((replyTo!['body'] ?? replyTo!['file_name'] ?? '').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: skin.accent, fontSize: 12))),
+            IconButton(onPressed: () => setState(() => replyTo = null), icon: const Icon(Icons.close, size: 17)),
+           ]),
+          ),
+         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+           IconButton(
+            constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.standard,
+            onPressed: uploading || sending ? null : _showAttachments,
+            tooltip: t('إرفاق صورة أو ملف أو ملصق', 'Attach photo, file or sticker'),
+            icon: uploading ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: skin.accent)) : Icon(Icons.add_circle_outline_rounded, color: skin.accent, size: 22),
+           ),
+           Expanded(
+            child: TextField(
+             controller: input,
+             minLines: 1,
+             maxLines: 5,
+             textInputAction: TextInputAction.send,
+             textDirection: Directionality.of(context),
+             style: const TextStyle(fontSize: 14, height: 1.25),
+             textAlignVertical: TextAlignVertical.center,
+             onSubmitted: (_) => _send(),
+             decoration: InputDecoration(
+              isDense: true,
+              hintText: t('اكتب لنفسك…', 'Write a note…'),
+              hintStyle: const TextStyle(fontSize: 13, height: 1.25),
+              filled: true,
+              fillColor: skin.partner.withValues(alpha: .94),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(21), borderSide: BorderSide(color: skin.accent.withValues(alpha: .10), width: .7)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(21), borderSide: BorderSide(color: skin.accent.withValues(alpha: .10), width: .7)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(21), borderSide: BorderSide(color: skin.accent.withValues(alpha: .48), width: 1.1)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+             ),
+            ),
+           ),
+           IconButton(
+            constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.standard,
+            onPressed: uploading || sending ? null : _startRecording,
+            tooltip: t('تسجيل صوتي', 'Record audio'),
+            icon: Icon(Icons.mic_none_rounded, color: skin.accent, size: 22),
+           ),
+           IconButton.filled(
+            constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.standard,
+            onPressed: sending || uploading ? null : _send,
+            style: IconButton.styleFrom(backgroundColor: skin.accent, foregroundColor: skin.bg),
+            icon: sending ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded, size: 20),
+           ),
+          ],
+         ),
+        ],
+       ),
+     ),
+    ),
    ])
   ]));
  }
