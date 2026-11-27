@@ -404,7 +404,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Uint8List? _editedPreviewBytes;
  Map<String,dynamic>? replyTo;
  RealtimeChannel? channel,liveChannel;AudioRecorder? recorder;String? recordingPath;
- Timer? typingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen;String? highlightedMessageId, _draggingReplyMessageId;
+ Timer? typingTimer,recordingTimer;bool typingSent=false,partnerOnline=false,partnerTyping=false;DateTime? partnerLastSeen,recordingStartedAt;Duration recordingElapsed=Duration.zero;String? highlightedMessageId, _draggingReplyMessageId;
  double _replyDragOffset=0;
  bool loading=true,sending=false,recording=false,uploading=false,downloading=false;double? downloadProgress;String? localPartnerName,wallpaperPath;
  Timer? _outboxTimer;bool _syncingOutbox=false;double wallpaperOpacity=.22,wallpaperZoom=1,wallpaperRotation=0,wallpaperDim=.55,wallpaperOffsetX=0,wallpaperOffsetY=0;_ChatSkin skin=_skins.first;
@@ -1273,19 +1273,20 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   try{if(!await r.hasPermission()){_show(t('اسمح باستخدام الميكروفون أولًا','Allow microphone access first'));return;}
    final d=await getTemporaryDirectory();final p=d.path+'/ours_'+DateTime.now().microsecondsSinceEpoch.toString()+'.m4a';
    await r.start(const RecordConfig(encoder:AudioEncoder.aacLc,bitRate:96000,sampleRate:44100,numChannels:1,echoCancel:true,noiseSuppress:true),path:p);
-   if(mounted)setState((){recordingPath=p;recording=true;});
+   if(mounted){recordingTimer?.cancel();recordingStartedAt=DateTime.now();recordingElapsed=Duration.zero;setState((){recordingPath=p;recording=true;});recordingTimer=Timer.periodic(const Duration(seconds:1),(_){if(!mounted||recordingStartedAt==null)return;setState(()=>recordingElapsed=DateTime.now().difference(recordingStartedAt!));});}
   }catch(e){_show(t('تعذر بدء التسجيل: $e','Could not start recording: $e'));}
  }
  Future<void> _cancelRecording() async{
+  recordingTimer?.cancel();recordingStartedAt=null;recordingElapsed=Duration.zero;
   final p=recordingPath;try{await recorder?.cancel();if(p!=null&&await File(p).exists())await File(p).delete();}catch(_){}
   if(mounted)setState((){recording=false;recordingPath=null;});
  }
  Future<void> _sendRecording() async{
-  final r=recorder;if(r==null||!recording)return;setState((){sending=true;recording=false;});String? p;
+  final r=recorder;if(r==null||!recording)return;recordingTimer?.cancel();recordingStartedAt=null;recordingElapsed=Duration.zero;setState((){sending=true;recording=false;});String? p;
   try{p=await r.stop();if(p==null)throw Exception('Recording unavailable');final f=File(p);if(!await f.exists())throw Exception('Recording not found');
    await _upload(await f.readAsBytes(),'voice_'+DateTime.now().millisecondsSinceEpoch.toString()+'.m4a','audio');
   }catch(e){_show(t('تعذر إرسال التسجيل: $e','Could not send recording: $e'));}
-  finally{if(p!=null&&await File(p).exists())await File(p).delete();if(mounted)setState((){sending=false;recordingPath=null;});}
+  finally{recordingTimer?.cancel();recordingStartedAt=null;recordingElapsed=Duration.zero;if(p!=null&&await File(p).exists())await File(p).delete();if(mounted)setState((){sending=false;recordingPath=null;});}
  }
  Future<String> _signed(String path){
   final old=urls[path];if(old!=null)return old;final f=db.storage.from(_bucket).createSignedUrl(path,900);urls[path]=f;
@@ -1510,7 +1511,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    ])
   )));
  }
-   @override void dispose(){_outboxTimer?.cancel();typingTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));if(liveChannel!=null){unawaited(liveChannel!.untrack().then<void>((_){}));db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
+   @override void dispose(){_outboxTimer?.cancel();typingTimer?.cancel();recordingTimer?.cancel();if(typingSent&&liveChannel!=null)unawaited(liveChannel!.sendBroadcastMessage(event:'typing',payload:{'user_id':uid,'typing':false}).then<void>((_){}));if(liveChannel!=null){unawaited(liveChannel!.untrack().then<void>((_){}));db.removeChannel(liveChannel!);}input.dispose();scroll.dispose();recorder?.dispose();if(channel!=null)db.removeChannel(channel!);super.dispose();}
  @override Widget build(BuildContext context){
   final me=db.auth.currentUser!.id;
   return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg, elevation:0, scrolledUnderElevation:0, toolbarHeight:76, centerTitle:true, surfaceTintColor:Colors.transparent, shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.14),width:.8)),
@@ -1734,10 +1735,12 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       if(partnerTyping)Padding(padding:const EdgeInsetsDirectional.fromSTEB(16,0,16,6),child:Align(alignment:AlignmentDirectional.centerStart,child:Text(t('يكتب الآن…','Typing…'),style:TextStyle(color:skin.accent,fontSize:11,fontStyle:FontStyle.italic)))),
       if(replyTo!=null)Container(margin:const EdgeInsets.fromLTRB(12,0,12,6),padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(12)),child:Row(children:[Icon(Icons.reply,color:skin.accent,size:18),const SizedBox(width:8),Expanded(child:Text((replyTo!['body']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:12))),IconButton(onPressed:()=>setState(()=>replyTo=null),icon:const Icon(Icons.close,size:17))])),
       Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
-      IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,visualDensity:VisualDensity.standard,onPressed:uploading||sending?null:_showAttachments,tooltip:t('إرفاق صورة أو ملف أو ملصق','Attach photo, file or sticker'),icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.add_circle_outline_rounded,color:skin.accent,size:22)),
-      Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,textDirection:Directionality.of(context),style:const TextStyle(fontSize:14,height:1.25),textAlignVertical:TextAlignVertical.center,onChanged:_handleTyping,onSubmitted:(_)=>_sendText(),decoration:InputDecoration(isDense:true,hintText:t('اكتب رسالة…','Write a message…'),hintStyle:const TextStyle(fontSize:13,height:1.25),filled:true,fillColor:skin.partner.withValues(alpha:.94),border:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.48),width:1.1)),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:12)))),
-      IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,visualDensity:VisualDensity.standard,onPressed:uploading||sending?null:_startRecording,tooltip:t('تسجيل صوتي','Record audio'),icon:Icon(Icons.mic_none_rounded,color:skin.accent,size:22)),
-      IconButton.filled(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,visualDensity:VisualDensity.standard,onPressed:sending||uploading?null:_sendText,style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded,size:20))
+      if(recording)IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,onPressed:_cancelRecording,tooltip:t('إلغاء التسجيل','Cancel recording'),icon:Icon(Icons.delete_outline_rounded,color:skin.accent,size:22)),
+      if(recording)Expanded(child:Row(children:[const Icon(Icons.circle,color:Colors.red,size:9),const SizedBox(width:9),Text('${recordingElapsed.inMinutes.toString().padLeft(2,'0')}:${(recordingElapsed.inSeconds%60).toString().padLeft(2,'0')}',style:TextStyle(color:skin.accent,fontWeight:FontWeight.w700,fontFeatures:const [FontFeature.tabularFigures()])),const SizedBox(width:8),Expanded(child:Container(height:3,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.20),borderRadius:BorderRadius.circular(3)),child:Align(alignment:Alignment.centerLeft,child:Container(width:5,height:3,decoration:BoxDecoration(color:Colors.red,borderRadius:BorderRadius.circular(3))))))])),
+      if(!recording)IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,visualDensity:VisualDensity.standard,onPressed:uploading||sending?null:_showAttachments,tooltip:t('إرفاق صورة أو ملف أو ملصق','Attach photo, file or sticker'),icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:skin.accent)):Icon(Icons.add_circle_outline_rounded,color:skin.accent,size:22)),
+      if(!recording)Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,textDirection:Directionality.of(context),style:const TextStyle(fontSize:14,height:1.25),textAlignVertical:TextAlignVertical.center,onChanged:_handleTyping,onSubmitted:(_)=>_sendText(),decoration:InputDecoration(isDense:true,hintText:t('اكتب رسالة…','Write a message…'),hintStyle:const TextStyle(fontSize:13,height:1.25),filled:true,fillColor:skin.partner.withValues(alpha:.94),border:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.48),width:1.1)),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:12)))),
+      if(!recording)IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,visualDensity:VisualDensity.standard,onPressed:uploading||sending?null:_startRecording,tooltip:t('تسجيل صوتي','Record audio'),icon:Icon(Icons.mic_none_rounded,color:skin.accent,size:22)),
+      IconButton.filled(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,visualDensity:VisualDensity.standard,onPressed:recording?_sendRecording:(sending||uploading?null:_sendText),style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):Icon(recording?Icons.send_rounded:Icons.send_rounded,size:20))
      ])])))
    ]),
   ]));
