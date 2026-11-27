@@ -1900,7 +1900,7 @@ class OursSelfChatPage extends StatefulWidget{
 class _OursSelfChatPageState extends State<OursSelfChatPage>{
  final db=Supabase.instance.client,input=TextEditingController(),scroll=ScrollController(),picker=ImagePicker();
  final Map<String,Future<String>> urls={};final List<Map<String,dynamic>> rows=[];
- RealtimeChannel? channel;AudioRecorder? recorder;String? recordingPath,wallpaperPath;double wallpaperOpacity=.22,wallpaperZoom=1,wallpaperRotation=0,wallpaperDim=.55,wallpaperOffsetX=0,wallpaperOffsetY=0;
+ RealtimeChannel? channel;AudioRecorder? recorder;Timer? recordingTimer;DateTime? recordingStartedAt;Duration recordingElapsed=Duration.zero;String? recordingPath,wallpaperPath;double wallpaperOpacity=.22,wallpaperZoom=1,wallpaperRotation=0,wallpaperDim=.55,wallpaperOffsetX=0,wallpaperOffsetY=0;
  Map<String,dynamic>? replyTo;_ChatSkin skin=_skins.first;
  bool loading=true,sending=false,uploading=false,recording=false;
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';
@@ -2018,11 +2018,11 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   try{if(!await r.hasPermission()){_notice(t('اسمح باستخدام الميكروفون أولًا','Allow microphone access first'));return;}
    final dir=await getTemporaryDirectory(),path='${dir.path}/ours_self_${DateTime.now().microsecondsSinceEpoch}.m4a';
    await r.start(const RecordConfig(encoder:AudioEncoder.aacLc,bitRate:96000,sampleRate:44100,numChannels:1,echoCancel:true,noiseSuppress:true),path:path);
-   if(mounted)setState((){recordingPath=path;recording=true;});
+   if(mounted){recordingTimer?.cancel();recordingStartedAt=DateTime.now();recordingElapsed=Duration.zero;setState((){recordingPath=path;recording=true;});recordingTimer=Timer.periodic(const Duration(seconds:1),(_){if(!mounted||recordingStartedAt==null)return;setState(()=>recordingElapsed=DateTime.now().difference(recordingStartedAt!));});}
   }catch(_){_notice(t('تعذر بدء التسجيل','Could not start recording'));}
  }
  Future<void> _stopRecording({bool send=true})async{
-  final r=recorder;if(r==null||!recording)return;
+  final r=recorder;if(r==null||!recording)return;recordingTimer?.cancel();recordingStartedAt=null;recordingElapsed=Duration.zero;
   String? path;
   try{path=await r.stop();if(send&&path!=null){final file=File(path);if(await file.exists())await _uploadSelf(await file.readAsBytes(),'voice_${DateTime.now().millisecondsSinceEpoch}.m4a','audio');}}
   catch(_){_notice(t('تعذر إرسال التسجيل','Could not send recording'));}
@@ -2081,7 +2081,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  String _selfTime(dynamic value){final date=DateTime.tryParse(value?.toString()??'')?.toLocal();return date==null?'':_oursMessageTimestamp(date,ar);}
  String _selfDate(DateTime date){final today=DateUtils.dateOnly(DateTime.now()),day=DateUtils.dateOnly(date);if(day==today)return t('اليوم','Today');if(day==today.subtract(const Duration(days:1)))return t('أمس','Yesterday');return _oursDate(day,ar);}
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(0,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
- @override void dispose(){if(channel!=null)db.removeChannel(channel!);recorder?.dispose();input.dispose();scroll.dispose();super.dispose();}
+ @override void dispose(){recordingTimer?.cancel();if(channel!=null)db.removeChannel(channel!);recorder?.dispose();input.dispose();scroll.dispose();super.dispose();}
  @override Widget build(BuildContext context){
   return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,elevation:0,scrolledUnderElevation:0,toolbarHeight:76,centerTitle:true,surfaceTintColor:Colors.transparent,shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.14),width:.8)),leadingWidth:48,leading:IconButton(tooltip:t('رجوع','Back'),onPressed:()=>Navigator.maybePop(context),icon:Icon(Icons.arrow_back_ios_new_rounded,color:skin.accent,size:19)),title:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:40,height:40,decoration:BoxDecoration(color:skin.partner,border:Border.all(color:skin.accent.withValues(alpha:.35)),shape:BoxShape.circle),child:Icon(Icons.bookmark_rounded,color:skin.accent,size:20)),const SizedBox(width:9),Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('مراسلة نفسي','Saved messages'),style:TextStyle(color:skin.accent,fontSize:14,fontWeight:FontWeight.w800)),Text(t('مساحة لا يراها غيرك','Private to you'),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:10))])]),actions:[
    IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_searchSelf,icon:Icon(Icons.search,color:skin.accent,size:19)),
@@ -2122,7 +2122,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
      if(replyTo!=null)Container(margin:const EdgeInsets.fromLTRB(10,0,10,6),padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(10)),child:Row(children:[Icon(Icons.reply,color:skin.accent,size:17),const SizedBox(width:7),Expanded(child:Text((replyTo!['file_name']??replyTo!['body']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))),IconButton(onPressed:()=>setState(()=>replyTo=null),icon:const Icon(Icons.close,size:16))])),
      Row(children:[
       IconButton(onPressed:uploading||sending?null:_showAttachments,icon:uploading?SizedBox(width:18,height:18,child:CircularProgressIndicator(color:skin.accent,strokeWidth:2)):Icon(Icons.add_circle_outline,color:skin.accent)),
-      Expanded(child:TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اكتب لنفسك…','Write a note…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:11)))),
+      Expanded(child:recording?Row(children:[const Icon(Icons.circle,color:Colors.red,size:9),const SizedBox(width:8),Text('${recordingElapsed.inMinutes.toString().padLeft(2,'0')}:${(recordingElapsed.inSeconds%60).toString().padLeft(2,'0')}',style:TextStyle(color:skin.accent,fontWeight:FontWeight.w700,fontFeatures:const [FontFeature.tabularFigures()])),const SizedBox(width:8),Expanded(child:Container(height:3,decoration:BoxDecoration(color:skin.accent.withValues(alpha:.18),borderRadius:BorderRadius.circular(4)),child:Align(alignment:Alignment.centerLeft,child:Container(width:5,height:3,decoration:BoxDecoration(color:Colors.red,borderRadius:BorderRadius.circular(4))))))]):TextField(controller:input,minLines:1,maxLines:5,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اكتب لنفسك…','Write a note…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:11)))),
       if(recording)IconButton(onPressed:()=>_stopRecording(send:false),icon:Icon(Icons.delete_outline,color:skin.accent)),
       IconButton(onPressed:recording?()=>_stopRecording():_startRecording,icon:Icon(recording?Icons.send_rounded:Icons.mic_none_rounded,color:skin.accent)),
       IconButton.filled(onPressed:sending||uploading?null:_send,style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
