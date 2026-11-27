@@ -455,41 +455,15 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final savedOffsetY=p.getDouble('${wallpaperKey}_offset_y')??p.getDouble('ours_direct_wallpaper_offset_y_'+widget.conversationId)??0.0;
   if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=savedWallpaper;wallpaperOpacity=savedOpacity.clamp(.08,.45).toDouble();wallpaperZoom=savedZoom.clamp(1.0,2.5).toDouble();wallpaperRotation=savedRotation;wallpaperDim=savedDim.clamp(0.0,.85).toDouble();wallpaperOffsetX=savedOffsetX;wallpaperOffsetY=savedOffsetY;});
  }
- Future<void> _chooseSkin() async{
-  final selected=await showModalBottomSheet<_ChatSkin>(
-   context:context,backgroundColor:const Color(0xFF171326),showDragHandle:true,isScrollControlled:true,
-   builder:(ctx)=>SafeArea(child:Padding(
-    padding:const EdgeInsets.fromLTRB(14,8,14,18),
-    child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-     Text(t('اختر أجواء محادثتكما','Choose your chat atmosphere'),style:const TextStyle(color:_gold,fontSize:18,fontWeight:FontWeight.w800)),
-     const SizedBox(height:5),
-     Text(t('كل أجواء لها مشهدها وتفاصيلها، وليس مجرد لون مختلف.','Each atmosphere has its own scene and details, not just a different color.'),style:const TextStyle(color:_lavender,fontSize:11)),
-     const SizedBox(height:14),
-     GridView.builder(
-      shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:_skins.length,
-      gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,childAspectRatio:1.35,crossAxisSpacing:10,mainAxisSpacing:10),
-      itemBuilder:(context,index){
-       final item=_skins[index];final active=skin.id==item.id;
-       return InkWell(
-        borderRadius:BorderRadius.circular(16),onTap:()=>Navigator.pop(ctx,item),
-        child:Container(
-         decoration:BoxDecoration(borderRadius:BorderRadius.circular(16),border:Border.all(color:active?item.accent:item.accent.withValues(alpha:.3),width:active?2:1)),
-         clipBehavior:Clip.antiAlias,
-         child:Stack(children:[
-          Positioned.fill(child:CustomPaint(painter:_ChatAtmospherePainter(item))),
-          Positioned(left:10,top:10,child:Container(width:50,height:15,decoration:BoxDecoration(color:item.mine,borderRadius:BorderRadius.circular(9)))),
-          Positioned(right:10,top:30,child:Container(width:62,height:15,decoration:BoxDecoration(color:item.partner,borderRadius:BorderRadius.circular(9),border:Border.all(color:item.accent.withValues(alpha:.45))))),
-          Positioned(left:10,right:10,bottom:10,child:Text(ar?item.ar:item.en,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:12))),
-          if(active)const Positioned(top:8,right:8,child:Icon(Icons.check_circle,color:_gold,size:18)),
-         ]),
-        ),
-       );
-      },
-     ),
-    ]),
-   )),
-  );
-  if(selected==null)return;setState(()=>skin=selected);final p=await SharedPreferences.getInstance();await p.setString('ours_direct_skin_'+widget.conversationId,selected.id);
+ Future<void> _chooseTheme()async{
+  final selected=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF100D1B),showDragHandle:true,isScrollControlled:true,builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,18),child:Column(mainAxisSize:MainAxisSize.min,children:[
+   Row(children:[Icon(Icons.palette_rounded,color:skin.accent,size:24),const SizedBox(width:9),Expanded(child:Text(t('أجواء OURS','OURS atmospheres'),style:TextStyle(color:skin.accent,fontSize:19,fontWeight:FontWeight.w900))),Text(t('اختر مزاجك','Choose your mood'),style:const TextStyle(color:_lavender,fontSize:10))]),
+   const SizedBox(height:12),Container(width:double.infinity,padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:skin.bg,borderRadius:BorderRadius.circular(20),border:Border.all(color:skin.accent.withValues(alpha:.28))),child:Row(children:[Container(width:42,height:42,decoration:BoxDecoration(gradient:LinearGradient(colors:[skin.mine,skin.partner,skin.accent.withValues(alpha:.5)]),borderRadius:BorderRadius.circular(14)),child:Icon(Icons.chat_bubble_rounded,color:skin.accent)),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('معاينة الثيم الحالي','Current theme preview'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w800)),Text(ar?skin.ar:skin.en,style:const TextStyle(color:Colors.white,fontSize:12))]))])),
+   const SizedBox(height:10),Flexible(child:GridView.builder(shrinkWrap:true,physics:const BouncingScrollPhysics(),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,mainAxisSpacing:10,crossAxisSpacing:10,childAspectRatio:1.55),itemCount:_skins.length,itemBuilder:(ctx,i){final x=_skins[i];final active=x.id==skin.id;return InkWell(onTap:()=>Navigator.pop(ctx,x.id),borderRadius:BorderRadius.circular(18),child:Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[x.bg,x.partner]),borderRadius:BorderRadius.circular(18),border:Border.all(color:active?x.accent:Colors.white.withValues(alpha:.12),width:active?2:1)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(width:9,height:9,decoration:BoxDecoration(color:x.accent,shape:BoxShape.circle)),const Spacer(),if(active)Icon(Icons.check_circle_rounded,color:x.accent,size:17)]),const Spacer(),Row(children:[Container(width:23,height:12,decoration:BoxDecoration(color:x.mine,borderRadius:BorderRadius.circular(8))),const SizedBox(width:4),Container(width:20,height:12,decoration:BoxDecoration(color:x.partner,borderRadius:BorderRadius.circular(8))),const Spacer(),Icon(Icons.auto_awesome_rounded,color:x.accent,size:15)]),const SizedBox(height:5),Text(ar?x.ar:x.en,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:11))])));})),
+   const SizedBox(height:6),Text(t('ألوان وخلفيات مصممة لكل مزاج','A distinct palette and atmosphere for every mood'),style:const TextStyle(color:_lavender,fontSize:10))
+  ]))));
+  if(selected==null)return;final p=await SharedPreferences.getInstance();await p.setString('ours_direct_skin_'+widget.conversationId,selected);
+  if(mounted)setState(()=>skin=_skins.firstWhere((x)=>x.id==selected,orElse:()=>_skins.first));
  }
  Future<void> _startLiveStatus() async{
   try{
@@ -1795,12 +1769,13 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
   if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=p.getString('ours_self_wallpaper');wallpaperOpacity=p.getDouble('ours_self_wallpaper_opacity')??.22;wallpaperZoom=p.getDouble('ours_self_wallpaper_zoom')??1;wallpaperRotation=p.getDouble('ours_self_wallpaper_rotation')??0;wallpaperDim=p.getDouble('ours_self_wallpaper_dim')??.55;wallpaperOffsetX=p.getDouble('ours_self_wallpaper_offset_x')??0;wallpaperOffsetY=p.getDouble('ours_self_wallpaper_offset_y')??0;});
  }
  Future<void> _chooseTheme()async{
-  final selected=await showModalBottomSheet<String>(context:context,backgroundColor:_navy,showDragHandle:true,builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.of(ctx).size.height*.62,child:ListView(padding:const EdgeInsets.all(14),children:[
-   Padding(padding:const EdgeInsets.all(8),child:Text(t('ثيم المحادثة','Chat theme'),style:const TextStyle(color:_gold,fontWeight:FontWeight.w900,fontSize:18))),
-   ..._skins.map((x)=>ListTile(leading:CircleAvatar(backgroundColor:x.accent,child:Icon(Icons.palette_rounded,color:x.bg)),title:Text(ar?x.ar:x.en,style:const TextStyle(color:Colors.white)),subtitle:Text(ar?x.id:x.id,style:const TextStyle(color:_lavender,fontSize:11)),onTap:()=>Navigator.pop(ctx,x.id)))
+  final selected=await showModalBottomSheet<String>(context:context,backgroundColor:const Color(0xFF100D1B),showDragHandle:true,isScrollControlled:true,builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(14,8,14,18),child:Column(mainAxisSize:MainAxisSize.min,children:[
+   Row(children:[Icon(Icons.palette_rounded,color:skin.accent,size:24),const SizedBox(width:9),Expanded(child:Text(t('أجواء OURS','OURS atmospheres'),style:TextStyle(color:skin.accent,fontSize:19,fontWeight:FontWeight.w900))),Text(t('اختر مزاجك','Choose your mood'),style:const TextStyle(color:_lavender,fontSize:10))]),
+   const SizedBox(height:12),Container(width:double.infinity,padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:skin.bg,borderRadius:BorderRadius.circular(20),border:Border.all(color:skin.accent.withValues(alpha:.28))),child:Row(children:[Container(width:42,height:42,decoration:BoxDecoration(gradient:LinearGradient(colors:[skin.mine,skin.partner,skin.accent.withValues(alpha:.5)]),borderRadius:BorderRadius.circular(14)),child:Icon(Icons.chat_bubble_rounded,color:skin.accent)),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('معاينة الثيم الحالي','Current theme preview'),style:TextStyle(color:skin.accent,fontWeight:FontWeight.w800)),Text(ar?skin.ar:skin.en,style:const TextStyle(color:Colors.white,fontSize:12))]))])),
+   const SizedBox(height:10),Flexible(child:GridView.builder(shrinkWrap:true,physics:const BouncingScrollPhysics(),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,mainAxisSpacing:10,crossAxisSpacing:10,childAspectRatio:1.55),itemCount:_skins.length,itemBuilder:(ctx,i){final x=_skins[i];final active=x.id==skin.id;return InkWell(onTap:()=>Navigator.pop(ctx,x.id),borderRadius:BorderRadius.circular(18),child:Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[x.bg,x.partner]),borderRadius:BorderRadius.circular(18),border:Border.all(color:active?x.accent:Colors.white.withValues(alpha:.12),width:active?2:1)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(width:9,height:9,decoration:BoxDecoration(color:x.accent,shape:BoxShape.circle)),const Spacer(),if(active)Icon(Icons.check_circle_rounded,color:x.accent,size:17)]),const Spacer(),Row(children:[Container(width:23,height:12,decoration:BoxDecoration(color:x.mine,borderRadius:BorderRadius.circular(8))),const SizedBox(width:4),Container(width:20,height:12,decoration:BoxDecoration(color:x.partner,borderRadius:BorderRadius.circular(8))),const Spacer(),Icon(Icons.auto_awesome_rounded,color:x.accent,size:15)]),const SizedBox(height:5),Text(ar?x.ar:x.en,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800,fontSize:11))])));})),
+   const SizedBox(height:6),Text(t('ألوان وخلفيات مصممة لكل مزاج','A distinct palette and atmosphere for every mood'),style:const TextStyle(color:_lavender,fontSize:10))
   ]))));
-  if(selected==null)return;
-  final p=await SharedPreferences.getInstance();await p.setString('ours_self_skin',selected);
+  if(selected==null)return;final p=await SharedPreferences.getInstance();await p.setString('ours_self_skin',selected);
   if(mounted)setState(()=>skin=_skins.firstWhere((x)=>x.id==selected,orElse:()=>_skins.first));
  }
  Future<void> _chooseWallpaper()async{
