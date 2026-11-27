@@ -1,4 +1,4 @@
-name: Build OURS APK
+name: Build OURS APK # Reference bubble contour refinement
 
 on:
   push:
