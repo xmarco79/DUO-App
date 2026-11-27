@@ -287,7 +287,8 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
   backgroundColor:skin.bg,
   child:Stack(fit:StackFit.expand,children:[
    Positioned.fill(child:Transform.translate(offset:Offset(offsetX,offsetY),child:Transform.rotate(angle:rotation,child:Transform.scale(scale:zoom,child:Opacity(opacity:(.55+opacity).clamp(.55,1.0),child:Image.file(source!,fit:BoxFit.cover,errorBuilder:(_,__,___)=>ColoredBox(color:skin.bg))))))),
-   Positioned.fill(child:ColoredBox(color:skin.bg.withValues(alpha:dim))),
+   Positioned.fill(child:ClipRect(child:Transform.translate(offset:Offset(offsetX,offsetY),child:Transform.rotate(angle:rotation,child:Transform.scale(scale:zoom,child:Opacity(opacity:(.55+opacity).clamp(.55,1.0),child:Image.file(source!,fit:BoxFit.cover,errorBuilder:(_,__,___)=>ColoredBox(color:skin.bg)))))))),
+  Positioned.fill(child:ColoredBox(color:skin.bg.withValues(alpha:dim))),
    SafeArea(child:Column(children:[
     Padding(padding:const EdgeInsets.fromLTRB(16,10,16,8),child:Row(children:[
      IconButton(onPressed:()=>Navigator.pop(ctx,false),icon:const Icon(Icons.close_rounded,color:Colors.white)),
@@ -309,13 +310,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
        final type=(m['message_type']??'text').toString();
        final body=(m['body']??'').toString();
        final label=type=='image'?t('صورة','Photo'):type=='video'?t('مقطع فيديو','Video'):type=='audio'?t('رسالة صوتية','Voice message'):type=='sticker'?t('ملصق','Sticker'):body;
-       return Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(
-        constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.76),
-        margin:const EdgeInsets.symmetric(vertical:5),
-        padding:const EdgeInsets.symmetric(horizontal:13,vertical:10),
-        decoration:BoxDecoration(color:mine?skin.mine.withValues(alpha:.96):skin.partner.withValues(alpha:.96),borderRadius:BorderRadius.circular(17),border:Border.all(color:(mine?skin.accent:_lavender).withValues(alpha:.35)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.12),blurRadius:12)]),
-        child:Text(label,maxLines:4,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:13,height:1.4))
-       ));
+       return Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:Text(label,maxLines:4,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:13,height:1.4))));
       })),
      Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.94),borderRadius:BorderRadius.circular(24),border:Border.all(color:skin.accent.withValues(alpha:.24))),child:Row(children:[
       Icon(Icons.add_circle_outline,color:skin.accent),const SizedBox(width:10),Expanded(child:Text(t('اكتب رسالة…','Write a message…'),style:TextStyle(color:Colors.white.withValues(alpha:.6),fontSize:12))),Icon(Icons.mic_none_rounded,color:skin.accent),const SizedBox(width:10),Icon(Icons.send_rounded,color:skin.accent)
@@ -370,7 +365,7 @@ Future<Map<String,dynamic>?> _openOursWallpaperStudio({
   return {'path':targetPath,'opacity':opacity,'zoom':zoom,'rotation':rotation,'dim':dim,'offset_x':offsetX,'offset_y':offsetY};
  }catch(_){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(t('تعذر حفظ الخلفية. حاول اختيار صورة أخرى.','Could not save wallpaper. Try another image.'))));return null;}
 }
-Widget _oursWallpaperPreviewBubble(String value,bool mine,_ChatSkin skin)=>Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Container(margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),constraints:const BoxConstraints(maxWidth:290),decoration:BoxDecoration(color:mine?skin.mine.withValues(alpha:.96):skin.partner.withValues(alpha:.96),borderRadius:BorderRadius.circular(17),border:Border.all(color:(mine?skin.accent:_lavender).withValues(alpha:.35))),child:Text(value,style:const TextStyle(color:Colors.white,fontSize:13,height:1.4))));
+Widget _oursWallpaperPreviewBubble(String value,bool mine,_ChatSkin skin)=>Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:Text(value,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:13,height:1.4))));
 Widget _oursWallpaperSliderLabel(String label,String value,_ChatSkin skin)=>Row(children:[Expanded(child:Text(label,style:TextStyle(color:skin.accent,fontWeight:FontWeight.w700))),Text(value,style:TextStyle(color:skin.accent))]);
 
 class OursDirectChatPage extends StatefulWidget{
