@@ -778,19 +778,20 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
  Future<void> _load() async{
   try{
    final prefs=await SharedPreferences.getInstance();
+   // Load hide records BEFORE showing cached messages so deleted-for-me notes never flash.
+   final hidden=await db.from('ours_direct_message_hides').select('message_id').eq('user_id',uid).timeout(const Duration(seconds:6));
+   hiddenIds..clear()..addAll(hidden.map((r)=>r['message_id'].toString()));
    final cached=prefs.getString(_chatCacheKey);
    if(cached!=null){
     try{
-     final rows=(jsonDecode(cached) as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
+     final rows=(jsonDecode(cached) as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList().where((m)=>!hiddenIds.contains(m['id'].toString())).toList();
      final queued=await _readOutbox();
      final combined=<String,Map<String,dynamic>>{};
      for(final row in rows){combined[row['id'].toString()]=row;}
-     for(final row in queued){combined[row['id'].toString()]=row;}
+     for(final row in queued){if(!hiddenIds.contains(row['id'].toString()))combined[row['id'].toString()]=row;}
      if(mounted)setState((){messages..clear()..addAll(combined.values);messages.sort(_compareMessages);loading=false;});
     }catch(_){}
    }
-   final hidden=await db.from('ours_direct_message_hides').select('message_id').eq('user_id',uid).timeout(const Duration(seconds:6));
-   hiddenIds..clear()..addAll(hidden.map((r)=>r['message_id'].toString()));
    final rows=await db.from('duo_direct_messages').select().eq('conversation_id',widget.conversationId).order('created_at',ascending:true).timeout(const Duration(seconds:8));
    final ordered=List<Map<String,dynamic>>.from(rows).where((m)=>!hiddenIds.contains(m['id'].toString())).toList()..sort(_compareMessages);
    final queued=await _readOutbox();final merged=<String,Map<String,dynamic>>{};
@@ -1374,7 +1375,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
    try{final editedAt=DateTime.now().toUtc().toIso8601String();final saved=await db.from('duo_direct_messages').update({'body':edited,'edited_at':editedAt}).eq('id',id).eq('sender_id',uid).select('id,body,edited_at').maybeSingle();if(saved==null)throw StateError('Message was not updated. Check update permissions.');if(mounted){final index=messages.indexWhere((m)=>m['id'].toString()==id);if(index>=0)setState((){messages[index]['body']=saved['body'];messages[index]['edited_at']=saved['edited_at'];});}_show(t('تم تعديل الرسالة','Message edited'));}catch(e){_show(t('تعذر تعديل الرسالة: $e','Could not edit message: $e'));}
    return;
   }
-  try{if(choice=='local'){await db.from('ours_direct_message_hides').insert({'message_id':id,'user_id':uid});hiddenIds.add(id);if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));}else{await db.from('duo_direct_messages').delete().eq('id',id).eq('sender_id',uid);if(['image','view_once','view_twice','video','audio','file'].contains(type)){try{await db.storage.from(_bucket).remove([body]);}catch(_){}}if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));}}catch(e){_show(t('تعذر حذف الرسالة: $e','Could not delete message: $e'));}
+  try{if(choice=='local'){await db.from('ours_direct_message_hides').insert({'message_id':id,'user_id':uid});hiddenIds.add(id);if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));await _persistChatCache();}else{await db.from('duo_direct_messages').delete().eq('id',id).eq('sender_id',uid);if(['image','view_once','view_twice','video','audio','file'].contains(type)){try{await db.storage.from(_bucket).remove([body]);}catch(_){}}if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));}}catch(e){_show(t('تعذر حذف الرسالة: $e','Could not delete message: $e'));}
  }
  PopupMenuItem<String> _messageMenuItem(String value,String label,IconData icon,{Color? color})=>PopupMenuItem<String>(
   value:value,
