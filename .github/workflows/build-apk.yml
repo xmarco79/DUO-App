@@ -1,4 +1,4 @@
-name: Build OURS APK # Reference bubble contour refinement
+name: Build OURS APK # Voice recording timer refinement # Reference bubble contour refinement
 
 on:
   push:
