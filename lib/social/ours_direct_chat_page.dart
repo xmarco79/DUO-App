@@ -187,12 +187,32 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  @override
  Path getClip(Size size) {
   if(size.width<=0||size.height<=0)return Path();
-  // Fresh minimal capsule: smooth continuous contour, no tail.
-  final radius=math.min(size.height*.5,28.0);
-  return Path()..addRRect(RRect.fromRectAndRadius(Offset.zero&size,Radius.circular(radius)));
+  final h=size.height, w=size.width;
+  final r=math.min(h*.48,26.0), tailH=math.min(h*.30,17.0);
+  final base=math.min(r+24.0,w*.34);
+  final p=Path();
+  // Rounded capsule body with an integrated, softly curved messenger tail.
+  p.moveTo(r,0);
+  p.lineTo(w-r,0);
+  p.quadraticBezierTo(w,0,w,r);
+  p.lineTo(w,h-r);
+  p.quadraticBezierTo(w,h,w-r,h);
+  p.lineTo(base+tailH*.35,h);
+  p.cubicTo(base+tailH*.10,h,base-tailH*.15,h-tailH*.10,base-tailH*.45,h-tailH*.30);
+  p.cubicTo(base-tailH*.70,h-tailH*.12,base-tailH*.92,h-tailH*.04,base-tailH*1.05,h-tailH*.02);
+  p.cubicTo(base-tailH*.55,h+tailH*.02,base-tailH*.05,h+tailH*.04,base-tailH*.12,h-tailH*.12);
+  p.cubicTo(base-tailH*.18,h-tailH*.30,r*.62,h-tailH*.52,r*.48,h-tailH*.62);
+  p.quadraticBezierTo(0,h*.62,0,r);
+  p.quadraticBezierTo(0,0,r,0);
+  p.close();
+  if(!tailOnLeft){
+   final matrix=Matrix4.identity()..translate(w,0)..scale(-1.0,1.0);
+   return p.transform(matrix.storage);
+  }
+  return p;
  }
  @override
- bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>false;
+ bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
 }
 class _OursUnifiedMessageSurface extends StatelessWidget {
  final _ChatSkin skin; final bool isMine,isVisual; final Widget child;
@@ -201,15 +221,13 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
   final tailOnLeft=isMine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr;
   return Padding(padding:const EdgeInsets.symmetric(vertical:7),child:PhysicalShape(
    clipper:isVisual?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:tailOnLeft),
-   color:isVisual?Colors.transparent:(isMine?skin.mine:skin.partner),elevation:isVisual?0:5,
-   shadowColor:isVisual?Colors.transparent:skin.accent.withValues(alpha:.20),clipBehavior:Clip.antiAlias,
+   color:isVisual?Colors.transparent:(isMine?skin.accent:const Color(0xFF303030)),elevation:isVisual?0:4,
+   shadowColor:isVisual?Colors.transparent:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,
    child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),
-    padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(13,9,13,9),
+    padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(14,10,14,10),
     decoration:isVisual?const BoxDecoration():BoxDecoration(
-     gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:isMine
-      ?[Color.lerp(skin.mine,Colors.white,.055)!,Color.lerp(skin.mine,skin.bg,.16)!]
-      :[Color.lerp(skin.partner,Colors.white,.045)!,Color.lerp(skin.partner,skin.bg,.12)!]),
-     border:Border.all(color:(isMine?skin.accent:_lavender).withValues(alpha:isMine ? .26 : .18),width:.85)),
+     color:isMine?skin.accent:const Color(0xFF303030),
+     border:Border.all(color:isMine?skin.accent.withValues(alpha:.14):Colors.white.withValues(alpha:.035),width:.65)),
     child:child)));
  }
 }
