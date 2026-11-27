@@ -184,35 +184,58 @@ class _MediaMessageClipper extends CustomClipper<Path> {
 class _MessageBubbleClipper extends CustomClipper<Path> {
  const _MessageBubbleClipper({required this.tailOnLeft});
  final bool tailOnLeft;
+
  @override
  Path getClip(Size size) {
-  if(size.width<=0||size.height<=0)return Path();
-  final h=size.height, w=size.width;
-  final r=math.min(h*.48,26.0), tailH=math.min(h*.30,17.0);
-  final base=math.min(r+18.0,w*.34);
+  final w=size.width,h=size.height;
+  if(w<=0||h<=0)return Path();
+
+  // Build the message body as a clean rounded rectangle, then add a small
+  // lower-corner tail. The body bottom remains a single horizontal segment.
+  final radius=math.min(22.0,h*.46);
+  final tailWidth=math.min(15.0,math.max(10.0,w*.10));
+  final tailDepth=math.min(12.0,h*.24);
+  final bodyLeft=tailOnLeft?tailWidth:0.0;
+  final bodyRight=tailOnLeft?w: w-tailWidth;
   final p=Path();
-  // Rounded capsule with a clearly protruding, smoothly joined tail at the lower corner.
-  p.moveTo(r,0);
-  p.lineTo(w-r,0);
-  p.quadraticBezierTo(w,0,w,r);
-  p.lineTo(w,h-r);
-  p.quadraticBezierTo(w,h,w-r,h);
-  p.lineTo(base+tailH*.25,h);
-  p.cubicTo(base+tailH*.08,h,base-tailH*.08,h-tailH*.08,base-tailH*.30,h-tailH*.22);
-  p.cubicTo(base-tailH*.55,h-tailH*.06,-tailH*.82,h-tailH*.10,-tailH*.95,h-tailH*.12);
-  p.cubicTo(-tailH*.55,h-tailH*.08,base-tailH*.12,h-tailH*.16,base-tailH*.05,h-tailH*.32);
-  p.cubicTo(base-tailH*.04,h-tailH*.42,r*.65,h-tailH*.60,r*.48,h-tailH*.66);
-  p.quadraticBezierTo(0,h*.62,0,r);
-  p.quadraticBezierTo(0,0,r,0);
-  p.close();
-  if(!tailOnLeft){
-   final matrix=Matrix4.identity()..translate(w,0)..scale(-1.0,1.0);
-   return p.transform(matrix.storage);
+
+  if(tailOnLeft){
+   p.moveTo(bodyLeft+radius,0);
+   p.lineTo(bodyRight-radius,0);
+   p.quadraticBezierTo(bodyRight,0,bodyRight,radius);
+   p.lineTo(bodyRight,h-radius);
+   p.quadraticBezierTo(bodyRight,h,bodyRight-radius,h);
+   // Straight bottom edge, untouched by the tail curves.
+   p.lineTo(bodyLeft+radius,h);
+   p.cubicTo(bodyLeft+radius*.48,h,bodyLeft+radius*.12,h-tailDepth*.18,bodyLeft,h-tailDepth*.55);
+   p.cubicTo(bodyLeft-tailWidth*.20,h-tailDepth*.22,0,h-tailDepth*.58,0,h-tailDepth);
+   p.cubicTo(tailWidth*.18,h-tailDepth*.72,bodyLeft-tailWidth*.08,h-tailDepth*.30,bodyLeft,h-tailDepth*.12);
+   p.lineTo(bodyLeft,h-radius);
+   p.quadraticBezierTo(bodyLeft,h-radius*.48,bodyLeft+radius*.48,h-radius*.18);
+   p.quadraticBezierTo(bodyLeft+radius,h,bodyLeft+radius,h);
+   p.close();
+  }else{
+   p.moveTo(bodyLeft+radius,0);
+   p.lineTo(bodyRight-radius,0);
+   p.quadraticBezierTo(bodyRight,0,bodyRight,radius);
+   p.lineTo(bodyRight,h-radius);
+   p.quadraticBezierTo(bodyRight,h,bodyRight-radius,h);
+   p.lineTo(bodyLeft+radius,h);
+   p.quadraticBezierTo(bodyLeft,h,bodyLeft,h-radius);
+   p.lineTo(bodyLeft,h-tailDepth*.55);
+   p.cubicTo(bodyLeft+tailWidth*.20,h-tailDepth*.22,w,h-tailDepth*.58,w,h-tailDepth);
+   p.cubicTo(w-tailWidth*.18,h-tailDepth*.72,bodyRight+tailWidth*.08,h-tailDepth*.30,bodyRight,h-tailDepth*.12);
+   p.lineTo(bodyRight,h-radius);
+   p.quadraticBezierTo(bodyRight,h-radius*.48,bodyRight-radius*.48,h-radius*.18);
+   p.quadraticBezierTo(bodyRight-radius,h,bodyRight-radius,h);
+   p.close();
   }
   return p;
  }
+
  @override
- bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>oldClipper.tailOnLeft!=tailOnLeft;
+ bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>
+  oldClipper.tailOnLeft!=tailOnLeft;
 }
 class _OursUnifiedMessageSurface extends StatelessWidget {
  final _ChatSkin skin; final bool isMine,isVisual; final Widget child;
