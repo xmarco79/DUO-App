@@ -1904,113 +1904,191 @@ class _ChatPageState extends State<ChatPage> {
                         },
                       ),
           ),
-          Container(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [chatTheme.mine, chatTheme.background], begin: Alignment.centerLeft, end: Alignment.centerRight),
-              border: Border(
-                top: BorderSide(
-                  color: chatTheme.accent.withValues(alpha: 0.2),
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                if (recordingAudio) ...[
-                  IconButton(
-                    tooltip: 'إلغاء التسجيل',
-                    onPressed: sending ? null : cancelAudioRecording,
-                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          SafeArea(
+            top: false,
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(10, 5, 10, 8),
+              padding: const EdgeInsets.fromLTRB(9, 10, 9, 9),
+              decoration: BoxDecoration(
+                color: chatTheme.background.withValues(alpha: .96),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: chatTheme.accent.withValues(alpha: .16)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: .18),
+                    blurRadius: 22,
+                    offset: const Offset(0, -5),
                   ),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                      decoration: BoxDecoration(
-                        color: chatTheme.partner.withValues(alpha: .72),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: chatTheme.accent.withValues(alpha: .25)),
-                      ),
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Row(children: [
-                          Container(width: 9, height: 9, decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle)),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text('تسجيل صوتي', style: TextStyle(color: chatTheme.accent, fontSize: 12, fontWeight: FontWeight.w700))),
-                          Text('${recordingAudioElapsed.inMinutes.toString().padLeft(2, '0')}:${(recordingAudioElapsed.inSeconds % 60).toString().padLeft(2, '0')}', style: TextStyle(color: chatTheme.accent, fontSize: 15, fontWeight: FontWeight.w900, fontFeatures: const [FontFeature.tabularFigures()])),
-                        ]),
-                        const SizedBox(height: 7),
-                        ClipRRect(borderRadius: BorderRadius.circular(5), child: LinearProgressIndicator(value: null, minHeight: 3, backgroundColor: chatTheme.accent.withValues(alpha: .18), color: Colors.redAccent)),
-                      ]),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'إيقاف وإرسال التسجيل',
-                    onPressed: sending ? null : stopAndSendAudio,
-                    icon: sending
-                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: gold, strokeWidth: 2))
-                        : const Icon(Icons.send_rounded, color: gold),
-                  ),
-                ] else ...[
-                IconButton(
-                  tooltip: 'إرفاق ملف أو صورة',
-                  onPressed: uploadingImage || uploadingFile || sending ? null : showSelfAttachmentPicker,
-                  icon: uploadingImage || uploadingFile
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: gold, strokeWidth: 2))
-                      : const Icon(Icons.add_circle_outline_rounded, color: gold),
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: messageController,
-                    minLines: 1,
-                    maxLines: 4,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => sendMessage(),
-                    decoration: InputDecoration(
-                      hintText: replyingTo == null
-                          ? 'اكتب رسالتك...'
-                          : 'الرد على: ${_messagePreview(replyingTo!)}',
-                      filled: true,
-                      fillColor: chatTheme.partner,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                IconButton(
-                  onPressed: sending ? null : sendMessage,
-                  icon: sending
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: gold,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.send_rounded,
-                          color: gold,
-                        ),
-                ),
-                if (replyingTo != null)
-                  IconButton(
-                    tooltip: 'إلغاء الرد',
-                    onPressed: () => setState(() => replyingTo = null),
-                    icon: const Icon(Icons.close, color: lavender),
-                  ),
-                IconButton(
-                  tooltip: 'تسجيل رسالة صوتية',
-                  onPressed: sending || uploadingFile || uploadingImage ? null : startAudioRecording,
-                  icon: const Icon(Icons.mic_none_rounded, color: gold),
-                ),
                 ],
-              ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (replyingTo != null)
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: chatTheme.partner,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.reply_rounded, color: chatTheme.accent, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _messagePreview(replyingTo!),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: chatTheme.accent, fontSize: 12),
+                            ),
+                          ),
+                          IconButton(
+                            constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+                            padding: EdgeInsets.zero,
+                            onPressed: () => setState(() => replyingTo = null),
+                            icon: const Icon(Icons.close_rounded, size: 17),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (uploadingImage || uploadingFile)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                      child: LinearProgressIndicator(
+                        minHeight: 2,
+                        color: chatTheme.accent,
+                        backgroundColor: chatTheme.accent.withValues(alpha: .15),
+                      ),
+                    ),
+                  if (recordingAudio)
+                    Row(
+                      children: [
+                        IconButton(
+                          constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+                          padding: EdgeInsets.zero,
+                          onPressed: sending ? null : cancelAudioRecording,
+                          tooltip: 'إلغاء التسجيل',
+                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                        ),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                            decoration: BoxDecoration(
+                              color: chatTheme.partner.withValues(alpha: .72),
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(color: chatTheme.accent.withValues(alpha: .25)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 9,
+                                  height: 9,
+                                  decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'تسجيل صوتي',
+                                    style: TextStyle(color: chatTheme.accent, fontSize: 12, fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                                Text(
+                                  '${recordingAudioElapsed.inMinutes.toString().padLeft(2, '0')}:${(recordingAudioElapsed.inSeconds % 60).toString().padLeft(2, '0')}',
+                                  style: TextStyle(
+                                    color: chatTheme.accent,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    fontFeatures: const [FontFeature.tabularFigures()],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+                          padding: EdgeInsets.zero,
+                          onPressed: sending ? null : stopAndSendAudio,
+                          tooltip: 'إيقاف وإرسال التسجيل',
+                          icon: sending
+                              ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: chatTheme.accent, strokeWidth: 2))
+                              : Icon(Icons.send_rounded, color: chatTheme.accent),
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.standard,
+                          onPressed: uploadingImage || uploadingFile || sending ? null : showSelfAttachmentPicker,
+                          tooltip: 'إرفاق صورة أو ملف',
+                          icon: uploadingImage || uploadingFile
+                              ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: chatTheme.accent))
+                              : Icon(Icons.add_circle_outline_rounded, color: chatTheme.accent, size: 22),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: messageController,
+                            minLines: 1,
+                            maxLines: 5,
+                            textInputAction: TextInputAction.send,
+                            textDirection: Directionality.of(context),
+                            style: const TextStyle(fontSize: 14, height: 1.25),
+                            textAlignVertical: TextAlignVertical.center,
+                            onSubmitted: (_) => sendMessage(),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              hintText: replyingTo == null ? 'اكتب رسالة…' : 'الرد على: ${_messagePreview(replyingTo!)}',
+                              hintStyle: const TextStyle(fontSize: 13, height: 1.25),
+                              filled: true,
+                              fillColor: chatTheme.partner.withValues(alpha: .94),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(21),
+                                borderSide: BorderSide(color: chatTheme.accent.withValues(alpha: .10), width: .7),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(21),
+                                borderSide: BorderSide(color: chatTheme.accent.withValues(alpha: .10), width: .7),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(21),
+                                borderSide: BorderSide(color: chatTheme.accent.withValues(alpha: .48), width: 1.1),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.standard,
+                          onPressed: sending || uploadingFile || uploadingImage ? null : startAudioRecording,
+                          tooltip: 'تسجيل صوتي',
+                          icon: Icon(Icons.mic_none_rounded, color: chatTheme.accent, size: 22),
+                        ),
+                        IconButton.filled(
+                          constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.standard,
+                          onPressed: sending ? null : sendMessage,
+                          style: IconButton.styleFrom(
+                            backgroundColor: chatTheme.accent,
+                            foregroundColor: chatTheme.background,
+                          ),
+                          icon: sending
+                              ? SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2, color: chatTheme.background))
+                              : Icon(Icons.send_rounded, size: 20, color: chatTheme.background),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
         ],
