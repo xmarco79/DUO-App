@@ -25,24 +25,29 @@ class _ChatSkin{
  const _ChatSkin(this.id,this.ar,this.en,this.bg,this.mine,this.partner,this.accent);
 }
 const _skins=[
- _ChatSkin('ours','OURS · نبض','OURS · Pulse',Color(0xFF10101C),Color(0xFF302044),Color(0xFF241B36),Color(0xFFFFD66B)),
- _ChatSkin('aurora','أورورا لايف','Aurora live',Color(0xFF081C25),Color(0xFF116C78),Color(0xFF10384A),Color(0xFF70F2D2)),
- _ChatSkin('sunset','فلامنكو','Flamenco',Color(0xFF271122),Color(0xFFB63C68),Color(0xFF56243F),Color(0xFFFFA36C)),
- _ChatSkin('sakura','بلوم','Bloom',Color(0xFF261622),Color(0xFFB64E89),Color(0xFF4B2844),Color(0xFFFFC2DE)),
- _ChatSkin('ocean','بلو لاجون','Blue lagoon',Color(0xFF061A2A),Color(0xFF167FB0),Color(0xFF123D58),Color(0xFF80E8FF)),
- _ChatSkin('forest','إميرالد','Emerald',Color(0xFF0C1E1A),Color(0xFF168B67),Color(0xFF18473A),Color(0xFF91F5B8)),
- _ChatSkin('cosmos','دريم سكيب','Dreamscape',Color(0xFF100C2A),Color(0xFF7045D8),Color(0xFF342458),Color(0xFFD6B7FF)),
- _ChatSkin('desert','صن داست','Sun dust',Color(0xFF241813),Color(0xFFB66B35),Color(0xFF4C3024),Color(0xFFFFDA87)),
- _ChatSkin('neon','سايبر بوب','Cyber pop',Color(0xFF140A22),Color(0xFF8144C7),Color(0xFF36234D),Color(0xFF7CFFF1)),
- _ChatSkin('rose','روز كوارتر','Rose quartz',Color(0xFF25101F),Color(0xFFB95380),Color(0xFF5D2E4D),Color(0xFFFFC7DA)),
- _ChatSkin('mint','مينت بريز','Mint breeze',Color(0xFF0B1F20),Color(0xFF218B7C),Color(0xFF184B4B),Color(0xFF9AF0D6)),
- _ChatSkin('glacier','آيس بلو','Ice blue',Color(0xFF0A1729),Color(0xFF3973B5),Color(0xFF1C3A5C),Color(0xFFA6D7FF)),
- _ChatSkin('ember','إمبر','Ember',Color(0xFF24110C),Color(0xFFB9502C),Color(0xFF63301E),Color(0xFFFFC078)),
- _ChatSkin('mono','مونوكروم','Monochrome',Color(0xFF111216),Color(0xFF4C505B),Color(0xFF282B32),Color(0xFFE3E5EA)),
- _ChatSkin('lavender','لافندر دريم','Lavender dream',Color(0xFF1C1530),Color(0xFF7857B7),Color(0xFF382A57),Color(0xFFC8B4FF)),
- _ChatSkin('candy','كاندي','Candy',Color(0xFF240F2B),Color(0xFFB44FA2),Color(0xFF532C67),Color(0xFFFFB6E7)),
+ _ChatSkin('ours','هوية OURS','OURS Signature',Color(0xFF10101C),Color(0xFF48316B),Color(0xFF29213D),Color(0xFFD9BC86)),
+ _ChatSkin('sea','نسيم البحر','Sea Breeze',Color(0xFF071B2A),Color(0xFF087E9B),Color(0xFF123B53),Color(0xFF8BE7E1)),
+ _ChatSkin('tropical','شاطئ استوائي','Tropical Shore',Color(0xFF09252B),Color(0xFF12A99A),Color(0xFF17515A),Color(0xFFFFD79A)),
+ _ChatSkin('forest','الغابة الهادئة','Forest Calm',Color(0xFF0B1D17),Color(0xFF26835D),Color(0xFF1B4937),Color(0xFFB3E7B8)),
+ _ChatSkin('wildflower','زهور برية','Wildflower',Color(0xFF21152A),Color(0xFFAD65B8),Color(0xFF4C3157),Color(0xFFE8B9F2)),
+ _ChatSkin('love','حب','Love',Color(0xFF28121E),Color(0xFFBD4778),Color(0xFF57263D),Color(0xFFFFC4D8)),
+ _ChatSkin('sakura','ساكورا','Sakura',Color(0xFF251624),Color(0xFFB968A1),Color(0xFF55364F),Color(0xFFFFD5E9)),
+ _ChatSkin('sunset','غروب','Sunset Glow',Color(0xFF27151A),Color(0xFFD66A45),Color(0xFF5B342D),Color(0xFFFFD08A)),
+ _ChatSkin('starlight','ضوء النجوم','Starlight',Color(0xFF0C1128),Color(0xFF536BD1),Color(0xFF28365E),Color(0xFFC4D4FF)),
+ _ChatSkin('lavender','لافندر','Lavender Dream',Color(0xFF1B1529),Color(0xFF8067BD),Color(0xFF453653),Color(0xFFDCCBFF)),
+ _ChatSkin('winter','شتاء','Winter Frost',Color(0xFF101D2B),Color(0xFF579BC8),Color(0xFF29465D),Color(0xFFD3F0FF)),
+ _ChatSkin('coffee','قهوة','Coffee House',Color(0xFF211711),Color(0xFFAD754A),Color(0xFF563B2D),Color(0xFFE8C69D)),
+ _ChatSkin('meadow','مرج','Meadow',Color(0xFF142019),Color(0xFF79A83C),Color(0xFF3E5932),Color(0xFFD9F49B)),
+ _ChatSkin('aurora','شفق قطبي','Aurora',Color(0xFF0A1D27),Color(0xFF258F83),Color(0xFF204B5B),Color(0xFFB7FFE6)),
+ _ChatSkin('clear_sky','سماء صافية','Clear Sky',Color(0xFF101F32),Color(0xFF4D91C9),Color(0xFF304F70),Color(0xFFCBEAFF)),
+ _ChatSkin('violet_night','ليلة بنفسجية','Violet Night',Color(0xFF171329),Color(0xFF7652B8),Color(0xFF40345F),Color(0xFFE0CEFF)),
 ];
 
+
+String _normalizeOursSkinId(String id){
+ const aliases={'ocean':'sea','rose':'love','cosmos':'starlight','desert':'coffee','glacier':'winter','ember':'sunset','neon':'violet_night','mint':'meadow','candy':'wildflower','mono':'ours'};
+ return aliases[id]??id;
+}
 
 String _oursMessageTimestamp(DateTime date,bool arabic){
  final now=DateTime.now(),today=DateUtils.dateOnly(now),day=DateUtils.dateOnly(date);
@@ -1487,7 +1492,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
         child:Stack(alignment:AlignmentDirectional.centerStart,children:[
          if(isReplySwipeable&&_draggingReplyMessageId==m['id'].toString())
           Positioned(left:swipeSign>0?5:null,right:swipeSign<0?5:null,child:Opacity(opacity:(_replyDragOffset/58).clamp(0.0,1.0).toDouble(),child:Transform.scale(scale:(.72+(_replyDragOffset/58).clamp(0.0,1.0).toDouble()*.28),child:Icon(Icons.reply_rounded,color:skin.accent,size:22)))),
-         Transform.translate(offset:Offset((_draggingReplyMessageId==m['id'].toString()?_replyDragOffset*swipeSign:0),0),child:Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
+         Transform.translate(offset:Offset((_draggingReplyMessageId==m['id'].toString()?_replyDragOffset*swipeSign:0),0),child:Padding(padding:const EdgeInsets.fromLTRB(0,7,0,25),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
          constraints:BoxConstraints(minWidth:isOutlinedMedia||isVisualMessage?0:64,maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(14,10,14,15)),
          decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?const Color(0xFFB9B4C6).withValues(alpha:.58):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .8 : (isVisualMessage ? 0 : .55))),borderRadius:isOutlinedMedia?BorderRadius.circular(18):(isVisualMessage?BorderRadius.circular(15):null)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
@@ -1555,20 +1560,12 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
           else if(type=='audio')_DirectAudioBubble(path:path,skin:skin,signed:_signed,ar:ar)
           else if(type=='text')Center(child:Text(path,textAlign:TextAlign.center,softWrap:true,style:const TextStyle(color:Colors.white,fontSize:15,fontWeight:FontWeight.w500,height:1.4)))
           else Center(child:Text(path,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:14,height:1.35))),
-          if(m['local_pending']==true)
-           Padding(
-            padding:const EdgeInsetsDirectional.only(top:7,bottom:2),
-            child:Align(
-             alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,
-             child:Row(mainAxisSize:MainAxisSize.min,children:[
-              SizedBox(width:10,height:10,child:CircularProgressIndicator(strokeWidth:1.5,color:skin.accent)),
-              const SizedBox(width:6),
-              Text(t('بانتظار الإرسال','Waiting to send'),style:TextStyle(color:skin.accent.withValues(alpha:.88),fontSize:9,fontWeight:FontWeight.w700)),
-             ]),
-            ),
-           ),
          ]))
         )))))
+         if(mine && m['local_pending']==true)
+          PositionedDirectional(end:-16,bottom:20,child:SizedBox(width:11,height:11,child:CircularProgressIndicator(strokeWidth:1.6,color:skin.accent)))
+         if(mine && m['read_at']!=null)
+          PositionedDirectional(end:0,bottom:-15,child:Text(t('تمت المشاهدة','Seen'),style:TextStyle(color:skin.accent.withValues(alpha:.88),fontSize:9,fontWeight:FontWeight.w700)))
        ]),
       ),
       ]);
@@ -1623,7 +1620,7 @@ class _OursAiPageState extends State<OursAiPage>{
  bool get ar=>Localizations.localeOf(context).languageCode=='ar';String t(String a,String e)=>ar?a:e;
  @override void initState(){super.initState();_restore();_loadAppearance();}
  Future<void> _loadAppearance()async{
-  final p=await SharedPreferences.getInstance(),id=p.getString('ours_ai_skin')??'ours';
+  final p=await SharedPreferences.getInstance(),id=_normalizeOursSkinId(p.getString('ours_ai_skin')??'ours');
   final found=_skins.where((x)=>x.id==id);
   if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=p.getString('ours_ai_wallpaper');wallpaperOpacity=p.getDouble('ours_ai_wallpaper_opacity')??.22;wallpaperZoom=p.getDouble('ours_ai_wallpaper_zoom')??1;wallpaperRotation=p.getDouble('ours_ai_wallpaper_rotation')??0;wallpaperDim=p.getDouble('ours_ai_wallpaper_dim')??.55;wallpaperOffsetX=p.getDouble('ours_ai_wallpaper_offset_x')??0;wallpaperOffsetY=p.getDouble('ours_ai_wallpaper_offset_y')??0;});
  }
@@ -1682,7 +1679,7 @@ class _OursAiPageState extends State<OursAiPage>{
  Future<void> _restore() async{try{final p=await SharedPreferences.getInstance();final raw=p.getString('ours_ai_history_'+db.auth.currentUser!.id);if(raw!=null){final decoded=(jsonDecode(raw) as List).map((e)=>Map<String,String>.from(e)).toList();if(mounted)setState(()=>messages.addAll(decoded));}}catch(_){} }
  Future<void> _persist() async{try{final p=await SharedPreferences.getInstance();await p.setString('ours_ai_history_'+db.auth.currentUser!.id,jsonEncode(messages.take(100).toList()));}catch(_){} }
  @override void dispose(){input.dispose();scroll.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,elevation:0,scrolledUnderElevation:0,toolbarHeight:76,centerTitle:true,surfaceTintColor:Colors.transparent,shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.14),width:.8)),leadingWidth:48,leading:IconButton(tooltip:t('رجوع','Back'),onPressed:()=>Navigator.maybePop(context),icon:Icon(Icons.arrow_back_ios_new_rounded,color:skin.accent,size:19)),title:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:40,height:40,decoration:BoxDecoration(color:skin.partner,border:Border.all(color:skin.accent.withValues(alpha:.35)),shape:BoxShape.circle),child:Icon(Icons.auto_awesome_rounded,color:skin.accent,size:20)),const SizedBox(width:9),Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[Text('OURS AI',style:TextStyle(color:skin.accent,letterSpacing:1.3,fontWeight:FontWeight.w800,fontSize:14)),Text(t('مساعدك الذكي','Your private assistant'),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:10))])]),actions:[
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,elevation:0,scrolledUnderElevation:0,toolbarHeight:76,centerTitle:false,titleSpacing:0,surfaceTintColor:Colors.transparent,shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.14),width:.8)),leadingWidth:48,leading:IconButton(tooltip:t('رجوع','Back'),onPressed:()=>Navigator.maybePop(context),icon:Icon(Icons.arrow_back_ios_new_rounded,color:skin.accent,size:19)),title:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:40,height:40,decoration:BoxDecoration(color:skin.partner,border:Border.all(color:skin.accent.withValues(alpha:.35)),shape:BoxShape.circle),child:Icon(Icons.auto_awesome_rounded,color:skin.accent,size:20)),const SizedBox(width:9),Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[Text('OURS AI',style:TextStyle(color:skin.accent,letterSpacing:1.3,fontWeight:FontWeight.w800,fontSize:14)),Text(t('مساعدك الذكي','Your private assistant'),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:10))])]),actions:[
   IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_search,icon:Icon(Icons.search,color:skin.accent,size:19)),
   IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_chooseTheme,icon:Icon(Icons.palette_outlined,color:skin.accent,size:19)),
   IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_chooseWallpaper,icon:Icon(Icons.wallpaper_outlined,color:skin.accent,size:19))
@@ -1706,19 +1703,22 @@ class _OursAiPageState extends State<OursAiPage>{
     Expanded(child:ListView.builder(controller:scroll,padding:const EdgeInsets.all(14),itemCount:messages.length,itemBuilder:(c,i){
      final m=messages[i],mine=m['role']=='user',date=DateTime.tryParse(m['created_at']??'')?.toLocal(),previous=i>0?DateTime.tryParse(messages[i-1]['created_at']??'')?.toLocal():null;
      final showDate=date!=null&&(previous==null||DateUtils.dateOnly(date)!=DateUtils.dateOnly(previous));
+     final showTimeGap=date!=null&&previous!=null&&!showDate&&date.difference(previous)>=const Duration(minutes:5);
      return Column(children:[
       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:9),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_dateLabel(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
-      Column(crossAxisAlignment:mine?CrossAxisAlignment.end:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-      Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:Text(m['content']??'',textAlign:TextAlign.start,style:const TextStyle(height:1.32,fontSize:14.5,color:Colors.white)))),
-      Padding(padding:const EdgeInsetsDirectional.only(top:3,end:7,start:7),child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.78),fontSize:9.5)))
-     ])
+      if(showTimeGap)Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.82),fontSize:10,fontWeight:FontWeight.w700))),
+      Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:Text(m['content']??'',textAlign:TextAlign.start,style:const TextStyle(height:1.32,fontSize:14.5,color:Colors.white))))
      ]);
     })),
     
-    SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(8,8,8,10),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.2)))),child:Row(children:[
-     Expanded(child:TextField(controller:input,minLines:1,maxLines:4,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اسأل OURS AI…','Ask OURS AI…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:11)))),
-     const SizedBox(width:5),IconButton.filled(onPressed:sending?null:()=>_send(),style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
-    ])))
+    SafeArea(top:false,child:Container(
+     margin:const EdgeInsets.fromLTRB(10,5,10,8),
+     padding:const EdgeInsets.fromLTRB(9,10,9,9),
+     decoration:BoxDecoration(color:skin.bg.withValues(alpha:.96),borderRadius:BorderRadius.circular(25),border:Border.all(color:skin.accent.withValues(alpha:.16)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.18),blurRadius:22,offset:const Offset(0,-5))]),
+     child:Row(children:[
+      Expanded(child:TextField(controller:input,minLines:1,maxLines:4,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(isDense:true,hintText:t('اسأل OURS AI…','Ask OURS AI…'),filled:true,fillColor:skin.partner.withValues(alpha:.94),border:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.48),width:1.1)),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:12)))),
+      const SizedBox(width:5),IconButton.filled(constraints:const BoxConstraints.tightFor(width:42,height:42),onPressed:sending?null:()=>_send(),style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
+     ])))
    ]))
   ]));
 }
@@ -1944,7 +1944,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  void _bottom()=>WidgetsBinding.instance.addPostFrameCallback((_){if(scroll.hasClients)scroll.animateTo(0,duration:const Duration(milliseconds:220),curve:Curves.easeOut);});
  @override void dispose(){recordingTimer?.cancel();if(channel!=null)db.removeChannel(channel!);recorder?.dispose();input.dispose();scroll.dispose();super.dispose();}
  @override Widget build(BuildContext context){
-  return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,elevation:0,scrolledUnderElevation:0,toolbarHeight:76,centerTitle:true,surfaceTintColor:Colors.transparent,shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.14),width:.8)),leadingWidth:48,leading:IconButton(tooltip:t('رجوع','Back'),onPressed:()=>Navigator.maybePop(context),icon:Icon(Icons.arrow_back_ios_new_rounded,color:skin.accent,size:19)),title:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:40,height:40,decoration:BoxDecoration(color:skin.partner,border:Border.all(color:skin.accent.withValues(alpha:.35)),shape:BoxShape.circle),child:Icon(Icons.bookmark_rounded,color:skin.accent,size:20)),const SizedBox(width:9),Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('مراسلة نفسي','Saved messages'),style:TextStyle(color:skin.accent,fontSize:14,fontWeight:FontWeight.w800)),Text(t('مساحة لا يراها غيرك','Private to you'),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:10))])]),actions:[
+  return Scaffold(backgroundColor:skin.bg,appBar:AppBar(backgroundColor:skin.bg,elevation:0,scrolledUnderElevation:0,toolbarHeight:76,centerTitle:false,titleSpacing:0,surfaceTintColor:Colors.transparent,shape:Border(bottom:BorderSide(color:skin.accent.withValues(alpha:.14),width:.8)),leadingWidth:48,leading:IconButton(tooltip:t('رجوع','Back'),onPressed:()=>Navigator.maybePop(context),icon:Icon(Icons.arrow_back_ios_new_rounded,color:skin.accent,size:19)),title:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:40,height:40,decoration:BoxDecoration(color:skin.partner,border:Border.all(color:skin.accent.withValues(alpha:.35)),shape:BoxShape.circle),child:Icon(Icons.bookmark_rounded,color:skin.accent,size:20)),const SizedBox(width:9),Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('مراسلة نفسي','Saved messages'),style:TextStyle(color:skin.accent,fontSize:14,fontWeight:FontWeight.w800)),Text(t('مساحة لا يراها غيرك','Private to you'),style:TextStyle(color:skin.accent.withValues(alpha:.75),fontSize:10))])]),actions:[
    IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_searchSelf,icon:Icon(Icons.search,color:skin.accent,size:19)),
    IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_chooseTheme,icon:Icon(Icons.palette_outlined,color:skin.accent,size:19)),
    IconButton(style:IconButton.styleFrom(backgroundColor:skin.partner.withValues(alpha:.72),shape:const CircleBorder(),fixedSize:const Size(38,38),padding:EdgeInsets.zero),onPressed:_chooseWallpaper,icon:Icon(Icons.wallpaper_outlined,color:skin.accent,size:19))
@@ -1965,8 +1965,10 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
       final date=DateTime.tryParse(row['created_at']?.toString()??'')?.toLocal();
       final previous=i+1<rows.length?DateTime.tryParse(rows[rows.length-2-i]['created_at']?.toString()??'')?.toLocal():null;
       final showDate=date!=null&&(previous==null||DateUtils.dateOnly(date)!=DateUtils.dateOnly(previous));
+      final showTimeGap=date!=null&&previous!=null&&!showDate&&date.difference(previous).abs()>=const Duration(minutes:5);
       return Column(children:[
        if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_selfDate(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
+       if(showTimeGap)Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text(_selfTime(row['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.82),fontSize:10,fontWeight:FontWeight.w700))),
        Align(alignment:AlignmentDirectional.centerEnd,child:GestureDetector(onLongPress:()=>_noteActions(row),child:_OursUnifiedMessageSurface(skin:skin,isMine:true,isVisual:type=='image'||type=='sticker',child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
          if(row['reply_to']!=null&&rows.any((r)=>r['id'].toString()==row['reply_to'].toString()))
           Builder(builder:(ctx){final original=rows.firstWhere((r)=>r['id'].toString()==row['reply_to'].toString());return InkWell(onTap:()=>_jumpSelfMessage(original['id'].toString()),child:Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.4),borderRadius:BorderRadius.circular(8)),child:Text((original['body']??original['file_name']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))));}),
@@ -1975,7 +1977,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
          else if(type=='file')InkWell(onTap:()=>_openSelfFile(body),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.insert_drive_file_outlined,color:skin.accent,size:30),const SizedBox(width:8),Flexible(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text((row['file_name']??body.split('/').last).toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white)),Text('${((row['file_size'] as num?)?.toInt()??0)/1024>1024?(((row['file_size'] as num?)?.toInt()??0)/1048576).toStringAsFixed(1)+' MB':(((row['file_size'] as num?)?.toInt()??0)/1024).toStringAsFixed(0)+' KB'} · ${(row['mime_type']??'').toString()}',style:TextStyle(color:skin.accent,fontSize:10))]))]))
          else if(type=='audio')_DirectAudioBubble(path:body,skin:skin,signed:_signedSelf,ar:ar)
          else Text(body,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,height:1.5)),
-         const SizedBox(height:5),Row(mainAxisSize:MainAxisSize.min,children:[if(row['pinned']==true)Icon(Icons.push_pin_rounded,color:skin.accent,size:12),Text(_selfTime(row['created_at']),style:TextStyle(color:skin.accent,fontSize:10))])
+         if(row['pinned']==true)Padding(padding:const EdgeInsets.only(top:4),child:Icon(Icons.push_pin_rounded,color:skin.accent,size:12))
         ]))
        )))
       ]);
