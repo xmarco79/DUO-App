@@ -197,9 +197,9 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
 
   // Build the message body as a clean rounded rectangle, then add a small
   // lower-corner tail. The body bottom remains a single horizontal segment.
-  final radius=math.min(22.0,h*.46);
+  final radius=math.min(27.0,h*.50);
   final tailWidth=math.min(15.0,math.max(10.0,w*.10));
-  final tailDepth=math.min(12.0,h*.24);
+  final tailDepth=math.min(10.0,h*.22);
   final bodyLeft=tailOnLeft?tailWidth:0.0;
   final bodyRight=tailOnLeft?w: w-tailWidth;
   final p=Path();
@@ -458,7 +458,7 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   if(mounted)setState(()=>localPartnerName=value.isEmpty?widget.partnerName:value);
  }
  Future<void> _loadSkin() async{
-  final p=await SharedPreferences.getInstance();final id=p.getString('ours_direct_skin_'+widget.conversationId)??'ours';
+  final p=await SharedPreferences.getInstance();final id=_normalizeOursSkinId(p.getString('ours_direct_skin_'+widget.conversationId)??'ours');
   final found=_skins.where((s)=>s.id==id);
   final savedWallpaper=p.getString('ours_direct_wallpaper_'+widget.conversationId);
   final wallpaperKey='ours_direct_wallpaper_'+widget.conversationId;
@@ -695,18 +695,21 @@ class _OursDirectChatPageState extends State<OursDirectChatPage>{
   final id='${hex.substring(0,8)}-${hex.substring(8,12)}-${hex.substring(12,16)}-${hex.substring(16,20)}-${hex.substring(20)}';
   final created=DateTime.now().toUtc().toIso8601String();
   final payload=<String,dynamic>{'id':id,'conversation_id':widget.conversationId,'sender_id':uid,'body':text,'message_type':'text','reply_to':replyId,'created_at':created};
+  if(mounted){setState(()=>messages.add({...payload,'local_pending':true}));messages.sort(_compareMessages);_bottom();}
   setState(()=>sending=true);
   try{
    await db.from('duo_direct_messages').upsert(payload,onConflict:'id',ignoreDuplicates:true);
    if(mounted){
     final existing=messages.indexWhere((m)=>m['id'].toString()==id);
-    if(existing<0){setState(()=>messages.add(Map<String,dynamic>.from(payload)));messages.sort(_compareMessages);}
+    if(existing<0){setState(()=>messages.add(Map<String,dynamic>.from(payload)));}
+    else{setState(()=>messages[existing]=Map<String,dynamic>.from(payload));}
+    messages.sort(_compareMessages);
     input.clear();setState(()=>replyTo=null);
     await _persistChatCache();_bottom();
    }
   }catch(e){
    try{await _queueTextMessage(text,replyId,messageId:id,createdAt:created);input.clear();if(mounted)setState(()=>replyTo=null);_show(t('حُفظت الرسالة محليًا وستُرسل عند عودة الاتصال','Message saved on this device and will send when connection returns'));}
-   catch(_){_show(t('تعذر إرسال الرسالة أو حفظها محليًا','Could not send or save this message locally'));}
+   catch(_){if(mounted)setState(()=>messages.removeWhere((m)=>m['id'].toString()==id));_show(t('تعذر إرسال الرسالة أو حفظها محليًا','Could not send or save this message locally'));}
   }finally{if(mounted)setState(()=>sending=false);}
  }
  String _mime(String name){
@@ -1489,7 +1492,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
          setState((){_draggingReplyMessageId=null;_replyDragOffset=0;if(shouldReply)replyTo=m;});
         }:null,
         onHorizontalDragCancel:isReplySwipeable?(){if(_draggingReplyMessageId==m['id'].toString())setState((){_draggingReplyMessageId=null;_replyDragOffset=0;});}:null,
-        child:Stack(alignment:AlignmentDirectional.centerStart,children:[
+        child:Stack(clipBehavior:Clip.none,alignment:AlignmentDirectional.centerStart,children:[
          if(isReplySwipeable&&_draggingReplyMessageId==m['id'].toString())
           Positioned(left:swipeSign>0?5:null,right:swipeSign<0?5:null,child:Opacity(opacity:(_replyDragOffset/58).clamp(0.0,1.0).toDouble(),child:Transform.scale(scale:(.72+(_replyDragOffset/58).clamp(0.0,1.0).toDouble()*.28),child:Icon(Icons.reply_rounded,color:skin.accent,size:22)))),
          Transform.translate(offset:Offset((_draggingReplyMessageId==m['id'].toString()?_replyDragOffset*swipeSign:0),0),child:Padding(padding:const EdgeInsets.fromLTRB(0,7,0,25),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
@@ -1774,7 +1777,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  @override void initState(){super.initState();_loadSelfSkin();_load();_listen();}
  Future<void> _loadSelfSkin()async{
   final p=await SharedPreferences.getInstance();
-  final id=p.getString('ours_self_skin')??'ours';
+  final id=_normalizeOursSkinId(p.getString('ours_self_skin')??'ours');
   final found=_skins.where((x)=>x.id==id);
   if(mounted)setState((){skin=found.isEmpty?_skins.first:found.first;wallpaperPath=p.getString('ours_self_wallpaper');wallpaperOpacity=p.getDouble('ours_self_wallpaper_opacity')??.22;wallpaperZoom=p.getDouble('ours_self_wallpaper_zoom')??1;wallpaperRotation=p.getDouble('ours_self_wallpaper_rotation')??0;wallpaperDim=p.getDouble('ours_self_wallpaper_dim')??.55;wallpaperOffsetX=p.getDouble('ours_self_wallpaper_offset_x')??0;wallpaperOffsetY=p.getDouble('ours_self_wallpaper_offset_y')??0;});
  }
