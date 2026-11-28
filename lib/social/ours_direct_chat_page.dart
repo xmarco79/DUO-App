@@ -397,6 +397,28 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
  }
 }
 
+BoxDecoration _oursGlassPanelDecoration(_ChatSkin skin,{double radius=25})=>BoxDecoration(
+ gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[
+  Color.lerp(skin.partner,Colors.white,.035)!.withValues(alpha:.96),
+  skin.bg.withValues(alpha:.94),
+  Color.lerp(skin.partner,skin.bg,.48)!.withValues(alpha:.96),
+ ],stops:const [0,.52,1]),
+ borderRadius:BorderRadius.circular(radius),
+ border:Border.all(color:skin.accent.withValues(alpha:.22),width:.85),
+ boxShadow:[
+  BoxShadow(color:Colors.black.withValues(alpha:.28),blurRadius:28,spread:-8,offset:const Offset(0,9)),
+  BoxShadow(color:skin.accent.withValues(alpha:.055),blurRadius:18,spread:-5,offset:const Offset(0,-2)),
+ ],
+);
+
+Widget _oursAtmosphereDepth(_ChatSkin skin)=>DecoratedBox(decoration:BoxDecoration(
+ gradient:RadialGradient(center:const Alignment(-.88,-.92),radius:1.18,colors:[skin.accent.withValues(alpha:.075),Colors.transparent],stops:const [0,.82]),
+ ),child:DecoratedBox(decoration:BoxDecoration(
+ gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[
+  Colors.black.withValues(alpha:.10),Colors.transparent,Colors.transparent,Colors.black.withValues(alpha:.20),
+ ],stops:const [0,.22,.72,1]),
+ ),child:const SizedBox.expand()));
+
 Widget _wallpaperStudioAction(BuildContext ctx,{required IconData icon,required String title,required String subtitle,required Color accent,required VoidCallback onTap,bool danger=false}) {
  return Material(color:Colors.transparent,child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(17),child:Container(
   padding:const EdgeInsets.symmetric(horizontal:13,vertical:12),
@@ -1564,6 +1586,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
     if(wallpaperPath==null)Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
     if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ClipRect(child:Transform.translate(offset:Offset(wallpaperOffsetX,wallpaperOffsetY),child:Transform.rotate(angle:wallpaperRotation,child:Transform.scale(scale:wallpaperZoom,child:Opacity(opacity:(.55+wallpaperOpacity).clamp(.55,1.0),child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>CustomPaint(painter:_ChatAtmospherePainter(skin)))))))))),
     if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:wallpaperDim)))),
+    Positioned.fill(child:IgnorePointer(child:_oursAtmosphereDepth(skin))),
     Column(children:[
     if(pinnedMessageIds.isNotEmpty)Padding(padding:const EdgeInsets.fromLTRB(10,6,10,2),child:InkWell(onTap:(){final pinned=messages.where((m)=>pinnedMessageIds.contains(m['id'].toString())).toList();if(pinned.isNotEmpty)_jumpToMessage(pinned.last['id'].toString());},borderRadius:BorderRadius.circular(13),child:Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),decoration:BoxDecoration(color:skin.partner.withValues(alpha:.96),borderRadius:BorderRadius.circular(13),border:Border.all(color:skin.accent.withValues(alpha:.28))),child:Row(children:[Icon(Icons.push_pin_rounded,color:skin.accent,size:17),const SizedBox(width:8),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[Text(t('رسالة مثبتة','Pinned message'),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w800)),Text((pinnedMessageIds.isNotEmpty?messages.firstWhere((m)=>pinnedMessageIds.contains(m['id'].toString()),orElse:()=>{})['body']??'':'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:11))])),Icon(Icons.keyboard_arrow_down_rounded,color:skin.accent)])))),
     Expanded(child:loading?Center(child:CircularProgressIndicator(color:skin.accent)):messages.isEmpty
@@ -1699,7 +1722,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
       ),
       ]);
      })),
-    SafeArea(top:false,child:Container(margin:const EdgeInsets.fromLTRB(10,5,10,8),padding:const EdgeInsets.fromLTRB(9,10,9,9),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.96),borderRadius:BorderRadius.circular(25),border:Border.all(color:skin.accent.withValues(alpha:.16)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.18),blurRadius:22,offset:const Offset(0,-5))]),
+    SafeArea(top:false,child:Container(margin:const EdgeInsets.fromLTRB(10,5,10,8),padding:const EdgeInsets.fromLTRB(9,10,9,9),decoration:_oursGlassPanelDecoration(skin),
      child:recording?Row(children:[
       IconButton(constraints:const BoxConstraints.tightFor(width:42,height:42),padding:EdgeInsets.zero,onPressed:sending?null:_cancelRecording,tooltip:t('إلغاء التسجيل','Cancel recording'),icon:Icon(Icons.close_rounded,color:skin.accent.withValues(alpha:.82),size:21)),
       Expanded(child:Container(padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),decoration:BoxDecoration(gradient:LinearGradient(begin:AlignmentDirectional.centerStart,end:AlignmentDirectional.centerEnd,colors:[skin.partner.withValues(alpha:.92),skin.partner.withValues(alpha:.58)]),borderRadius:BorderRadius.circular(20),border:Border.all(color:skin.accent.withValues(alpha:.22))),child:Row(children:[
@@ -1816,6 +1839,7 @@ class _OursAiPageState extends State<OursAiPage>{
    if(wallpaperPath==null)Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ClipRect(child:Transform.translate(offset:Offset(wallpaperOffsetX,wallpaperOffsetY),child:Transform.rotate(angle:wallpaperRotation,child:Transform.scale(scale:wallpaperZoom,child:Opacity(opacity:(.55+wallpaperOpacity).clamp(.55,1.0),child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>CustomPaint(painter:_ChatAtmospherePainter(skin)))))))))),
    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:wallpaperDim)))),
+    Positioned.fill(child:IgnorePointer(child:_oursAtmosphereDepth(skin))),
    SafeArea(child:Column(children:[
     Container(margin:const EdgeInsets.fromLTRB(12,8,12,4),padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(15)),child:Row(children:[Icon(Icons.lock_outline_rounded,color:skin.accent,size:19),const SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t('سياق المحادثة','Chat context'),style:const TextStyle(fontWeight:FontWeight.w700,fontSize:12,color:Colors.white)),Text(t('اختياري · مغلق افتراضيًا','Optional · off by default'),style:TextStyle(color:skin.accent,fontSize:10))])),Switch(value:includeContext,onChanged:(v)=>setState(()=>includeContext=v),activeColor:skin.accent)])),
     SizedBox(height:40,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(mainAxisSize:MainAxisSize.min,children:[
@@ -1842,7 +1866,7 @@ class _OursAiPageState extends State<OursAiPage>{
     SafeArea(top:false,child:Container(
      margin:const EdgeInsets.fromLTRB(10,5,10,8),
      padding:const EdgeInsets.fromLTRB(9,10,9,9),
-     decoration:BoxDecoration(color:skin.bg.withValues(alpha:.96),borderRadius:BorderRadius.circular(25),border:Border.all(color:skin.accent.withValues(alpha:.16)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.18),blurRadius:22,offset:const Offset(0,-5))]),
+     decoration:_oursGlassPanelDecoration(skin),
      child:Row(children:[
       Expanded(child:TextField(controller:input,minLines:1,maxLines:4,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(isDense:true,hintText:t('اسأل OURS AI…','Ask OURS AI…'),filled:true,fillColor:skin.partner.withValues(alpha:.94),border:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.10),width:.7)),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(21),borderSide:BorderSide(color:skin.accent.withValues(alpha:.48),width:1.1)),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:12)))),
       const SizedBox(width:5),IconButton.filled(constraints:const BoxConstraints.tightFor(width:42,height:42),onPressed:sending?null:()=>_send(),style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
@@ -2083,6 +2107,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
    if(wallpaperPath==null)Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_ChatAtmospherePainter(skin)))),
    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ClipRect(child:Transform.translate(offset:Offset(wallpaperOffsetX,wallpaperOffsetY),child:Transform.rotate(angle:wallpaperRotation,child:Transform.scale(scale:wallpaperZoom,child:Opacity(opacity:(.55+wallpaperOpacity).clamp(.55,1.0),child:Image.file(File(wallpaperPath!),fit:BoxFit.cover,errorBuilder:(_,__,___)=>CustomPaint(painter:_ChatAtmospherePainter(skin)))))))))),
    if(wallpaperPath!=null)Positioned.fill(child:IgnorePointer(child:ColoredBox(color:skin.bg.withValues(alpha:wallpaperDim)))),
+    Positioned.fill(child:IgnorePointer(child:_oursAtmosphereDepth(skin))),
    Column(children:[
     Expanded(child:loading?Center(child:CircularProgressIndicator(color:skin.accent)):rows.isEmpty
      ?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -2119,12 +2144,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
      child: Container(
       margin: const EdgeInsets.fromLTRB(10, 5, 10, 8),
       padding: const EdgeInsets.fromLTRB(9, 10, 9, 9),
-      decoration: BoxDecoration(
-       color: skin.bg.withValues(alpha: .96),
-       borderRadius: BorderRadius.circular(25),
-       border: Border.all(color: skin.accent.withValues(alpha: .16)),
-       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .18), blurRadius: 22, offset: const Offset(0, -5))],
-      ),
+      decoration: _oursGlassPanelDecoration(skin),
       child: recording
        ? Row(children: [
         IconButton(
