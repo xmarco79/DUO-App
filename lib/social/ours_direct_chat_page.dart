@@ -1708,13 +1708,13 @@ class _OursAiPageState extends State<OursAiPage>{
      final showDate=date!=null&&(previous==null||DateUtils.dateOnly(date)!=DateUtils.dateOnly(previous));
      return Column(children:[
       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:9),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_dateLabel(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
-      Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-       Text(m['content']??'',textAlign:TextAlign.center,style:const TextStyle(height:1.5,color:Colors.white)),
-       const SizedBox(height:5),Align(alignment:AlignmentDirectional.centerEnd,child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent,fontSize:10)))
-      ]))))
+      Column(crossAxisAlignment:mine?CrossAxisAlignment.end:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+      Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:Text(m['content']??'',textAlign:TextAlign.start,style:const TextStyle(height:1.32,fontSize:14.5,color:Colors.white)))),
+      Padding(padding:const EdgeInsetsDirectional.only(top:3,end:7,start:7),child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.78),fontSize:9.5)))
+     ])
      ]);
     })),
-    if(sending)LinearProgressIndicator(color:skin.accent,minHeight:2),
+    
     SafeArea(top:false,child:Container(padding:const EdgeInsets.fromLTRB(8,8,8,10),decoration:BoxDecoration(color:skin.bg,border:Border(top:BorderSide(color:skin.accent.withValues(alpha:.2)))),child:Row(children:[
      Expanded(child:TextField(controller:input,minLines:1,maxLines:4,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:InputDecoration(hintText:t('اسأل OURS AI…','Ask OURS AI…'),filled:true,fillColor:skin.partner,border:OutlineInputBorder(borderRadius:BorderRadius.circular(22),borderSide:BorderSide.none),contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:11)))),
      const SizedBox(width:5),IconButton.filled(onPressed:sending?null:()=>_send(),style:IconButton.styleFrom(backgroundColor:skin.accent,foregroundColor:skin.bg),icon:sending?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded))
