@@ -1810,10 +1810,10 @@ class _ChatPageState extends State<ChatPage> {
                               onLongPress: () => _showMessageActions(item, isMe),
                               child: ClipRRect(
                               borderRadius: BorderRadiusDirectional.only(
-                                topStart: const Radius.circular(21),
-                                topEnd: const Radius.circular(21),
-                                bottomStart: Radius.circular(isMe ? 21 : 5),
-                                bottomEnd: Radius.circular(isMe ? 5 : 21),
+                                topStart: const Radius.circular(28),
+                                topEnd: const Radius.circular(28),
+                                bottomStart: const Radius.circular(28),
+                                bottomEnd: const Radius.circular(28),
                               ),
                               child: Container(
                               constraints: BoxConstraints(
@@ -1821,8 +1821,8 @@ class _ChatPageState extends State<ChatPage> {
                               ),
                               margin: EdgeInsets.zero,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
+                                horizontal: 13,
+                                vertical: 8,
                               ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(colors: isMe ? chatTheme.mineGradient : chatTheme.partnerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
@@ -1943,7 +1943,7 @@ class _ChatPageState extends State<ChatPage> {
                                       child: SelectableText(
                                         item['body']?.toString() ?? '',
                                         textAlign: TextAlign.center,
-                                        style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.35),
+                                        style: const TextStyle(color: Colors.white, fontSize: 14.5, height: 1.35),
                                       ),
                                     ),
                                   if (item['deleted_at'] == null)
