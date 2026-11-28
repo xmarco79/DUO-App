@@ -242,18 +242,18 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
  const _OursUnifiedMessageSurface({required this.skin,required this.isMine,required this.child,this.isVisual=false});
  @override Widget build(BuildContext context){
   final bubbleRadius=BorderRadiusDirectional.only(
-   topStart:const Radius.circular(21),
-   topEnd:const Radius.circular(21),
-   bottomStart:Radius.circular(isMine?21:5),
-   bottomEnd:Radius.circular(isMine?5:21),
+   topStart:const Radius.circular(28),
+   topEnd:const Radius.circular(28),
+   bottomStart:const Radius.circular(28),
+   bottomEnd:const Radius.circular(28),
   );
   return Padding(
-   padding:const EdgeInsets.symmetric(vertical:3.5),
+   padding:const EdgeInsets.symmetric(vertical:2),
    child:ClipRRect(
     borderRadius:isVisual?BorderRadius.circular(16):bubbleRadius,
     child:Container(
      constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),
-     padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(14,10,14,10),
+     padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(13,8,13,8),
      decoration:isVisual?const BoxDecoration():BoxDecoration(
       color:isMine?skin.accent:skin.partner,
       border:Border.all(color:isMine?skin.accent.withValues(alpha:.12):Colors.white.withValues(alpha:.045),width:.65),
