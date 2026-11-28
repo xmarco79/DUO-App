@@ -246,26 +246,30 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
  final _ChatSkin skin; final bool isMine,isVisual; final Widget child;
  const _OursUnifiedMessageSurface({required this.skin,required this.isMine,required this.child,this.isVisual=false});
  @override Widget build(BuildContext context){
-  final bubbleRadius=BorderRadiusDirectional.only(
-   topStart:const Radius.circular(28),
-   topEnd:const Radius.circular(28),
-   bottomStart:const Radius.circular(28),
-   bottomEnd:const Radius.circular(28),
+  final tailOnLeft=isMine
+   ?Directionality.of(context)==ui.TextDirection.rtl
+   :Directionality.of(context)==ui.TextDirection.ltr;
+  final content=Container(
+   constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),
+   padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(13,8,13,8),
+   decoration:isVisual?const BoxDecoration():BoxDecoration(
+    color:isMine?skin.mine:skin.partner,
+    border:Border.all(color:isMine?skin.accent.withValues(alpha:.12):Colors.white.withValues(alpha:.045),width:.65),
+   ),
+   child:child,
   );
   return Padding(
    padding:const EdgeInsets.symmetric(vertical:2),
-   child:ClipRRect(
-    borderRadius:isVisual?BorderRadius.circular(16):bubbleRadius,
-    child:Container(
-     constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),
-     padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(13,8,13,8),
-     decoration:isVisual?const BoxDecoration():BoxDecoration(
-      color:isMine?skin.accent:skin.partner,
-      border:Border.all(color:isMine?skin.accent.withValues(alpha:.12):Colors.white.withValues(alpha:.045),width:.65),
+   child:isVisual
+    ?ClipRRect(borderRadius:BorderRadius.circular(16),child:content)
+    :PhysicalShape(
+      clipper:_MessageBubbleClipper(tailOnLeft:tailOnLeft),
+      color:isMine?skin.mine:skin.partner,
+      elevation:2.2,
+      shadowColor:Colors.black.withValues(alpha:.20),
+      clipBehavior:Clip.antiAlias,
+      child:content,
      ),
-     child:child,
-    ),
-   ),
   );
  }
 }
@@ -1496,7 +1500,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
          if(isReplySwipeable&&_draggingReplyMessageId==m['id'].toString())
           Positioned(left:swipeSign>0?5:null,right:swipeSign<0?5:null,child:Opacity(opacity:(_replyDragOffset/58).clamp(0.0,1.0).toDouble(),child:Transform.scale(scale:(.72+(_replyDragOffset/58).clamp(0.0,1.0).toDouble()*.28),child:Icon(Icons.reply_rounded,color:skin.accent,size:22)))),
          Transform.translate(offset:Offset((_draggingReplyMessageId==m['id'].toString()?_replyDragOffset*swipeSign:0),0),child:Padding(padding:const EdgeInsets.fromLTRB(0,7,0,25),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
-         constraints:BoxConstraints(minWidth:isOutlinedMedia||isVisualMessage?0:64,maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(14,10,14,15)),
+         constraints:BoxConstraints(minWidth:isOutlinedMedia||isVisualMessage?0:64,maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(14,10,14,12)),
          decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?const Color(0xFFB9B4C6).withValues(alpha:.58):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .8 : (isVisualMessage ? 0 : .55))),borderRadius:isOutlinedMedia?BorderRadius.circular(18):(isVisualMessage?BorderRadius.circular(15):null)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
 
