@@ -182,7 +182,7 @@ jobs:
           raw = Image.open(src).convert("RGB")
           w, h = raw.size
           side = min(w, h)
-          raw = raw.crop(((w-side)//2, (h-side)//2, (w-side)//2+side, (h-side)//2+side)
+          raw = raw.crop(((w-side)//2, (h-side)//2, (w-side)//2+side, (h-side)//2+side))
           artwork = raw.resize((1024, 1024), Image.Resampling.LANCZOS)
           root = Path("android/app/src/main/res")
           dark = (8, 7, 14, 255)
