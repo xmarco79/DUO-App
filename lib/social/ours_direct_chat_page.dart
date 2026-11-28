@@ -1710,7 +1710,7 @@ class _OursAiPageState extends State<OursAiPage>{
      return Column(children:[
       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:9),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_dateLabel(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
       if(showTimeGap)Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.82),fontSize:10,fontWeight:FontWeight.w700))),
-      Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:Text(m['content']??'',textAlign:TextAlign.start,style:const TextStyle(height:1.32,fontSize:14.5,color:Colors.white))))
+      Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Row(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.center,children:[_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:Text(m['content']??'',textAlign:TextAlign.start,style:const TextStyle(height:1.32,fontSize:14.5,color:Colors.white))),if(sending&&mine&&i==messages.length-1)const Padding(padding:EdgeInsetsDirectional.only(start:8),child:SizedBox(width:11,height:11,child:CircularProgressIndicator(strokeWidth:1.6))) ]))
      ]);
     })),
     
@@ -1825,12 +1825,15 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
  }
  void _notice(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
  Future<void> _send()async{
-  final text=input.text.trim();if(text.isEmpty||sending)return;setState(()=>sending=true);
+  final text=input.text.trim();if(text.isEmpty||sending)return;
+  final pendingId='local_${DateTime.now().microsecondsSinceEpoch}';
+  final pendingRow=<String,dynamic>{'id':pendingId,'user_id':uid,'body':text,'message_type':'text','reply_to':replyTo?['id'],'created_at':DateTime.now().toUtc().toIso8601String(),'local_pending':true};
+  setState((){sending=true;rows.add(pendingRow);});_bottom();
   try{
    final row=await db.from('ours_self_messages').insert({'user_id':uid,'body':text,'message_type':'text','reply_to':replyTo?['id']}).select().single();
-   if(mounted&&!rows.any((r)=>r['id'].toString()==row['id'].toString()))setState(()=>rows.add(Map<String,dynamic>.from(row)));
+   if(mounted)setState((){rows.removeWhere((r)=>r['id'].toString()==pendingId);if(!rows.any((r)=>r['id'].toString()==row['id'].toString()))rows.add(Map<String,dynamic>.from(row));});
    input.clear();if(mounted)setState(()=>replyTo=null);_bottom();
-  }catch(_){_notice(t('تعذر حفظ الرسالة. حاول مجددًا.','Could not save message. Try again.'));}
+  }catch(_){if(mounted)setState(()=>rows.removeWhere((r)=>r['id'].toString()==pendingId));_notice(t('تعذر حفظ الرسالة. حاول مجددًا.','Could not save message. Try again.'));}
   finally{if(mounted)setState(()=>sending=false);}
  }
  String _selfMime(String name){
@@ -1972,7 +1975,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
       return Column(children:[
        if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_selfDate(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
        if(showTimeGap)Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text(_selfTime(row['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.82),fontSize:10,fontWeight:FontWeight.w700))),
-       Align(alignment:AlignmentDirectional.centerEnd,child:GestureDetector(onLongPress:()=>_noteActions(row),child:_OursUnifiedMessageSurface(skin:skin,isMine:true,isVisual:type=='image'||type=='sticker',child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+       Align(alignment:AlignmentDirectional.centerEnd,child:Row(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.center,children:[GestureDetector(onLongPress:()=>_noteActions(row),child:_OursUnifiedMessageSurface(skin:skin,isMine:true,isVisual:type=='image'||type=='sticker',child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
          if(row['reply_to']!=null&&rows.any((r)=>r['id'].toString()==row['reply_to'].toString()))
           Builder(builder:(ctx){final original=rows.firstWhere((r)=>r['id'].toString()==row['reply_to'].toString());return InkWell(onTap:()=>_jumpSelfMessage(original['id'].toString()),child:Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.4),borderRadius:BorderRadius.circular(8)),child:Text((original['body']??original['file_name']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))));}),
          if(type=='image'||type=='sticker')FutureBuilder<String>(future:_signedSelf(body),builder:(c,s)=>s.hasData?GestureDetector(onTap:()=>_openSelfImage(body),child:type=='sticker'?Image.network(s.data!,width:150,height:150,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:38)):ClipRRect(borderRadius:BorderRadius.circular(13),child:Image.network(s.data!,width:225,height:220,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:38)))):SizedBox(width:180,height:130,child:Center(child:CircularProgressIndicator(color:skin.accent))))
@@ -1982,7 +1985,9 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
          else Text(body,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,height:1.5)),
          if(row['pinned']==true)Padding(padding:const EdgeInsets.only(top:4),child:Icon(Icons.push_pin_rounded,color:skin.accent,size:12))
         ]))
-       )))
+       )),
+       if(row['local_pending']==true)const Padding(padding:EdgeInsetsDirectional.only(start:8),child:SizedBox(width:11,height:11,child:CircularProgressIndicator(strokeWidth:1.6))),
+      ]))
       ]);
      })),
     SafeArea(
