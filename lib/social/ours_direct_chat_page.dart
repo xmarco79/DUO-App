@@ -83,7 +83,7 @@ class _ChatAtmospherePainter extends CustomPainter {
   void heart(Offset c,double r,Color color){
    final p=Path()..moveTo(c.dx,c.dy+r*.42)
     ..cubicTo(c.dx-r*.95,c.dy-r*.12,c.dx-r*.58,c.dy-r*.86,c.dx,c.dy-r*.38)
-    ..c.cubicTo(c.dx+r*.58,c.dy-r*.86,c.dx+r*.95,c.dy-r*.12,c.dx,c.dy+r*.42)..close();
+    ..cubicTo(c.dx+r*.58,c.dy-r*.86,c.dx+r*.95,c.dy-r*.12,c.dx,c.dy+r*.42)..close();
    canvas.drawPath(p,Paint()..color=color);
   }
   void flower(Offset c,double r,Color color,{Color center=const Color(0xFFFFD98B)}){
@@ -158,7 +158,7 @@ class _ChatAtmospherePainter extends CustomPainter {
     hill(.86,const Color(0xFF16291F).withValues(alpha:.55),.08,.6);
     for(var i=0;i<44;i++){
      final x=size.width*((i*71)%997)/997,y=size.height*(.65+((i*37)%34)/100),h=size.height*(.055+((i*13)%15)/100);
-     canvas.drawLine(Offset(x,y),Offset(x-size.width*.008,y-h),Paint()..color=const Color(0xFF8CB17C).withValues(alpha:.22)..strokeWidth:1.3);
+     canvas.drawLine(Offset(x,y),Offset(x-size.width*.008,y-h),Paint()..color=const Color(0xFF8CB17C).withValues(alpha:.22)..strokeWidth=1.3);
      if(i%2==0)canvas.drawOval(Rect.fromCenter(center:Offset(x+size.width*.012,y-h*.52),width:size.width*.027,height:h*.24),Paint()..color=const Color(0xFF75A77C).withValues(alpha:.18));
      flower(Offset(x-size.width*.008,y-h),3.5+(i%5)*.8,[const Color(0xFFE8C9F7),const Color(0xFFFFD4A1),const Color(0xFFFFBFD7),const Color(0xFFC9DDFF)][i%4].withValues(alpha:.42));
     }
@@ -183,7 +183,7 @@ class _ChatAtmospherePainter extends CustomPainter {
     canvas.drawCircle(moon,size.width*.095,Paint()..color=const Color(0xFFFFE9B9).withValues(alpha:.22));
     canvas.drawCircle(Offset(moon.dx+size.width*.04,moon.dy-size.width*.025),size.width*.086,Paint()..color=skin.bg);
     final constellation=[Offset(.12,.15),Offset(.27,.29),Offset(.41,.19),Offset(.56,.34),Offset(.73,.27),Offset(.89,.12),Offset(.81,.52),Offset(.58,.59)];
-    final line=Paint()..color=accent.withValues(alpha:.19)..strokeWidth:1.0;
+    final line=Paint()..color=accent.withValues(alpha:.19)..strokeWidth=1.0;
     for(var i=0;i<constellation.length-1;i++){final a=constellation[i],b=constellation[i+1];canvas.drawLine(Offset(a.dx*size.width,a.dy*size.height),Offset(b.dx*size.width,b.dy*size.height),line);}
     for(var i=0;i<120;i++){
      final x=size.width*((i*71)%997)/997,y=size.height*((i*137)%991)/991;
@@ -197,18 +197,18 @@ class _ChatAtmospherePainter extends CustomPainter {
     hill(.88,const Color(0xFFB5DDF0).withValues(alpha:.12),.08,.5);
     for(var i=0;i<42;i++){
      final x=size.width*((i*83)%997)/997,y=size.height*((i*149)%991)/991,r=3.0+(i%6)*2.0;
-     for(var arm=0;arm<6;arm++){final a=arm*math.pi/3;canvas.drawLine(Offset(x,y),Offset(x+math.cos(a)*r,y+math.sin(a)*r),Paint()..color=accent.withValues(alpha:.23)..strokeWidth:1.0);}
+     for(var arm=0;arm<6;arm++){final a=arm*math.pi/3;canvas.drawLine(Offset(x,y),Offset(x+math.cos(a)*r,y+math.sin(a)*r),Paint()..color=accent.withValues(alpha:.23)..strokeWidth=1.0);}
     }
     break;
    case 'coffee':
     glow(Offset(size.width*.76,size.height*.24),size.width*.33,const Color(0xFFD29A5D),.10);
     final cup=RRect.fromRectAndRadius(Rect.fromCenter(center:Offset(size.width*.76,size.height*.26),width:size.width*.23,height:size.height*.12),const Radius.circular(14));
     canvas.drawRRect(cup,Paint()..color=const Color(0xFFD6B48B).withValues(alpha:.18));
-    canvas.drawRRect(cup,Paint()..color=accent.withValues(alpha:.38)..style=PaintingStyle.stroke..strokeWidth:1.5);
-    canvas.drawCircle(Offset(size.width*.88,size.height*.26),size.width*.04,Paint()..color=accent.withValues(alpha:.22)..style=PaintingStyle.stroke..strokeWidth:2);
+    canvas.drawRRect(cup,Paint()..color=accent.withValues(alpha:.38)..style=PaintingStyle.stroke..strokeWidth=1.5);
+    canvas.drawCircle(Offset(size.width*.88,size.height*.26),size.width*.04,Paint()..color=accent.withValues(alpha:.22)..style=PaintingStyle.stroke..strokeWidth=2);
     for(var i=0;i<4;i++){
      final steam=Path()..moveTo(size.width*(.68+i*.035),size.height*.18)..cubicTo(size.width*(.65+i*.035),size.height*.13,size.width*(.73+i*.035),size.height*.09,size.width*(.69+i*.035),size.height*.04);
-     canvas.drawPath(steam,Paint()..color=accent.withValues(alpha:.20)..style=PaintingStyle.stroke..strokeWidth:2.1);
+     canvas.drawPath(steam,Paint()..color=accent.withValues(alpha:.20)..style=PaintingStyle.stroke..strokeWidth=2.1);
     }
     for(var i=0;i<36;i++){
      final x=size.width*((i*67)%997)/997,y=size.height*((i*127)%991)/991;
@@ -222,7 +222,7 @@ class _ChatAtmospherePainter extends CustomPainter {
     hill(.87,const Color(0xFF1D3521).withValues(alpha:.42),.08,.7);
     for(var i=0;i<70;i++){
      final x=size.width*((i*37)%997)/997,y=size.height*(.67+((i*17)%31)/100),h=size.height*(.025+((i*11)%10)/100);
-     canvas.drawLine(Offset(x,y),Offset(x+math.sin(i*.7)*size.width*.018,y-h),Paint()..color=accent.withValues(alpha:.19)..strokeWidth:1.4);
+     canvas.drawLine(Offset(x,y),Offset(x+math.sin(i*.7)*size.width*.018,y-h),Paint()..color=accent.withValues(alpha:.19)..strokeWidth=1.4);
     }
     for(var i=0;i<26;i++){final x=size.width*((i*79)%997)/997,y=size.height*(.72+((i*13)%25)/100);flower(Offset(x,y-size.height*.04),4+(i%3),const Color(0xFFFFE6B7).withValues(alpha:.28));}
     break;
@@ -235,7 +235,7 @@ class _ChatAtmospherePainter extends CustomPainter {
     hill(.84,const Color(0xFF3C2B50).withValues(alpha:.24),.08,.2);
     for(var i=0;i<36;i++){
      final x=size.width*((i*73)%997)/997,y=size.height*(.86+((i*19)%12)/100),h=size.height*(.10+((i*7)%13)/100);
-     canvas.drawLine(Offset(x,y),Offset(x-size.width*.01,y-h),Paint()..color=const Color(0xFF728B5A).withValues(alpha:.23)..strokeWidth:1.3);
+     canvas.drawLine(Offset(x,y),Offset(x-size.width*.01,y-h),Paint()..color=const Color(0xFF728B5A).withValues(alpha:.23)..strokeWidth=1.3);
      for(var j=0;j<6;j++){final fy=y-h+j*h*.13;canvas.drawOval(Rect.fromCenter(center:Offset(x-size.width*.008,fy),width:6,height:11),Paint()..color=const Color(0xFFB9A2D5).withValues(alpha:.30));}
     }
     break;
@@ -246,7 +246,7 @@ class _ChatAtmospherePainter extends CustomPainter {
      final wave=Path()..moveTo(0,y)..cubicTo(size.width*.22,y-size.height*.05,size.width*.62,y+size.height*.04,size.width,y-size.height*.035)..lineTo(size.width,size.height)..lineTo(0,size.height)..close();
      canvas.drawPath(wave,Paint()..color=Color.lerp(const Color(0xFF117A9C),const Color(0xFF05283B),layer/6)!.withValues(alpha:.11+layer*.025));
      final highlight=Path()..moveTo(size.width*.08,y)..quadraticBezierTo(size.width*.42,y-size.height*.025,size.width*.75,y+size.height*.01);
-     canvas.drawPath(highlight,Paint()..color=accent.withValues(alpha:.16)..style=PaintingStyle.stroke..strokeWidth:1.5);
+     canvas.drawPath(highlight,Paint()..color=accent.withValues(alpha:.16)..style=PaintingStyle.stroke..strokeWidth=1.5);
     }
     for(var i=0;i<22;i++){final x=size.width*((i*83)%997)/997,y=size.height*((i*137)%991)/991;canvas.drawCircle(Offset(x,y),2+(i%4),Paint()..color=accent.withValues(alpha:.09));}
     break;
@@ -257,7 +257,7 @@ class _ChatAtmospherePainter extends CustomPainter {
      canvas.save();canvas.translate(x,y);canvas.rotate((i%9-4)*.22);
      final leaf=Path()..moveTo(0,0)..quadraticBezierTo(size.width*.04,-size.height*.07,size.width*.12,-size.height*.018)..quadraticBezierTo(size.width*.05,size.height*.018,0,0);
      canvas.drawPath(leaf,Paint()..color=accent.withValues(alpha:.15));
-     canvas.drawLine(Offset.zero,Offset(size.width*.10,-size.height*.015),Paint()..color=accent.withValues(alpha:.12)..strokeWidth:1);
+     canvas.drawLine(Offset.zero,Offset(size.width*.10,-size.height*.015),Paint()..color=accent.withValues(alpha:.12)..strokeWidth=1);
      canvas.restore();
     }
     for(var layer=0;layer<4;layer++){final p=Path()..moveTo(0,size.height*(.56+layer*.08))..cubicTo(size.width*.2,size.height*(.48+layer*.08),size.width*.68,size.height*(.63+layer*.07),size.width,size.height*(.53+layer*.08))..lineTo(size.width,size.height)..lineTo(0,size.height)..close();canvas.drawPath(p,Paint()..color=const Color(0xFF168F85).withValues(alpha:.055+layer*.018));}
@@ -267,7 +267,7 @@ class _ChatAtmospherePainter extends CustomPainter {
     for(var i=0;i<5;i++){
      final p=Path()..moveTo(-size.width*.12,size.height*(.12+i*.09))
       ..cubicTo(size.width*.2,size.height*(.02+i*.11),size.width*.57,size.height*(.45+i*.08),size.width*1.12,size.height*(.11+i*.14));
-     canvas.drawPath(p,Paint()..color=[accent,const Color(0xFF70BCEB),const Color(0xFF66E0B9),const Color(0xFF9D83D8),const Color(0xFF4FA9C7)][i].withValues(alpha:.13)..style=PaintingStyle.stroke..strokeWidth:24.0+i*9.0..maskFilter=const MaskFilter.blur(BlurStyle.normal,16));
+     canvas.drawPath(p,Paint()..color=[accent,const Color(0xFF70BCEB),const Color(0xFF66E0B9),const Color(0xFF9D83D8),const Color(0xFF4FA9C7)][i].withValues(alpha:.13)..style=PaintingStyle.stroke..strokeWidth=24.0+i*9.0..maskFilter=const MaskFilter.blur(BlurStyle.normal,16));
     }
     for(var i=0;i<55;i++){final x=size.width*((i*71)%997)/997,y=size.height*((i*137)%991)/991;star(Offset(x,y),1.8+(i%3),accent.withValues(alpha:.16));}
     break;
@@ -276,13 +276,13 @@ class _ChatAtmospherePainter extends CustomPainter {
     canvas.drawCircle(Offset(size.width*.78,size.height*.19),size.width*.14,Paint()..color=const Color(0xFFFFC27C).withValues(alpha:.16));
     hill(.66,const Color(0xFF6B3D3A).withValues(alpha:.18),.09,.1);
     hill(.78,const Color(0xFF3C252B).withValues(alpha:.26),.08,.6);
-    for(var i=0;i<7;i++){final y=size.height*(.25+i*.045);canvas.drawLine(Offset(size.width*.65,y),Offset(size.width*.91,y),Paint()..color=accent.withValues(alpha:.10)..strokeWidth:1.2);}
+    for(var i=0;i<7;i++){final y=size.height*(.25+i*.045);canvas.drawLine(Offset(size.width*.65,y),Offset(size.width*.91,y),Paint()..color=accent.withValues(alpha:.10)..strokeWidth=1.2);}
     break;
    case 'sakura':
     glow(Offset(size.width*.25,size.height*.15),size.width*.32,const Color(0xFFFFB5D4),.10);
     for(var i=0;i<3;i++){
      final branch=Path()..moveTo(size.width*(.04+i*.08),size.height*(.08+i*.13))..quadraticBezierTo(size.width*.35,size.height*(.22+i*.11),size.width*.68,size.height*(.06+i*.18))..quadraticBezierTo(size.width*.85,size.height*(.13+i*.14),size.width*.97,size.height*(.29+i*.11));
-     canvas.drawPath(branch,Paint()..color=const Color(0xFF6E465D).withValues(alpha:.24)..style=PaintingStyle.stroke..strokeWidth:3.0);
+     canvas.drawPath(branch,Paint()..color=const Color(0xFF6E465D).withValues(alpha:.24)..style=PaintingStyle.stroke..strokeWidth=3.0);
     }
     for(var i=0;i<45;i++){
      final x=size.width*((i*83)%997)/997,y=size.height*((i*137)%991)/991;
@@ -299,7 +299,7 @@ class _ChatAtmospherePainter extends CustomPainter {
    case 'ours':
     for(var i=0;i<6;i++){
      final r=size.width*(.18+i*.10);
-     canvas.drawOval(Rect.fromCenter(center:Offset(size.width*.52,size.height*.48),width:r*2,height:r*.72),Paint()..color=accent.withValues(alpha:.09-i*.009)..style=PaintingStyle.stroke..strokeWidth:1.0+i*.3);
+     canvas.drawOval(Rect.fromCenter(center:Offset(size.width*.52,size.height*.48),width:r*2,height:r*.72),Paint()..color=accent.withValues(alpha:.09-i*.009)..style=PaintingStyle.stroke..strokeWidth=1.0+i*.3);
     }
     for(var i=0;i<48;i++){final x=size.width*((i*67)%997)/997,y=size.height*((i*131)%991)/991;star(Offset(x,y),1.4+(i%3)*.6,accent.withValues(alpha:.19));}
     break;
@@ -406,8 +406,8 @@ BoxDecoration _oursGlassPanelDecoration(_ChatSkin skin,{double radius=25})=>BoxD
  borderRadius:BorderRadius.circular(radius),
  border:Border.all(color:skin.accent.withValues(alpha:.22),width:.85),
  boxShadow:[
-  BoxShadow(color:Colors.black.withValues(alpha:.28),blurRadius:28,spread:-8,offset:const Offset(0,9)),
-  BoxShadow(color:skin.accent.withValues(alpha:.055),blurRadius:18,spread:-5,offset:const Offset(0,-2)),
+  BoxShadow(color:Colors.black.withValues(alpha:.28),blurRadius:28,spreadRadius:-8,offset:const Offset(0,9)),
+  BoxShadow(color:skin.accent.withValues(alpha:.055),blurRadius:18,spreadRadius:-5,offset:const Offset(0,-2)),
  ],
 );
 
