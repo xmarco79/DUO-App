@@ -1564,11 +1564,11 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
           else if(type=='text')Center(child:Text(path,textAlign:TextAlign.center,softWrap:true,style:const TextStyle(color:Colors.white,fontSize:15,fontWeight:FontWeight.w500,height:1.4)))
           else Center(child:Text(path,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:14,height:1.35))),
          ]))
-        )))))
+        ))))),
          if(mine && m['local_pending']==true)
-          PositionedDirectional(end:-16,bottom:20,child:SizedBox(width:11,height:11,child:CircularProgressIndicator(strokeWidth:1.6,color:skin.accent)))
+          PositionedDirectional(end:-16,bottom:20,child:SizedBox(width:11,height:11,child:CircularProgressIndicator(strokeWidth:1.6,color:skin.accent))),
          if(mine && m['read_at']!=null)
-          PositionedDirectional(end:0,bottom:-15,child:Text(t('تمت المشاهدة','Seen'),style:TextStyle(color:skin.accent.withValues(alpha:.88),fontSize:9,fontWeight:FontWeight.w700)))
+          PositionedDirectional(end:0,bottom:-15,child:Text(t('تمت المشاهدة','Seen'),style:TextStyle(color:skin.accent.withValues(alpha:.88),fontSize:9,fontWeight:FontWeight.w700))),
        ]),
       ),
       ]);
