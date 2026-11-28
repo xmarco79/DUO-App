@@ -376,9 +376,9 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
   final bubbleGradient=LinearGradient(
    begin:Alignment.topLeft,end:Alignment.bottomRight,
    colors:[
-    Color.lerp(base,Colors.white,isMine?.105:.045)!.withValues(alpha:.99),
+    Color.lerp(base,Colors.white,isMine ? .105 : .045)!.withValues(alpha:.99),
     base,
-    Color.lerp(base,skin.bg,isMine?.16:.30)!.withValues(alpha:.99),
+    Color.lerp(base,skin.bg,isMine ? .16 : .30)!.withValues(alpha:.99),
    ],
    stops:const [0,.48,1],
   );
@@ -405,7 +405,7 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
       clipper:_MessageBubbleClipper(tailOnLeft:tailOnLeft),
       color:Colors.transparent,
       elevation:3.6,
-      shadowColor:(isMine?skin.accent:Colors.black).withValues(alpha:isMine?.16:.26),
+      shadowColor:(isMine?skin.accent:Colors.black).withValues(alpha:isMine ? .16 : .26),
       clipBehavior:Clip.antiAlias,
       child:content,
      ),
