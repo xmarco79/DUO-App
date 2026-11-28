@@ -372,12 +372,28 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
   final tailOnLeft=isMine
    ?Directionality.of(context)==ui.TextDirection.rtl
    :Directionality.of(context)==ui.TextDirection.ltr;
+  final base=isMine?skin.mine:skin.partner;
+  final bubbleGradient=LinearGradient(
+   begin:Alignment.topLeft,end:Alignment.bottomRight,
+   colors:[
+    Color.lerp(base,Colors.white,isMine?.105:.045)!.withValues(alpha:.99),
+    base,
+    Color.lerp(base,skin.bg,isMine?.16:.30)!.withValues(alpha:.99),
+   ],
+   stops:const [0,.48,1],
+  );
   final content=Container(
    constraints:BoxConstraints(minWidth:isVisual?0:76,maxWidth:MediaQuery.of(context).size.width*.78),
    padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(13,8,13,8),
-   decoration:isVisual?const BoxDecoration():BoxDecoration(
-    color:isMine?skin.mine:skin.partner,
-    border:Border.all(color:isMine?skin.accent.withValues(alpha:.12):Colors.white.withValues(alpha:.045),width:.65),
+   decoration:isVisual?BoxDecoration(
+    borderRadius:BorderRadius.circular(16),
+    border:Border.all(color:skin.accent.withValues(alpha:.30),width:.85),
+   ):BoxDecoration(
+    gradient:bubbleGradient,
+    border:Border.all(
+     color:isMine?skin.accent.withValues(alpha:.34):Colors.white.withValues(alpha:.095),
+     width:isMine?1.0:.75,
+    ),
    ),
    child:child,
   );
@@ -387,9 +403,9 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
     ?ClipRRect(borderRadius:BorderRadius.circular(16),child:content)
     :PhysicalShape(
       clipper:_MessageBubbleClipper(tailOnLeft:tailOnLeft),
-      color:isMine?skin.mine:skin.partner,
-      elevation:2.2,
-      shadowColor:Colors.black.withValues(alpha:.20),
+      color:Colors.transparent,
+      elevation:3.6,
+      shadowColor:(isMine?skin.accent:Colors.black).withValues(alpha:isMine?.16:.26),
       clipBehavior:Clip.antiAlias,
       child:content,
      ),
