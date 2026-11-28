@@ -40,38 +40,14 @@ class _OursChatBubbleClipper extends CustomClipper<Path> {
   const _OursChatBubbleClipper({required this.tailOnLeft});
 
   @override
-  Path getClip(Size size) {
-    final radius = math.min(23.0, size.height * .42);
-    final tailWidth = math.min(15.0, size.width * .18);
-    const tailHeight = 10.0;
-    final bodyBottom = size.height - tailHeight;
-    final path = Path()
-      ..moveTo(radius, 0)
-      ..lineTo(size.width - radius, 0)
-      ..cubicTo(size.width - radius * .42, 0, size.width, radius * .42, size.width, radius)
-      ..lineTo(size.width, bodyBottom - radius)
-      ..cubicTo(size.width, bodyBottom - radius * .42, size.width - radius * .42, bodyBottom, size.width - radius, bodyBottom);
-
-    if (tailOnLeft) {
-      path
-        ..lineTo(radius + tailWidth, bodyBottom)
-        ..cubicTo(radius + tailWidth * .72, bodyBottom + 1, radius + tailWidth * .48, size.height - 1, radius + tailWidth * .18, size.height - 1)
-        ..cubicTo(radius - 1, size.height - 1, radius + 1, bodyBottom + 3, radius, bodyBottom);
-    } else {
-      path
-        ..lineTo(size.width - radius - tailWidth, bodyBottom)
-        ..cubicTo(size.width - radius - tailWidth * .72, bodyBottom + 1, size.width - radius - tailWidth * .48, size.height - 1, size.width - radius - tailWidth * .18, size.height - 1)
-        ..cubicTo(size.width - radius + 1, size.height - 1, size.width - radius - 1, bodyBottom + 3, size.width - radius, bodyBottom);
-    }
-
-    path
-      ..lineTo(radius, bodyBottom)
-      ..cubicTo(radius * .42, bodyBottom, 0, bodyBottom - radius * .42, 0, bodyBottom - radius)
-      ..lineTo(0, radius)
-      ..cubicTo(0, radius * .42, radius * .42, 0, radius, 0)
-      ..close();
-    return path;
-  }
+  Path getClip(Size size) => Path()
+    ..addRRect(RRect.fromRectAndCorners(
+      Offset.zero & size,
+      topLeft: const Radius.circular(21),
+      topRight: const Radius.circular(21),
+      bottomLeft: Radius.circular(tailOnLeft ? 5 : 21),
+      bottomRight: Radius.circular(tailOnLeft ? 21 : 5),
+    ));
 
   @override
   bool shouldReclip(covariant _OursChatBubbleClipper oldClipper) => oldClipper.tailOnLeft != tailOnLeft;
@@ -1832,11 +1808,12 @@ class _ChatPageState extends State<ChatPage> {
                               padding: EdgeInsets.only(bottom: groupedWithPrevious ? 4 : 12),
                               child: GestureDetector(
                               onLongPress: () => _showMessageActions(item, isMe),
-                              child: ClipPath(
-                              clipper: _OursChatBubbleClipper(
-                                tailOnLeft: isMe
-                                    ? Directionality.of(context) == ui.TextDirection.rtl
-                                    : Directionality.of(context) == ui.TextDirection.ltr,
+                              child: ClipRRect(
+                              borderRadius: BorderRadiusDirectional.only(
+                                topStart: const Radius.circular(21),
+                                topEnd: const Radius.circular(21),
+                                bottomStart: Radius.circular(isMe ? 21 : 5),
+                                bottomEnd: Radius.circular(isMe ? 5 : 21),
                               ),
                               child: Container(
                               constraints: BoxConstraints(
