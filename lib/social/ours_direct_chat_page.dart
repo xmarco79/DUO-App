@@ -1554,7 +1554,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
          ]))
         ))))),
          if(mine && m['local_pending']==true)
-          PositionedDirectional(end:-16,bottom:20,child:SizedBox(width:11,height:11,child:CircularProgressIndicator(strokeWidth:1.6,color:skin.accent))),
+          PositionedDirectional(start:-16,bottom:20,child:SizedBox(width:11,height:11,child:CircularProgressIndicator(strokeWidth:1.6,color:skin.accent))),
          if(mine && m['read_at']!=null)
           PositionedDirectional(end:0,bottom:-15,child:Text(t('تمت المشاهدة','Seen'),style:TextStyle(color:skin.accent.withValues(alpha:.88),fontSize:9,fontWeight:FontWeight.w700))),
        ]),
@@ -1698,7 +1698,7 @@ class _OursAiPageState extends State<OursAiPage>{
      return Column(children:[
       if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:9),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_dateLabel(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
       if(showTimeGap)Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text(_time(m['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.82),fontSize:10,fontWeight:FontWeight.w700))),
-      Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Row(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.center,children:[_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:Text(m['content']??'',textAlign:TextAlign.start,style:const TextStyle(height:1.32,fontSize:14.5,color:Colors.white))),if(sending&&mine&&i==messages.length-1)const Padding(padding:EdgeInsetsDirectional.only(start:8),child:SizedBox(width:11,height:11,child:CircularProgressIndicator(strokeWidth:1.6))) ]))
+      Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:Stack(clipBehavior:Clip.none,children:[_OursUnifiedMessageSurface(skin:skin,isMine:mine,child:Text(m['content']??'',textAlign:TextAlign.start,style:const TextStyle(height:1.32,fontSize:14.5,color:Colors.white))),if(sending&&mine&&i==messages.length-1)PositionedDirectional(start:-16,top:0,bottom:0,child:Center(child:SizedBox(width:11,height:11,child:CircularProgressIndicator(strokeWidth:1.6,color:skin.accent))))]))
      ]);
     })),
     
@@ -1963,7 +1963,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
       return Column(children:[
        if(showDate)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),decoration:BoxDecoration(color:skin.partner,borderRadius:BorderRadius.circular(14)),child:Text(_selfDate(date),style:TextStyle(color:skin.accent,fontSize:10,fontWeight:FontWeight.w700)))),
        if(showTimeGap)Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text(_selfTime(row['created_at']),style:TextStyle(color:skin.accent.withValues(alpha:.82),fontSize:10,fontWeight:FontWeight.w700))),
-       Align(alignment:AlignmentDirectional.centerEnd,child:Row(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.center,children:[GestureDetector(onLongPress:()=>_noteActions(row),child:_OursUnifiedMessageSurface(skin:skin,isMine:true,isVisual:type=='image'||type=='sticker',child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+       Align(alignment:AlignmentDirectional.centerEnd,child:Stack(clipBehavior:Clip.none,children:[GestureDetector(onLongPress:()=>_noteActions(row),child:_OursUnifiedMessageSurface(skin:skin,isMine:true,isVisual:type=='image'||type=='sticker',child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
          if(row['reply_to']!=null&&rows.any((r)=>r['id'].toString()==row['reply_to'].toString()))
           Builder(builder:(ctx){final original=rows.firstWhere((r)=>r['id'].toString()==row['reply_to'].toString());return InkWell(onTap:()=>_jumpSelfMessage(original['id'].toString()),child:Container(margin:const EdgeInsets.only(bottom:7),padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:skin.bg.withValues(alpha:.4),borderRadius:BorderRadius.circular(8)),child:Text((original['body']??original['file_name']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(color:skin.accent,fontSize:11))));}),
          if(type=='image'||type=='sticker')FutureBuilder<String>(future:_signedSelf(body),builder:(c,s)=>s.hasData?GestureDetector(onTap:()=>_openSelfImage(body),child:type=='sticker'?Image.network(s.data!,width:150,height:150,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:38)):ClipRRect(borderRadius:BorderRadius.circular(13),child:Image.network(s.data!,width:225,height:220,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Icon(Icons.broken_image_outlined,color:skin.accent,size:38)))):SizedBox(width:180,height:130,child:Center(child:CircularProgressIndicator(color:skin.accent))))
@@ -1974,7 +1974,7 @@ class _OursSelfChatPageState extends State<OursSelfChatPage>{
          if(row['pinned']==true)Padding(padding:const EdgeInsets.only(top:4),child:Icon(Icons.push_pin_rounded,color:skin.accent,size:12))
         ]))
        )),
-       if(row['local_pending']==true)const Padding(padding:EdgeInsetsDirectional.only(start:8),child:SizedBox(width:11,height:11,child:CircularProgressIndicator(strokeWidth:1.6))),
+       if(row['local_pending']==true)PositionedDirectional(start:-16,top:0,bottom:0,child:Center(child:SizedBox(width:11,height:11,child:CircularProgressIndicator(strokeWidth:1.6,color:skin.accent)))),
       ]))
       ]);
      })),
