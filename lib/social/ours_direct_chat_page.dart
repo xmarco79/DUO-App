@@ -241,17 +241,27 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
  final _ChatSkin skin; final bool isMine,isVisual; final Widget child;
  const _OursUnifiedMessageSurface({required this.skin,required this.isMine,required this.child,this.isVisual=false});
  @override Widget build(BuildContext context){
-  final tailOnLeft=isMine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr;
-  return Padding(padding:const EdgeInsets.symmetric(vertical:7),child:PhysicalShape(
-   clipper:isVisual?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:tailOnLeft),
-   color:isVisual?Colors.transparent:(isMine?skin.accent:const Color(0xFF303030)),elevation:isVisual?0:4,
-   shadowColor:isVisual?Colors.transparent:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,
-   child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),
-    padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(14,10,14,10),
-    decoration:isVisual?const BoxDecoration():BoxDecoration(
-     color:isMine?skin.accent:const Color(0xFF303030),
-     border:Border.all(color:isMine?skin.accent.withValues(alpha:.14):Colors.white.withValues(alpha:.035),width:.65)),
-    child:child)));
+  final bubbleRadius=BorderRadiusDirectional.only(
+   topStart:const Radius.circular(21),
+   topEnd:const Radius.circular(21),
+   bottomStart:Radius.circular(isMine?21:5),
+   bottomEnd:Radius.circular(isMine?5:21),
+  );
+  return Padding(
+   padding:const EdgeInsets.symmetric(vertical:3.5),
+   child:ClipRRect(
+    borderRadius:isVisual?BorderRadius.circular(16):bubbleRadius,
+    child:Container(
+     constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),
+     padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(14,10,14,10),
+     decoration:isVisual?const BoxDecoration():BoxDecoration(
+      color:isMine?skin.accent:skin.partner,
+      border:Border.all(color:isMine?skin.accent.withValues(alpha:.12):Colors.white.withValues(alpha:.045),width:.65),
+     ),
+     child:child,
+    ),
+   ),
+  );
  }
 }
 
