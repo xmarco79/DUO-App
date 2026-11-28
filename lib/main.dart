@@ -105,6 +105,15 @@ const _oursChatThemes = [
   _OursChatTheme('meadow','مرج','Meadow','عشب أخضر وشمس صباحية ولمسات ليمونية','Fresh meadow green and morning sunshine',
     Color(0xFF142019),Color(0xFF79A83C),Color(0xFF3E5932),Color(0xFFD9F49B),
     [Color(0xFFA2C94C),Color(0xFF48A878)],[Color(0xFF526B40),Color(0xFF2D422B)],Icons.grass_rounded),
+  _OursChatTheme('aurora','شفق قطبي','Aurora','أضواء الشفق بين الأخضر والتركواز والأزرق','Northern lights in emerald, teal and blue',
+    Color(0xFF0A1D27),Color(0xFF258F83),Color(0xFF204B5B),Color(0xFFB7FFE6),
+    [Color(0xFF36C6A0),Color(0xFF4779C8)],[Color(0xFF286B69),Color(0xFF193B4B)],Icons.auto_awesome_rounded),
+  _OursChatTheme('clear_sky','سماء صافية','Clear Sky','زرقة سماوية هادئة وسحب بيضاء ناعمة','Calm sky blue with soft cloud tones',
+    Color(0xFF101F32),Color(0xFF4D91C9),Color(0xFF304F70),Color(0xFFCBEAFF),
+    [Color(0xFF72B9E8),Color(0xFF4C82C8)],[Color(0xFF456987),Color(0xFF293F5B)],Icons.cloud_rounded),
+  _OursChatTheme('violet_night','ليلة بنفسجية','Violet Night','ليل بنفسجي عميق مع لمعات نجمية','Deep violet night with sparkling starlight',
+    Color(0xFF171329),Color(0xFF7652B8),Color(0xFF40345F),Color(0xFFE0CEFF),
+    [Color(0xFF986BE0),Color(0xFF5B4AA8)],[Color(0xFF594875),Color(0xFF302743)],Icons.nights_stay_rounded),
 ];
 
 // ==================== APP PREFERENCES ====================
