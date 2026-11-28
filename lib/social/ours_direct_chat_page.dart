@@ -194,54 +194,38 @@ class _MessageBubbleClipper extends CustomClipper<Path> {
  Path getClip(Size size) {
   final w=size.width,h=size.height;
   if(w<=0||h<=0)return Path();
-
-  // Build the message body as a clean rounded rectangle, then add a small
-  // lower-corner tail. The body bottom remains a single horizontal segment.
-  final radius=math.min(27.0,h*.50);
-  final tailWidth=math.min(15.0,math.max(10.0,w*.10));
-  final tailDepth=math.min(10.0,h*.22);
-  final bodyLeft=tailOnLeft?tailWidth:0.0;
-  final bodyRight=tailOnLeft?w: w-tailWidth;
-  final p=Path();
-
+  // Reserve a real strip for the tail so the message body never collapses.
+  final tailWidth=math.min(12.0,math.max(8.0,w*.12));
+  final left=tailOnLeft?tailWidth:0.0;
+  final right=tailOnLeft?w:w-tailWidth;
+  final bodyWidth=math.max(1.0,right-left);
+  final radius=math.min(22.0,math.min(h*.5,bodyWidth*.5));
+  final body=Path()..addRRect(RRect.fromRectAndRadius(
+   Rect.fromLTRB(left,0,right,h),Radius.circular(radius),
+  ));
+  // A compact curved tail, unioned with the rounded body. It stays inside
+  // the clip bounds and cannot cut into short messages.
+  final tailHeight=math.min(13.0,h*.38);
+  final tail=Path();
   if(tailOnLeft){
-   p.moveTo(bodyLeft+radius,0);
-   p.lineTo(bodyRight-radius,0);
-   p.quadraticBezierTo(bodyRight,0,bodyRight,radius);
-   p.lineTo(bodyRight,h-radius);
-   p.quadraticBezierTo(bodyRight,h,bodyRight-radius,h);
-   // Straight bottom edge, untouched by the tail curves.
-   p.lineTo(bodyLeft+radius,h);
-   p.cubicTo(bodyLeft+radius*.48,h,bodyLeft+radius*.12,h-tailDepth*.18,bodyLeft,h-tailDepth*.55);
-   p.cubicTo(bodyLeft-tailWidth*.20,h-tailDepth*.22,0,h-tailDepth*.58,0,h-tailDepth);
-   p.cubicTo(tailWidth*.18,h-tailDepth*.72,bodyLeft-tailWidth*.08,h-tailDepth*.30,bodyLeft,h-tailDepth*.12);
-   p.lineTo(bodyLeft,h-radius);
-   p.quadraticBezierTo(bodyLeft,h-radius*.48,bodyLeft+radius*.48,h-radius*.18);
-   p.quadraticBezierTo(bodyLeft+radius,h,bodyLeft+radius,h);
-   p.close();
+   tail.moveTo(left+math.min(radius*.35,5.0),h-tailHeight*.72);
+   tail.cubicTo(left-tailWidth*.08,h-tailHeight*.30,tailWidth*.12,h-tailHeight*.08,0,h);
+   tail.cubicTo(tailWidth*.42,h,left+tailWidth*.34,h-tailHeight*.18,left+tailWidth*.78,h-tailHeight*.52);
+   tail.close();
   }else{
-   p.moveTo(bodyLeft+radius,0);
-   p.lineTo(bodyRight-radius,0);
-   p.quadraticBezierTo(bodyRight,0,bodyRight,radius);
-   p.lineTo(bodyRight,h-radius);
-   p.quadraticBezierTo(bodyRight,h,bodyRight-radius,h);
-   p.lineTo(bodyLeft+radius,h);
-   p.quadraticBezierTo(bodyLeft,h,bodyLeft,h-radius);
-   p.lineTo(bodyLeft,h-tailDepth*.55);
-   p.cubicTo(bodyLeft+tailWidth*.20,h-tailDepth*.22,w,h-tailDepth*.58,w,h-tailDepth);
-   p.cubicTo(w-tailWidth*.18,h-tailDepth*.72,bodyRight+tailWidth*.08,h-tailDepth*.30,bodyRight,h-tailDepth*.12);
-   p.lineTo(bodyRight,h-radius);
-   p.quadraticBezierTo(bodyRight,h-radius*.48,bodyRight-radius*.48,h-radius*.18);
-   p.quadraticBezierTo(bodyRight-radius,h,bodyRight-radius,h);
-   p.close();
+   tail.moveTo(right-math.min(radius*.35,5.0),h-tailHeight*.72);
+   tail.cubicTo(right+tailWidth*.08,h-tailHeight*.30,w-tailWidth*.12,h-tailHeight*.08,w,h);
+   tail.cubicTo(w-tailWidth*.42,h,right-tailWidth*.34,h-tailHeight*.18,right-tailWidth*.78,h-tailHeight*.52);
+   tail.close();
   }
-  return p;
+  return Path.combine(PathOperation.union,body,tail);
  }
 
  @override
  bool shouldReclip(covariant _MessageBubbleClipper oldClipper)=>
   oldClipper.tailOnLeft!=tailOnLeft;
 }
+
 class _OursUnifiedMessageSurface extends StatelessWidget {
  final _ChatSkin skin; final bool isMine,isVisual; final Widget child;
  const _OursUnifiedMessageSurface({required this.skin,required this.isMine,required this.child,this.isVisual=false});
@@ -250,7 +234,7 @@ class _OursUnifiedMessageSurface extends StatelessWidget {
    ?Directionality.of(context)==ui.TextDirection.rtl
    :Directionality.of(context)==ui.TextDirection.ltr;
   final content=Container(
-   constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),
+   constraints:BoxConstraints(minWidth:isVisual?0:76,maxWidth:MediaQuery.of(context).size.width*.78),
    padding:isVisual?EdgeInsets.zero:const EdgeInsets.fromLTRB(13,8,13,8),
    decoration:isVisual?const BoxDecoration():BoxDecoration(
     color:isMine?skin.mine:skin.partner,
@@ -1500,7 +1484,7 @@ String _time(dynamic v){final d=DateTime.tryParse(v?.toString()??'')?.toLocal();
          if(isReplySwipeable&&_draggingReplyMessageId==m['id'].toString())
           Positioned(left:swipeSign>0?5:null,right:swipeSign<0?5:null,child:Opacity(opacity:(_replyDragOffset/58).clamp(0.0,1.0).toDouble(),child:Transform.scale(scale:(.72+(_replyDragOffset/58).clamp(0.0,1.0).toDouble()*.28),child:Icon(Icons.reply_rounded,color:skin.accent,size:22)))),
          Transform.translate(offset:Offset((_draggingReplyMessageId==m['id'].toString()?_replyDragOffset*swipeSign:0),0),child:Padding(padding:const EdgeInsets.fromLTRB(0,7,0,25),child:Align(alignment:mine?AlignmentDirectional.centerEnd:AlignmentDirectional.centerStart,child:PhysicalShape(clipper:isOutlinedMedia?_RoundedMediaMessageClipper():(isVisualMessage?_MediaMessageClipper():_MessageBubbleClipper(tailOnLeft:mine?Directionality.of(context)==ui.TextDirection.rtl:Directionality.of(context)==ui.TextDirection.ltr)),color:isOutlinedMedia||isVisualMessage?Colors.transparent:(mine?skin.mine:skin.partner),elevation:isOutlinedMedia||isVisualMessage?0:2.5,shadowColor:Colors.black.withValues(alpha:.22),clipBehavior:Clip.antiAlias,child:Container(
-         constraints:BoxConstraints(minWidth:isOutlinedMedia||isVisualMessage?0:64,maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(14,10,14,12)),
+         constraints:BoxConstraints(minWidth:isOutlinedMedia||isVisualMessage?0:72,maxWidth:MediaQuery.of(context).size.width*.78),padding:isOutlinedMedia?EdgeInsets.zero: (isVisualMessage?const EdgeInsets.all(2):const EdgeInsets.fromLTRB(14,10,14,12)),
          decoration:BoxDecoration(color:isVisualMessage?Colors.transparent:(highlightedMessageId==m['id'].toString()?Color.lerp(skin.accent,skin.mine,.55):(mine?skin.mine:skin.partner)),border:Border.all(color:highlightedMessageId==m['id'].toString()?skin.accent:(isOutlinedMedia?const Color(0xFFB9B4C6).withValues(alpha:.58):(mine?skin.accent.withValues(alpha:.20):_lavender.withValues(alpha:.14))),width:highlightedMessageId==m['id'].toString()?1.5:(isOutlinedMedia ? .8 : (isVisualMessage ? 0 : .55))),borderRadius:isOutlinedMedia?BorderRadius.circular(18):(isVisualMessage?BorderRadius.circular(15):null)),
          child:IntrinsicWidth(child:Column(crossAxisAlignment:CrossAxisAlignment.center,mainAxisSize:MainAxisSize.min,children:[
 
