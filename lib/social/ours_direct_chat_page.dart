@@ -69,201 +69,247 @@ class _ChatAtmospherePainter extends CustomPainter {
 
  @override
  void paint(Canvas canvas, Size size) {
-  final rect=Offset.zero & size;
+  if(size.isEmpty)return;
+  final rect=Offset.zero&size;
+  final accent=skin.accent;
+  final palette=Color.lerp(skin.bg,skin.partner,.52)!;
   canvas.drawRect(rect,Paint()..shader=LinearGradient(
    begin:Alignment.topLeft,end:Alignment.bottomRight,
-   colors:[skin.bg,skin.partner.withValues(alpha:.88),skin.bg],
+   colors:[skin.bg,palette,skin.bg],
   ).createShader(rect));
-  final accent=skin.accent;
-  final soft=Paint()..color=accent.withValues(alpha:.10)..style=PaintingStyle.fill;
-  final line=Paint()..color=accent.withValues(alpha:.16)..style=PaintingStyle.stroke..strokeWidth=1.2;
-  // Theme-specific illustrated scenes: layered silhouettes and recognizable motifs.
-  void drawHeart(Offset c,double scale,Color color){
-   final p=Path()..moveTo(c.dx,c.dy+scale*.42)..c.cubicTo(c.dx-scale*.85,c.dy-scale*.12,c.dx-scale*.55,c.dy-scale*.82,c.dx,c.dy-scale*.36)..c.cubicTo(c.dx+scale*.55,c.dy-scale*.82,c.dx+scale*.85,c.dy-scale*.12,c.dx,c.dy+scale*.42)..close();
+  void glow(Offset center,double radius,Color color,double opacity){
+   canvas.drawCircle(center,radius,Paint()..shader=RadialGradient(colors:[color.withValues(alpha:opacity),color.withValues(alpha:0)]).createShader(Rect.fromCircle(center:center,radius:radius)));
+  }
+  void heart(Offset c,double r,Color color){
+   final p=Path()..moveTo(c.dx,c.dy+r*.42)
+    ..cubicTo(c.dx-r*.95,c.dy-r*.12,c.dx-r*.58,c.dy-r*.86,c.dx,c.dy-r*.38)
+    ..c.cubicTo(c.dx+r*.58,c.dy-r*.86,c.dx+r*.95,c.dy-r*.12,c.dx,c.dy+r*.42)..close();
    canvas.drawPath(p,Paint()..color=color);
   }
-  void drawFlower(Offset c,double r,Color color){
-   for(var petal=0;petal<6;petal++){canvas.save();canvas.translate(c.dx,c.dy);canvas.rotate(petal*math.pi/3);canvas.drawOval(Rect.fromCenter(center:Offset(0,-r*.58),width:r*.54,height:r*.95),Paint()..color=color);canvas.restore();}
-   canvas.drawCircle(c,r*.2,Paint()..color=accent.withValues(alpha:.25));
+  void flower(Offset c,double r,Color color,{Color center=const Color(0xFFFFD98B)}){
+   for(var k=0;k<6;k++){
+    canvas.save();canvas.translate(c.dx,c.dy);canvas.rotate(k*math.pi/3);
+    canvas.drawOval(Rect.fromCenter(center:Offset(0,-r*.62),width:r*.55,height:r*.88),Paint()..color=color);
+    canvas.restore();
+   }
+   canvas.drawCircle(c,r*.22,Paint()..color=center);
   }
+  void fir(Offset c,double h,Color color){
+   final trunk=Rect.fromCenter(center:Offset(c.dx,c.dy+h*.32),width:h*.055,height:h*.55);
+   canvas.drawRect(trunk,Paint()..color=Color.lerp(color,Colors.black,.28)!);
+   for(var tier=0;tier<4;tier++){
+    final y=c.dy-h*.48+tier*h*.27;
+    final w=h*(.30+tier*.10);
+    final p=Path()..moveTo(c.dx,y)..lineTo(c.dx-w,y+h*.30)..quadraticBezierTo(c.dx,y+h*.23,c.dx+w,y+h*.30)..close();
+    canvas.drawPath(p,Paint()..color=Color.lerp(color,Colors.black,tier*.055)!);
+   }
+  }
+  void cloud(Offset c,double w,double h,Color color){
+   final p=Path()..addOval(Rect.fromCenter(center:Offset(c.dx-w*.22,c.dy),width:w*.55,height:h))
+    ..addOval(Rect.fromCenter(center:Offset(c.dx,c.dy-h*.14),width:w*.62,height:h*1.2))
+    ..addOval(Rect.fromCenter(center:Offset(c.dx+w*.22,c.dy),width:w*.55,height:h))
+    ..addRect(Rect.fromLTRB(c.dx-w*.4,c.dy-h*.1,c.dx+w*.4,c.dy+h*.38));
+   canvas.drawPath(p,Paint()..color=color);
+  }
+  void star(Offset c,double r,Color color){
+   final p=Path()..moveTo(c.dx,c.dy-r)..quadraticBezierTo(c.dx+r*.18,c.dy-r*.18,c.dx+r,c.dy)
+    ..quadraticBezierTo(c.dx+r*.18,c.dy+r*.18,c.dx,c.dy+r)
+    ..quadraticBezierTo(c.dx-r*.18,c.dy+r*.18,c.dx-r,c.dy)
+    ..quadraticBezierTo(c.dx-r*.18,c.dy-r*.18,c.dx,c.dy-r)..close();
+   canvas.drawPath(p,Paint()..color=color);
+  }
+  void hill(double y,Color color,double amplitude,double phase){
+   final p=Path()..moveTo(0,size.height*y)
+    ..cubicTo(size.width*.22,size.height*(y-amplitude),size.width*.72,size.height*(y+amplitude*.55),size.width,size.height*(y-amplitude*.2))
+    ..lineTo(size.width,size.height)..lineTo(0,size.height)..close();
+   canvas.drawPath(p,Paint()..color=color);
+  }
+  // Atmospheric lighting is stronger at the edges so message text remains clear.
+  glow(Offset(size.width*.16,size.height*.12),size.width*.55,accent,.075);
+  glow(Offset(size.width*.88,size.height*.82),size.width*.52,skin.partner,.09);
+
   switch(skin.id){
    case 'forest':
-    // Misty forest layers, fir-tree silhouettes and ground ferns.
+    glow(Offset(size.width*.52,size.height*.58),size.width*.65,const Color(0xFF4E9871),.12);
+    hill(.70,const Color(0xFF09251B).withValues(alpha:.58),.12,.1);
+    hill(.83,const Color(0xFF071811).withValues(alpha:.62),.09,.4);
     for(var layer=0;layer<3;layer++){
-     final y=size.height*(.48+layer*.18);
-     final shade=[Color(0xFF173B2C),Color(0xFF102B22),Color(0xFF091B15)][layer].withValues(alpha:.30+layer*.09);
-     for(var i=0;i<9;i++){
-      final x=size.width*((i*131+layer*43)%997)/997;
-      final height=size.height*(.22+((i*7)%5)*.045);
-      final trunk=Path()..moveTo(x-size.width*.025,y+height*.12)..lineTo(x+size.width*.025,y+height*.12)..lineTo(x+size.width*.008,y-height)..lineTo(x-size.width*.008,y-height)..close();
-      canvas.drawPath(trunk,Paint()..color=shade);
-      for(var tier=0;tier<3;tier++){
-       final tree=Path()..moveTo(x,y-height*(.48+tier*.22))..lineTo(x-height*.22,y-height*(.20+tier*.22))..lineTo(x+height*.22,y-height*(.20+tier*.22))..close();
-       canvas.drawPath(tree,Paint()..color=shade);
-      }
+     final y=size.height*(.52+layer*.18);
+     final h=size.height*(.32+layer*.08);
+     final shade=[const Color(0xFF26533B),const Color(0xFF153B2B),const Color(0xFF0A2118)][layer].withValues(alpha:.43+layer*.08);
+     for(var i=0;i<10;i++){
+      final x=size.width*((i*127+layer*43)%997)/997;
+      fir(Offset(x,y),h*(.72+((i*5)%5)*.12),shade);
      }
     }
-    for(var i=0;i<26;i++){final x=size.width*(i/25),y=size.height*(.82+math.sin(i*.65)*.035);canvas.drawLine(Offset(x,y),Offset(x+size.width*.02,y-size.height*.06),Paint()..color=accent.withValues(alpha:.11)..strokeWidth:1.6);}
+    // Soft fog bands between the forest silhouettes.
+    for(var band=0;band<3;band++){
+     final y=size.height*(.48+band*.13);
+     canvas.drawRect(Rect.fromLTRB(0,y,size.width,y+size.height*.045),Paint()..shader=LinearGradient(colors:[Colors.white.withValues(alpha:.015),const Color(0xFF9ACFB2).withValues(alpha:.055),Colors.white.withValues(alpha:.012)]).createShader(Rect.fromLTRB(0,y,size.width,y+size.height*.045)));
+    }
+    for(var i=0;i<34;i++){
+     final x=size.width*((i*53)%997)/997,y=size.height*(.77+((i*19)%20)/100);
+     final leaf=Path()..moveTo(x,y)..quadraticBezierTo(x-size.width*.035,y-size.height*.025,x-size.width*.018,y-size.height*.055)..quadraticBezierTo(x+size.width*.014,y-size.height*.04,x,y)..close();
+     canvas.drawPath(leaf,Paint()..color=const Color(0xFF79B68A).withValues(alpha:.12));
+    }
     break;
    case 'wildflower':
-    // Wildflower meadow with stems, leaves and clusters of delicate blossoms.
-    for(var i=0;i<31;i++){
-     final x=size.width*((i*79)%997)/997,y=size.height*(.58+((i*31)%39)/100),h=size.height*(.07+((i*13)%13)/100);
-     canvas.drawLine(Offset(x,y),Offset(x-size.width*.008,y-h),Paint()..color=Color(0xFF638A55).withValues(alpha:.22)..strokeWidth:1.4);
-     for(var leaf=0;leaf<2;leaf++){final lx=x+(leaf==0?-1:1)*size.width*.018;canvas.drawOval(Rect.fromCenter(center:Offset(lx,y-h*.48),width:size.width*.035,height:h*.24),Paint()..color=Color(0xFF5D8C63).withValues(alpha:.13));}
-     drawFlower(Offset(x-size.width*.008,y-h),3.2+((i*3)%4),[Color(0xFFE7C7F3),Color(0xFFFFD9A5),Color(0xFFFFC4D8),Color(0xFFBFD9FF)][i%4].withValues(alpha:.22));
+    hill(.73,const Color(0xFF263B2D).withValues(alpha:.35),.10,.3);
+    hill(.86,const Color(0xFF16291F).withValues(alpha:.55),.08,.6);
+    for(var i=0;i<44;i++){
+     final x=size.width*((i*71)%997)/997,y=size.height*(.65+((i*37)%34)/100),h=size.height*(.055+((i*13)%15)/100);
+     canvas.drawLine(Offset(x,y),Offset(x-size.width*.008,y-h),Paint()..color=const Color(0xFF8CB17C).withValues(alpha:.22)..strokeWidth:1.3);
+     if(i%2==0)canvas.drawOval(Rect.fromCenter(center:Offset(x+size.width*.012,y-h*.52),width:size.width*.027,height:h*.24),Paint()..color=const Color(0xFF75A77C).withValues(alpha:.18));
+     flower(Offset(x-size.width*.008,y-h),3.5+(i%5)*.8,[const Color(0xFFE8C9F7),const Color(0xFFFFD4A1),const Color(0xFFFFBFD7),const Color(0xFFC9DDFF)][i%4].withValues(alpha:.42));
     }
     break;
    case 'love':
-    // Soft romantic heart motifs, tiny sparkles, and drifting rose petals.
-    for(var i=0;i<22;i++){
-     final x=size.width*((i*113)%997)/997,y=size.height*((i*157)%991)/991;
-     final sc=7.0+(i%5)*3.5;
-     drawHeart(Offset(x,y),sc,accent.withValues(alpha:.055+(i%4)*.018));
+    glow(Offset(size.width*.5,size.height*.4),size.width*.75,const Color(0xFFBD4778),.10);
+    for(var i=0;i<26;i++){
+     final x=size.width*((i*113)%997)/997,y=size.height*((i*157)%991)/991,r=8.0+(i%6)*5;
+     heart(Offset(x,y),r,accent.withValues(alpha:.10+(i%4)*.018));
     }
-    for(var i=0;i<17;i++){final x=size.width*((i*59)%991)/991,y=size.height*((i*89)%997)/997;canvas.save();canvas.translate(x,y);canvas.rotate(i*.73);canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:6,height:14),Paint()..color=Color(0xFFEFA0C2).withValues(alpha:.11));canvas.restore();}
+    for(var i=0;i<30;i++){
+     final x=size.width*((i*59)%991)/991,y=size.height*((i*89)%997)/997;
+     canvas.save();canvas.translate(x,y);canvas.rotate(i*.61);
+     canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:5+(i%3)*2,height:12+(i%4)*3),Paint()..color=const Color(0xFFEFA0C2).withValues(alpha:.20));
+     canvas.restore();
+    }
+    for(var i=0;i<8;i++)star(Offset(size.width*((i*139)%997)/997,size.height*((i*79)%991)/991),3.5,accent.withValues(alpha:.28));
     break;
    case 'starlight':
-    // Night sky, layered stars, crescent moon and fine constellations.
-    final moonCenter=Offset(size.width*.78,size.height*.18);
-    canvas.drawCircle(moonCenter,size.width*.12,Paint()..color=Color(0xFFFFE8B2).withValues(alpha:.13));
-    canvas.drawCircle(Offset(moonCenter.dx+size.width*.045,moonCenter.dy-size.width*.035),size.width*.11,Paint()..color=skin.bg);
-    final stars=[Offset(.14,.13),Offset(.28,.25),Offset(.42,.16),Offset(.63,.27),Offset(.81,.39),Offset(.92,.12),Offset(.55,.52),Offset(.18,.62)];
-    final constellation=Paint()..color=accent.withValues(alpha:.16)..strokeWidth:1;
-    for(var i=0;i<stars.length-1;i++){final a=stars[i],b=stars[(i+1)%stars.length];canvas.drawLine(Offset(a.dx*size.width,a.dy*size.height),Offset(b.dx*size.width,b.dy*size.height),constellation);}
-    for(var i=0;i<90;i++){final x=size.width*((i*71)%997)/997,y=size.height*((i*137)%991)/991;final r=1.0+(i%4)*.65;canvas.drawCircle(Offset(x,y),r,Paint()..color=Color(0xFFDCE7FF).withValues(alpha:.14+(i%3)*.035));}
-    for(final p in stars){final c=Offset(p.dx*size.width,p.dy*size.height);canvas.drawCircle(c,2.5,Paint()..color=accent.withValues(alpha:.24));canvas.drawLine(c-Offset(4,0),c+Offset(4,0),constellation);canvas.drawLine(c-Offset(0,4),c+Offset(0,4),constellation);}
+    glow(Offset(size.width*.76,size.height*.18),size.width*.25,const Color(0xFFFFE8B2),.18);
+    final moon=Offset(size.width*.77,size.height*.17);
+    canvas.drawCircle(moon,size.width*.095,Paint()..color=const Color(0xFFFFE9B9).withValues(alpha:.22));
+    canvas.drawCircle(Offset(moon.dx+size.width*.04,moon.dy-size.width*.025),size.width*.086,Paint()..color=skin.bg);
+    final constellation=[Offset(.12,.15),Offset(.27,.29),Offset(.41,.19),Offset(.56,.34),Offset(.73,.27),Offset(.89,.12),Offset(.81,.52),Offset(.58,.59)];
+    final line=Paint()..color=accent.withValues(alpha:.19)..strokeWidth:1.0;
+    for(var i=0;i<constellation.length-1;i++){final a=constellation[i],b=constellation[i+1];canvas.drawLine(Offset(a.dx*size.width,a.dy*size.height),Offset(b.dx*size.width,b.dy*size.height),line);}
+    for(var i=0;i<120;i++){
+     final x=size.width*((i*71)%997)/997,y=size.height*((i*137)%991)/991;
+     final r=1.0+(i%4)*.7;canvas.drawCircle(Offset(x,y),r,Paint()..color=const Color(0xFFDCE7FF).withValues(alpha:.18+(i%3)*.04));
+     if(i%11==0)star(Offset(x,y),r*2.4,accent.withValues(alpha:.27));
+    }
+    for(final p in constellation)star(Offset(p.dx*size.width,p.dy*size.height),3.4,accent.withValues(alpha:.32));
     break;
    case 'winter':
-    // Frosted snowflakes and softly layered snow banks.
-    for(var i=0;i<34;i++){final x=size.width*((i*83)%997)/997,y=size.height*((i*149)%991)/991,r=3.0+(i%5)*2.0;for(var arm=0;arm<6;arm++){final a=arm*math.pi/3;canvas.drawLine(Offset(x,y),Offset(x+math.cos(a)*r,y+math.sin(a)*r),Paint()..color=accent.withValues(alpha:.13)..strokeWidth:1.0);}}
-    for(var layer=0;layer<3;layer++){final p=Path()..moveTo(0,size.height*(.78+layer*.08))..quadraticBezierTo(size.width*.4,size.height*(.64+layer*.08),size.width,size.height*(.8+layer*.07))..lineTo(size.width,size.height)..lineTo(0,size.height)..close();canvas.drawPath(p,Paint()..color=Color(0xFF8AC7E5).withValues(alpha:.025+layer*.02));}
+    hill(.78,const Color(0xFF8AC7E5).withValues(alpha:.10),.10,.2);
+    hill(.88,const Color(0xFFB5DDF0).withValues(alpha:.12),.08,.5);
+    for(var i=0;i<42;i++){
+     final x=size.width*((i*83)%997)/997,y=size.height*((i*149)%991)/991,r=3.0+(i%6)*2.0;
+     for(var arm=0;arm<6;arm++){final a=arm*math.pi/3;canvas.drawLine(Offset(x,y),Offset(x+math.cos(a)*r,y+math.sin(a)*r),Paint()..color=accent.withValues(alpha:.23)..strokeWidth:1.0);}
+    }
     break;
    case 'coffee':
-    // Warm café atmosphere: steam curls and scattered coffee beans.
-    final cup=RRect.fromRectAndRadius(Rect.fromCenter(center:Offset(size.width*.78,size.height*.23),width:size.width*.20,height:size.height*.10),const Radius.circular(12));
-    canvas.drawRRect(cup,Paint()..color=accent.withValues(alpha:.08)..style=PaintingStyle.stroke..strokeWidth:2);
-    canvas.drawCircle(Offset(size.width*.88,size.height*.23),size.width*.035,Paint()..color=accent.withValues(alpha:.06)..style=PaintingStyle.stroke..strokeWidth:2);
-    for(var i=0;i<4;i++){final steam=Path()..moveTo(size.width*(.70+i*.035),size.height*.13)..cubicTo(size.width*(.66+i*.035),size.height*.09,size.width*(.74+i*.035),size.height*.06,size.width*(.70+i*.035),size.height*.03);canvas.drawPath(steam,Paint()..color=accent.withValues(alpha:.13)..style=PaintingStyle.stroke..strokeWidth:2);}
-    for(var i=0;i<24;i++){final x=size.width*((i*67)%997)/997,y=size.height*((i*127)%991)/991;canvas.save();canvas.translate(x,y);canvas.rotate(i*.62);canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:8,height:14),Paint()..color=accent.withValues(alpha:.07));canvas.drawLine(Offset(0,-5),Offset(0,5),line);canvas.restore();}
-    break;
-   case 'meadow':
-    // Golden grass, small daisies and rolling meadow contours.
-    for(var i=0;i<70;i++){final x=size.width*((i*37)%997)/997,y=size.height*(.65+((i*17)%34)/100),h=size.height*(.025+((i*11)%8)/100);canvas.drawLine(Offset(x,y),Offset(x+math.sin(i*.7)*size.width*.018,y-h),Paint()..color=accent.withValues(alpha:.12)..strokeWidth:1.3);}
-    for(var i=0;i<18;i++){final x=size.width*((i*79)%997)/997,y=size.height*(.69+((i*13)%26)/100);drawFlower(Offset(x,y-size.height*.04),4+(i%3),Color(0xFFFFE6B7).withValues(alpha:.16));}
-    break;
-   case 'clear_sky':
-    // Puffy clouds and a soft horizon.
-    for(var i=0;i<6;i++){final x=size.width*(.12+i*.17),y=size.height*(.17+(i%3)*.12);final p=Path()..addOval(Rect.fromCenter(center:Offset(x,y),width:size.width*.15,height:size.height*.06))..addOval(Rect.fromCenter(center:Offset(x-size.width*.04,y-size.height*.02),width:size.width*.08,height:size.height*.06))..addOval(Rect.fromCenter(center:Offset(x+size.width*.04,y-size.height*.015),width:size.width*.09,height:size.height*.07));canvas.drawPath(p,Paint()..color=accent.withValues(alpha:.07));}
-    for(var i=0;i<2;i++){final p=Path()..moveTo(0,size.height*(.72+i*.1))..quadraticBezierTo(size.width*.5,size.height*(.63+i*.12),size.width,size.height*(.73+i*.08));canvas.drawPath(p,Paint()..color=accent.withValues(alpha:.05+i*.025)..style=PaintingStyle.stroke..strokeWidth:16);}
-    break;
-   case 'lavender':
-    // Lavender stems with narrow purple florets.
-    for(var i=0;i<27;i++){final x=size.width*((i*73)%997)/997,y=size.height*(.84+((i*19)%14)/100),h=size.height*(.09+((i*7)%11)/100);canvas.drawLine(Offset(x,y),Offset(x-size.width*.01,y-h),Paint()..color=Color(0xFF65804D).withValues(alpha:.15)..strokeWidth:1.2);for(var j=0;j<5;j++){final fy=y-h+j*h*.16;canvas.drawOval(Rect.fromCenter(center:Offset(x-size.width*.008,fy),width:6,height:10),Paint()..color=Color(0xFFB9A2D5).withValues(alpha:.17));}}
-    break;
-   case 'sea':
-   case 'tropical':
-    // Layered sea waves and tropical leaves.
-    for(var layer=0;layer<5;layer++){final wave=Path()..moveTo(0,size.height*(.52+layer*.09))..cubicTo(size.width*.25,size.height*(.42+layer*.09),size.width*.72,size.height*(.62+layer*.08),size.width,size.height*(.48+layer*.09))..lineTo(size.width,size.height)..lineTo(0,size.height)..close();canvas.drawPath(wave,Paint()..color=(skin.id=='sea'?Color(0xFF2D9EBA):Color(0xFF1F8274)).withValues(alpha:.035+layer*.025));}
-    if(skin.id=='tropical'){for(var i=0;i<18;i++){final x=size.width*((i*61)%997)/997,y=size.height*((i*113)%991)/991;canvas.save();canvas.translate(x,y);canvas.rotate((i%9-4)*.22);final leaf=Path()..moveTo(0,0)..quadraticBezierTo(16,-34,48,-6)..quadraticBezierTo(20,12,0,0);canvas.drawPath(leaf,Paint()..color=accent.withValues(alpha:.07));canvas.restore();}}
-    break;
-   default:
-    break;
-  }
-  switch(skin.id){
-   case 'ours':
-    for(var i=0;i<5;i++){
-     final orbit=Rect.fromCenter(center:Offset(size.width*.5,size.height*.48),width:size.width*(.42+i*.10),height:size.height*(.18+i*.07));
-     canvas.drawOval(orbit,line..strokeWidth=1.0+i*.25);
+    glow(Offset(size.width*.76,size.height*.24),size.width*.33,const Color(0xFFD29A5D),.10);
+    final cup=RRect.fromRectAndRadius(Rect.fromCenter(center:Offset(size.width*.76,size.height*.26),width:size.width*.23,height:size.height*.12),const Radius.circular(14));
+    canvas.drawRRect(cup,Paint()..color=const Color(0xFFD6B48B).withValues(alpha:.18));
+    canvas.drawRRect(cup,Paint()..color=accent.withValues(alpha:.38)..style=PaintingStyle.stroke..strokeWidth:1.5);
+    canvas.drawCircle(Offset(size.width*.88,size.height*.26),size.width*.04,Paint()..color=accent.withValues(alpha:.22)..style=PaintingStyle.stroke..strokeWidth:2);
+    for(var i=0;i<4;i++){
+     final steam=Path()..moveTo(size.width*(.68+i*.035),size.height*.18)..cubicTo(size.width*(.65+i*.035),size.height*.13,size.width*(.73+i*.035),size.height*.09,size.width*(.69+i*.035),size.height*.04);
+     canvas.drawPath(steam,Paint()..color=accent.withValues(alpha:.20)..style=PaintingStyle.stroke..strokeWidth:2.1);
     }
     for(var i=0;i<36;i++){
-     final x=((i*67)%997)/997*size.width,y=((i*131)%991)/991*size.height;
-     canvas.drawCircle(Offset(x,y),1+(i%3)*.45,Paint()..color=accent.withValues(alpha:.12+(i%3)*.03));
-    }
-    break;
-   case 'aurora':
-    for(var i=0;i<4;i++){
-     final path=Path()..moveTo(-size.width*.1,size.height*(.20+i*.12))
-      ..cubicTo(size.width*.25,size.height*(.02+i*.12),size.width*.58,size.height*(.48+i*.08),size.width*1.12,size.height*(.16+i*.13));
-     canvas.drawPath(path,Paint()..color=[accent, const Color(0xFF6B8FE8),const Color(0xFF63C9B5),const Color(0xFF9D83D8)][i].withValues(alpha:.09)..style=PaintingStyle.stroke..strokeWidth=28.0+i*8.0..maskFilter=const MaskFilter.blur(BlurStyle.normal,18));
-    }
-    break;
-   case 'sunset':
-    canvas.drawCircle(Offset(size.width*.78,size.height*.16),size.width*.20,Paint()..shader=RadialGradient(colors:[accent.withValues(alpha:.34),accent.withValues(alpha:0)]).createShader(Rect.fromCircle(center:Offset(size.width*.78,size.height*.16),radius:size.width*.20)));
-    for(var i=0;i<3;i++){final sunsetPath=Path()..moveTo(0,size.height*(.56+i*.10))..quadraticBezierTo(size.width*.48,size.height*(.32+i*.10),size.width,size.height*(.58+i*.10))..lineTo(size.width,size.height)..lineTo(0,size.height)..close();canvas.drawPath(sunsetPath,Paint()..color=accent.withValues(alpha:.035+i*.018));}
-    break;
-   case 'sakura':
-    for(var i=0;i<34;i++){
-     final sx=((i*83)%997)/997*size.width,sy=((i*137)%991)/991*size.height;
-     canvas.save();canvas.translate(sx,sy);canvas.rotate((i%7)*.43);
-     canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:7.0+(i%3)*2.0,height:14.0+(i%4)*2.0),Paint()..color=accent.withValues(alpha:.13));
+     final x=size.width*((i*67)%997)/997,y=size.height*((i*127)%991)/991;
+     canvas.save();canvas.translate(x,y);canvas.rotate(i*.62);
+     canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:7+(i%4)*2,height:12+(i%3)*3),Paint()..color=accent.withValues(alpha:.10));
      canvas.restore();
     }
     break;
-   case 'ocean':
-    for(var i=0;i<28;i++){
-     final ox=((i*97)%991)/991*size.width,oy=((i*149)%983)/983*size.height,radius=4+(i%6)*3.0;
-     canvas.drawCircle(Offset(ox,oy),radius,line);
-     canvas.drawCircle(Offset(ox-radius*.28,oy-radius*.3),radius*.18,soft);
+   case 'meadow':
+    hill(.76,const Color(0xFF395A2C).withValues(alpha:.20),.10,.3);
+    hill(.87,const Color(0xFF1D3521).withValues(alpha:.42),.08,.7);
+    for(var i=0;i<70;i++){
+     final x=size.width*((i*37)%997)/997,y=size.height*(.67+((i*17)%31)/100),h=size.height*(.025+((i*11)%10)/100);
+     canvas.drawLine(Offset(x,y),Offset(x+math.sin(i*.7)*size.width*.018,y-h),Paint()..color=accent.withValues(alpha:.19)..strokeWidth:1.4);
     }
+    for(var i=0;i<26;i++){final x=size.width*((i*79)%997)/997,y=size.height*(.72+((i*13)%25)/100);flower(Offset(x,y-size.height*.04),4+(i%3),const Color(0xFFFFE6B7).withValues(alpha:.28));}
     break;
-   case 'forest':
-    for(var i=0;i<22;i++){
-     final fx=((i*89)%983)/983*size.width,fy=((i*127)%977)/977*size.height;
-     canvas.save();canvas.translate(fx,fy);canvas.rotate((i%8)*.38);
-     final leafPath=Path()..moveTo(0,0)..quadraticBezierTo(24,-28,36,0)..quadraticBezierTo(18,28,0,0);
-     canvas.drawPath(leafPath,Paint()..color=accent.withValues(alpha:.07));
-     canvas.drawLine(Offset.zero,Offset(30,0),line);canvas.restore();
-    }
-    break;
-   case 'cosmos':
-    for(var i=0;i<75;i++){
-     final cx=((i*73)%997)/997*size.width,cy=((i*139)%991)/991*size.height,starRadius=1+(i%3)*.65;
-     canvas.drawCircle(Offset(cx,cy),starRadius,Paint()..color=accent.withValues(alpha:.18+(i%4)*.07));
-    }
-    canvas.drawCircle(Offset(size.width*.76,size.height*.22),size.width*.24,line);
-    canvas.drawCircle(Offset(size.width*.76,size.height*.22),size.width*.31,line);
-    break;
-   case 'desert':
-    canvas.drawCircle(Offset(size.width*.78,size.height*.19),size.width*.13,Paint()..color=accent.withValues(alpha:.12));
-    for(var i=0;i<3;i++){final dunePath=Path()..moveTo(0,size.height*(.58+i*.10))..quadraticBezierTo(size.width*.42,size.height*(.40+i*.12),size.width,size.height*(.62+i*.09));canvas.drawPath(dunePath,Paint()..color=accent.withValues(alpha:.06+i*.025)..style=PaintingStyle.stroke..strokeWidth=22);}
-    break;
-   case 'neon':
-    for(var x=0.0;x<size.width;x+=34.0){canvas.drawLine(Offset(x,0),Offset(x,size.height),line);}
-    for(var y=0.0;y<size.height;y+=34.0){canvas.drawLine(Offset(0,y),Offset(size.width,y),line);}
-    canvas.drawLine(Offset(size.width*.08,size.height*.72),Offset(size.width*.92,size.height*.18),Paint()..color=accent.withValues(alpha:.15)..strokeWidth=3..maskFilter=const MaskFilter.blur(BlurStyle.normal,8));
-    break;
-   case 'rose':
-    for(var i=0;i<9;i++){final x=size.width*((i*113)%997)/997,y=size.height*((i*191)%991)/991;canvas.drawCircle(Offset(x,y),18+(i%3)*9,Paint()..color=accent.withValues(alpha:.035));}
-    for(var i=0;i<4;i++){canvas.drawOval(Rect.fromCenter(center:Offset(size.width*.72,size.height*.24),width:size.width*(.22+i*.08),height:size.height*(.09+i*.05)),line);}
-    break;
-   case 'mint':
-    for(var i=0;i<14;i++){final x=size.width*((i*67)%997)/997,y=size.height*((i*131)%991)/991;canvas.save();canvas.translate(x,y);canvas.rotate((i%5)*.45);canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:12+(i%3)*5,height:30+(i%4)*6),soft);canvas.restore();}
-    break;
-   case 'glacier':
-    for(var i=0;i<6;i++){final path=Path()..moveTo(0,size.height*(.18+i*.13))..cubicTo(size.width*.25,size.height*(.02+i*.13),size.width*.7,size.height*(.34+i*.08),size.width,size.height*(.14+i*.12));canvas.drawPath(path,line);}
-    break;
-   case 'ember':
-    for(var i=0;i<6;i++){canvas.drawCircle(Offset(size.width*.78,size.height*.23),size.width*(.08+i*.055),Paint()..color=accent.withValues(alpha:.045)..style=PaintingStyle.stroke..strokeWidth=2);}
-    break;
-   case 'mono':
-    for(var x=0.0;x<size.width;x+=38.0){canvas.drawLine(Offset(x,0),Offset(x,size.height),line);}
-    for(var y=0.0;y<size.height;y+=38.0){canvas.drawLine(Offset(0,y),Offset(size.width,y),line);}
+   case 'clear_sky':
+    glow(Offset(size.width*.78,size.height*.19),size.width*.27,const Color(0xFFFFE3A5),.12);
+    for(var i=0;i<9;i++){final x=size.width*(.08+i*.13),y=size.height*(.16+(i%4)*.11);cloud(Offset(x,y),size.width*(.14+(i%3)*.035),size.height*.055,Colors.white.withValues(alpha:.075));}
+    hill(.74,const Color(0xFF456E91).withValues(alpha:.08),.06,.5);
     break;
    case 'lavender':
-    for(var i=0;i<7;i++){canvas.drawOval(Rect.fromCenter(center:Offset(size.width*.34,size.height*.44),width:size.width*(.25+i*.09),height:size.height*(.12+i*.06)),line);}
+    hill(.84,const Color(0xFF3C2B50).withValues(alpha:.24),.08,.2);
+    for(var i=0;i<36;i++){
+     final x=size.width*((i*73)%997)/997,y=size.height*(.86+((i*19)%12)/100),h=size.height*(.10+((i*7)%13)/100);
+     canvas.drawLine(Offset(x,y),Offset(x-size.width*.01,y-h),Paint()..color=const Color(0xFF728B5A).withValues(alpha:.23)..strokeWidth:1.3);
+     for(var j=0;j<6;j++){final fy=y-h+j*h*.13;canvas.drawOval(Rect.fromCenter(center:Offset(x-size.width*.008,fy),width:6,height:11),Paint()..color=const Color(0xFFB9A2D5).withValues(alpha:.30));}
+    }
     break;
-   case 'candy':
-    for(var i=0;i<7;i++){final x=size.width*((i*139)%997)/997,y=size.height*((i*83)%991)/991;canvas.drawCircle(Offset(x,y),20+(i%3)*12,soft);}
+   case 'sea':
+    glow(Offset(size.width*.52,size.height*.55),size.width*.55,const Color(0xFF3DC6D1),.11);
+    for(var layer=0;layer<6;layer++){
+     final y=size.height*(.50+layer*.075);
+     final wave=Path()..moveTo(0,y)..cubicTo(size.width*.22,y-size.height*.05,size.width*.62,y+size.height*.04,size.width,y-size.height*.035)..lineTo(size.width,size.height)..lineTo(0,size.height)..close();
+     canvas.drawPath(wave,Paint()..color=Color.lerp(const Color(0xFF117A9C),const Color(0xFF05283B),layer/6)!.withValues(alpha:.11+layer*.025));
+     final highlight=Path()..moveTo(size.width*.08,y)..quadraticBezierTo(size.width*.42,y-size.height*.025,size.width*.75,y+size.height*.01);
+     canvas.drawPath(highlight,Paint()..color=accent.withValues(alpha:.16)..style=PaintingStyle.stroke..strokeWidth:1.5);
+    }
+    for(var i=0;i<22;i++){final x=size.width*((i*83)%997)/997,y=size.height*((i*137)%991)/991;canvas.drawCircle(Offset(x,y),2+(i%4),Paint()..color=accent.withValues(alpha:.09));}
+    break;
+   case 'tropical':
+    glow(Offset(size.width*.75,size.height*.20),size.width*.35,const Color(0xFFFFD27E),.10);
+    for(var i=0;i<24;i++){
+     final x=size.width*((i*61)%997)/997,y=size.height*((i*113)%991)/991;
+     canvas.save();canvas.translate(x,y);canvas.rotate((i%9-4)*.22);
+     final leaf=Path()..moveTo(0,0)..quadraticBezierTo(size.width*.04,-size.height*.07,size.width*.12,-size.height*.018)..quadraticBezierTo(size.width*.05,size.height*.018,0,0);
+     canvas.drawPath(leaf,Paint()..color=accent.withValues(alpha:.15));
+     canvas.drawLine(Offset.zero,Offset(size.width*.10,-size.height*.015),Paint()..color=accent.withValues(alpha:.12)..strokeWidth:1);
+     canvas.restore();
+    }
+    for(var layer=0;layer<4;layer++){final p=Path()..moveTo(0,size.height*(.56+layer*.08))..cubicTo(size.width*.2,size.height*(.48+layer*.08),size.width*.68,size.height*(.63+layer*.07),size.width,size.height*(.53+layer*.08))..lineTo(size.width,size.height)..lineTo(0,size.height)..close();canvas.drawPath(p,Paint()..color=const Color(0xFF168F85).withValues(alpha:.055+layer*.018));}
+    break;
+   case 'aurora':
+    glow(Offset(size.width*.5,size.height*.25),size.width*.55,const Color(0xFF58D4B5),.12);
+    for(var i=0;i<5;i++){
+     final p=Path()..moveTo(-size.width*.12,size.height*(.12+i*.09))
+      ..cubicTo(size.width*.2,size.height*(.02+i*.11),size.width*.57,size.height*(.45+i*.08),size.width*1.12,size.height*(.11+i*.14));
+     canvas.drawPath(p,Paint()..color=[accent,const Color(0xFF70BCEB),const Color(0xFF66E0B9),const Color(0xFF9D83D8),const Color(0xFF4FA9C7)][i].withValues(alpha:.13)..style=PaintingStyle.stroke..strokeWidth:24.0+i*9.0..maskFilter=const MaskFilter.blur(BlurStyle.normal,16));
+    }
+    for(var i=0;i<55;i++){final x=size.width*((i*71)%997)/997,y=size.height*((i*137)%991)/991;star(Offset(x,y),1.8+(i%3),accent.withValues(alpha:.16));}
+    break;
+   case 'sunset':
+    glow(Offset(size.width*.78,size.height*.18),size.width*.28,const Color(0xFFFFB46C),.18);
+    canvas.drawCircle(Offset(size.width*.78,size.height*.19),size.width*.14,Paint()..color=const Color(0xFFFFC27C).withValues(alpha:.16));
+    hill(.66,const Color(0xFF6B3D3A).withValues(alpha:.18),.09,.1);
+    hill(.78,const Color(0xFF3C252B).withValues(alpha:.26),.08,.6);
+    for(var i=0;i<7;i++){final y=size.height*(.25+i*.045);canvas.drawLine(Offset(size.width*.65,y),Offset(size.width*.91,y),Paint()..color=accent.withValues(alpha:.10)..strokeWidth:1.2);}
+    break;
+   case 'sakura':
+    glow(Offset(size.width*.25,size.height*.15),size.width*.32,const Color(0xFFFFB5D4),.10);
+    for(var i=0;i<3;i++){
+     final branch=Path()..moveTo(size.width*(.04+i*.08),size.height*(.08+i*.13))..quadraticBezierTo(size.width*.35,size.height*(.22+i*.11),size.width*.68,size.height*(.06+i*.18))..quadraticBezierTo(size.width*.85,size.height*(.13+i*.14),size.width*.97,size.height*(.29+i*.11));
+     canvas.drawPath(branch,Paint()..color=const Color(0xFF6E465D).withValues(alpha:.24)..style=PaintingStyle.stroke..strokeWidth:3.0);
+    }
+    for(var i=0;i<45;i++){
+     final x=size.width*((i*83)%997)/997,y=size.height*((i*137)%991)/991;
+     canvas.save();canvas.translate(x,y);canvas.rotate(i*.41);
+     canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:6+(i%3)*2,height:12+(i%4)*2),Paint()..color=const Color(0xFFFFC6DF).withValues(alpha:.26));
+     canvas.restore();
+    }
+    break;
+   case 'violet_night':
+    glow(Offset(size.width*.74,size.height*.22),size.width*.3,const Color(0xFF9C80E5),.11);
+    for(var i=0;i<65;i++){final x=size.width*((i*73)%997)/997,y=size.height*((i*139)%991)/991;star(Offset(x,y),1.5+(i%3)*.8,accent.withValues(alpha:.20));}
+    final moon=Offset(size.width*.72,size.height*.20);canvas.drawCircle(moon,size.width*.09,Paint()..color=accent.withValues(alpha:.16));
+    break;
+   case 'ours':
+    for(var i=0;i<6;i++){
+     final r=size.width*(.18+i*.10);
+     canvas.drawOval(Rect.fromCenter(center:Offset(size.width*.52,size.height*.48),width:r*2,height:r*.72),Paint()..color=accent.withValues(alpha:.09-i*.009)..style=PaintingStyle.stroke..strokeWidth:1.0+i*.3);
+    }
+    for(var i=0;i<48;i++){final x=size.width*((i*67)%997)/997,y=size.height*((i*131)%991)/991;star(Offset(x,y),1.4+(i%3)*.6,accent.withValues(alpha:.19));}
     break;
   }
+  // Gentle edge shading improves contrast for the chat without hiding artwork.
+  canvas.drawRect(rect,Paint()..shader=LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.black.withValues(alpha:.13),Colors.transparent,Colors.black.withValues(alpha:.22)]).createShader(rect));
  }
-
  @override
  bool shouldRepaint(covariant _ChatAtmospherePainter oldDelegate)=>oldDelegate.skin.id!=skin.id;
 }
-
-
 class _RoundedMediaMessageClipper extends CustomClipper<Path> {
  const _RoundedMediaMessageClipper();
  @override
