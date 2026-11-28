@@ -77,6 +77,99 @@ class _ChatAtmospherePainter extends CustomPainter {
   final accent=skin.accent;
   final soft=Paint()..color=accent.withValues(alpha:.10)..style=PaintingStyle.fill;
   final line=Paint()..color=accent.withValues(alpha:.16)..style=PaintingStyle.stroke..strokeWidth=1.2;
+  // Theme-specific illustrated scenes: layered silhouettes and recognizable motifs.
+  void drawHeart(Offset c,double scale,Color color){
+   final p=Path()..moveTo(c.dx,c.dy+scale*.42)..c.cubicTo(c.dx-scale*.85,c.dy-scale*.12,c.dx-scale*.55,c.dy-scale*.82,c.dx,c.dy-scale*.36)..c.cubicTo(c.dx+scale*.55,c.dy-scale*.82,c.dx+scale*.85,c.dy-scale*.12,c.dx,c.dy+scale*.42)..close();
+   canvas.drawPath(p,Paint()..color=color);
+  }
+  void drawFlower(Offset c,double r,Color color){
+   for(var petal=0;petal<6;petal++){canvas.save();canvas.translate(c.dx,c.dy);canvas.rotate(petal*math.pi/3);canvas.drawOval(Rect.fromCenter(center:Offset(0,-r*.58),width:r*.54,height:r*.95),Paint()..color=color);canvas.restore();}
+   canvas.drawCircle(c,r*.2,Paint()..color=accent.withValues(alpha:.25));
+  }
+  switch(skin.id){
+   case 'forest':
+    // Misty forest layers, fir-tree silhouettes and ground ferns.
+    for(var layer=0;layer<3;layer++){
+     final y=size.height*(.48+layer*.18);
+     final shade=[Color(0xFF173B2C),Color(0xFF102B22),Color(0xFF091B15)][layer].withValues(alpha:.30+layer*.09);
+     for(var i=0;i<9;i++){
+      final x=size.width*((i*131+layer*43)%997)/997;
+      final height=size.height*(.22+((i*7)%5)*.045);
+      final trunk=Path()..moveTo(x-size.width*.025,y+height*.12)..lineTo(x+size.width*.025,y+height*.12)..lineTo(x+size.width*.008,y-height)..lineTo(x-size.width*.008,y-height)..close();
+      canvas.drawPath(trunk,Paint()..color=shade);
+      for(var tier=0;tier<3;tier++){
+       final tree=Path()..moveTo(x,y-height*(.48+tier*.22))..lineTo(x-height*.22,y-height*(.20+tier*.22))..lineTo(x+height*.22,y-height*(.20+tier*.22))..close();
+       canvas.drawPath(tree,Paint()..color=shade);
+      }
+     }
+    }
+    for(var i=0;i<26;i++){final x=size.width*(i/25),y=size.height*(.82+math.sin(i*.65)*.035);canvas.drawLine(Offset(x,y),Offset(x+size.width*.02,y-size.height*.06),Paint()..color=accent.withValues(alpha:.11)..strokeWidth:1.6);}
+    break;
+   case 'wildflower':
+    // Wildflower meadow with stems, leaves and clusters of delicate blossoms.
+    for(var i=0;i<31;i++){
+     final x=size.width*((i*79)%997)/997,y=size.height*(.58+((i*31)%39)/100),h=size.height*(.07+((i*13)%13)/100);
+     canvas.drawLine(Offset(x,y),Offset(x-size.width*.008,y-h),Paint()..color=Color(0xFF638A55).withValues(alpha:.22)..strokeWidth:1.4);
+     for(var leaf=0;leaf<2;leaf++){final lx=x+(leaf==0?-1:1)*size.width*.018;canvas.drawOval(Rect.fromCenter(center:Offset(lx,y-h*.48),width:size.width*.035,height:h*.24),Paint()..color=Color(0xFF5D8C63).withValues(alpha:.13));}
+     drawFlower(Offset(x-size.width*.008,y-h),3.2+((i*3)%4),[Color(0xFFE7C7F3),Color(0xFFFFD9A5),Color(0xFFFFC4D8),Color(0xFFBFD9FF)][i%4].withValues(alpha:.22));
+    }
+    break;
+   case 'love':
+    // Soft romantic heart motifs, tiny sparkles, and drifting rose petals.
+    for(var i=0;i<22;i++){
+     final x=size.width*((i*113)%997)/997,y=size.height*((i*157)%991)/991;
+     final sc=7.0+(i%5)*3.5;
+     drawHeart(Offset(x,y),sc,accent.withValues(alpha:.055+(i%4)*.018));
+    }
+    for(var i=0;i<17;i++){final x=size.width*((i*59)%991)/991,y=size.height*((i*89)%997)/997;canvas.save();canvas.translate(x,y);canvas.rotate(i*.73);canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:6,height:14),Paint()..color=Color(0xFFEFA0C2).withValues(alpha:.11));canvas.restore();}
+    break;
+   case 'starlight':
+    // Night sky, layered stars, crescent moon and fine constellations.
+    final moonCenter=Offset(size.width*.78,size.height*.18);
+    canvas.drawCircle(moonCenter,size.width*.12,Paint()..color=Color(0xFFFFE8B2).withValues(alpha:.13));
+    canvas.drawCircle(Offset(moonCenter.dx+size.width*.045,moonCenter.dy-size.width*.035),size.width*.11,Paint()..color=skin.bg);
+    final stars=[Offset(.14,.13),Offset(.28,.25),Offset(.42,.16),Offset(.63,.27),Offset(.81,.39),Offset(.92,.12),Offset(.55,.52),Offset(.18,.62)];
+    final constellation=Paint()..color=accent.withValues(alpha:.16)..strokeWidth:1;
+    for(var i=0;i<stars.length-1;i++){final a=stars[i],b=stars[(i+1)%stars.length];canvas.drawLine(Offset(a.dx*size.width,a.dy*size.height),Offset(b.dx*size.width,b.dy*size.height),constellation);}
+    for(var i=0;i<90;i++){final x=size.width*((i*71)%997)/997,y=size.height*((i*137)%991)/991;final r=1.0+(i%4)*.65;canvas.drawCircle(Offset(x,y),r,Paint()..color=Color(0xFFDCE7FF).withValues(alpha:.14+(i%3)*.035));}
+    for(final p in stars){final c=Offset(p.dx*size.width,p.dy*size.height);canvas.drawCircle(c,2.5,Paint()..color=accent.withValues(alpha:.24));canvas.drawLine(c-Offset(4,0),c+Offset(4,0),constellation);canvas.drawLine(c-Offset(0,4),c+Offset(0,4),constellation);}
+    break;
+   case 'winter':
+    // Frosted snowflakes and softly layered snow banks.
+    for(var i=0;i<34;i++){final x=size.width*((i*83)%997)/997,y=size.height*((i*149)%991)/991,r=3.0+(i%5)*2.0;for(var arm=0;arm<6;arm++){final a=arm*math.pi/3;canvas.drawLine(Offset(x,y),Offset(x+math.cos(a)*r,y+math.sin(a)*r),Paint()..color=accent.withValues(alpha:.13)..strokeWidth:1.0);}}
+    for(var layer=0;layer<3;layer++){final p=Path()..moveTo(0,size.height*(.78+layer*.08))..quadraticBezierTo(size.width*.4,size.height*(.64+layer*.08),size.width,size.height*(.8+layer*.07))..lineTo(size.width,size.height)..lineTo(0,size.height)..close();canvas.drawPath(p,Paint()..color=Color(0xFF8AC7E5).withValues(alpha:.025+layer*.02));}
+    break;
+   case 'coffee':
+    // Warm café atmosphere: steam curls and scattered coffee beans.
+    final cup=RRect.fromRectAndRadius(Rect.fromCenter(center:Offset(size.width*.78,size.height*.23),width:size.width*.20,height:size.height*.10),const Radius.circular(12));
+    canvas.drawRRect(cup,Paint()..color=accent.withValues(alpha:.08)..style=PaintingStyle.stroke..strokeWidth:2);
+    canvas.drawCircle(Offset(size.width*.88,size.height*.23),size.width*.035,Paint()..color=accent.withValues(alpha:.06)..style=PaintingStyle.stroke..strokeWidth:2);
+    for(var i=0;i<4;i++){final steam=Path()..moveTo(size.width*(.70+i*.035),size.height*.13)..cubicTo(size.width*(.66+i*.035),size.height*.09,size.width*(.74+i*.035),size.height*.06,size.width*(.70+i*.035),size.height*.03);canvas.drawPath(steam,Paint()..color=accent.withValues(alpha:.13)..style=PaintingStyle.stroke..strokeWidth:2);}
+    for(var i=0;i<24;i++){final x=size.width*((i*67)%997)/997,y=size.height*((i*127)%991)/991;canvas.save();canvas.translate(x,y);canvas.rotate(i*.62);canvas.drawOval(Rect.fromCenter(center:Offset.zero,width:8,height:14),Paint()..color=accent.withValues(alpha:.07));canvas.drawLine(Offset(0,-5),Offset(0,5),line);canvas.restore();}
+    break;
+   case 'meadow':
+    // Golden grass, small daisies and rolling meadow contours.
+    for(var i=0;i<70;i++){final x=size.width*((i*37)%997)/997,y=size.height*(.65+((i*17)%34)/100),h=size.height*(.025+((i*11)%8)/100);canvas.drawLine(Offset(x,y),Offset(x+math.sin(i*.7)*size.width*.018,y-h),Paint()..color=accent.withValues(alpha:.12)..strokeWidth:1.3);}
+    for(var i=0;i<18;i++){final x=size.width*((i*79)%997)/997,y=size.height*(.69+((i*13)%26)/100);drawFlower(Offset(x,y-size.height*.04),4+(i%3),Color(0xFFFFE6B7).withValues(alpha:.16));}
+    break;
+   case 'clear_sky':
+    // Puffy clouds and a soft horizon.
+    for(var i=0;i<6;i++){final x=size.width*(.12+i*.17),y=size.height*(.17+(i%3)*.12);final p=Path()..addOval(Rect.fromCenter(center:Offset(x,y),width:size.width*.15,height:size.height*.06))..addOval(Rect.fromCenter(center:Offset(x-size.width*.04,y-size.height*.02),width:size.width*.08,height:size.height*.06))..addOval(Rect.fromCenter(center:Offset(x+size.width*.04,y-size.height*.015),width:size.width*.09,height:size.height*.07));canvas.drawPath(p,Paint()..color=accent.withValues(alpha:.07));}
+    for(var i=0;i<2;i++){final p=Path()..moveTo(0,size.height*(.72+i*.1))..quadraticBezierTo(size.width*.5,size.height*(.63+i*.12),size.width,size.height*(.73+i*.08));canvas.drawPath(p,Paint()..color=accent.withValues(alpha:.05+i*.025)..style=PaintingStyle.stroke..strokeWidth:16);}
+    break;
+   case 'lavender':
+    // Lavender stems with narrow purple florets.
+    for(var i=0;i<27;i++){final x=size.width*((i*73)%997)/997,y=size.height*(.84+((i*19)%14)/100),h=size.height*(.09+((i*7)%11)/100);canvas.drawLine(Offset(x,y),Offset(x-size.width*.01,y-h),Paint()..color=Color(0xFF65804D).withValues(alpha:.15)..strokeWidth:1.2);for(var j=0;j<5;j++){final fy=y-h+j*h*.16;canvas.drawOval(Rect.fromCenter(center:Offset(x-size.width*.008,fy),width:6,height:10),Paint()..color=Color(0xFFB9A2D5).withValues(alpha:.17));}}
+    break;
+   case 'sea':
+   case 'tropical':
+    // Layered sea waves and tropical leaves.
+    for(var layer=0;layer<5;layer++){final wave=Path()..moveTo(0,size.height*(.52+layer*.09))..cubicTo(size.width*.25,size.height*(.42+layer*.09),size.width*.72,size.height*(.62+layer*.08),size.width,size.height*(.48+layer*.09))..lineTo(size.width,size.height)..lineTo(0,size.height)..close();canvas.drawPath(wave,Paint()..color=(skin.id=='sea'?Color(0xFF2D9EBA):Color(0xFF1F8274)).withValues(alpha:.035+layer*.025));}
+    if(skin.id=='tropical'){for(var i=0;i<18;i++){final x=size.width*((i*61)%997)/997,y=size.height*((i*113)%991)/991;canvas.save();canvas.translate(x,y);canvas.rotate((i%9-4)*.22);final leaf=Path()..moveTo(0,0)..quadraticBezierTo(16,-34,48,-6)..quadraticBezierTo(20,12,0,0);canvas.drawPath(leaf,Paint()..color=accent.withValues(alpha:.07));canvas.restore();}}
+    break;
+   default:
+    break;
+  }
   switch(skin.id){
    case 'ours':
     for(var i=0;i<5;i++){
