@@ -250,7 +250,9 @@ jobs:
           center = (257,257)
           splash.alpha_composite(halo, center)
           splash.alpha_composite(logo, center)
-          splash_dir = root/"drawable-nodpi"\n          splash_dir.mkdir(parents=True, exist_ok=True)\n          splash.convert("RGB").save(splash_dir/"ours_splash.png", optimize=True)
+          splash_dir = root/"drawable-nodpi"
+          splash_dir.mkdir(parents=True, exist_ok=True)
+          splash.convert("RGB").save(splash_dir/"ours_splash.png", optimize=True)
           launch = '''<?xml version="1.0" encoding="utf-8"?>
           <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
               <item android:drawable="@color/ours_icon_background" />
